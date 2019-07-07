@@ -1,4 +1,4 @@
-function [res_power_bins, res_power_bands] = st_power(cfg, data)
+function [res_power_bin, res_power_band] = st_power(cfg, data)
 
 % ST_POWER calculates power and power density as well as engergy and energy
 % density based on Welch's method with FFTs to overlapping data segments of a length that   
@@ -6,8 +6,8 @@ function [res_power_bins, res_power_bands] = st_power(cfg, data)
 % results are stored it in a result structure
 %
 % Use as
-%   [res res_bands] = st_power(cfg, data)
-%   [res res_bands] = st_power(cfg)
+%   [res_power_bin res_power_band] = st_power(cfg, data)
+%   [res_power_bin res_power_band] = st_power(cfg)
 %
 % Required configuration parameters are:
 %   cfg.scoring  = structure provided by ST_READ_SCORING
@@ -605,11 +605,11 @@ for iBand = 1:(numel(cfg.bands))
     
 end
 
-res_power_bands = [];
-res_power_bands.ori = functionname;
-res_power_bands.type = 'power_full';
-res_power_bands.cfg = cfg;
-res_power_bands.table = table(...
+res_power_band = [];
+res_power_band.ori = functionname;
+res_power_band.type = 'power_full';
+res_power_band.cfg = cfg;
+res_power_band.table = table(...
     bandNames,chs,...
     band_ch_meanPowerMeanOverSegmentss,band_ch_meanPowerMeanOverSegments_density,...
     band_ch_meanPowerSumOverSegmentss,band_ch_meanPowerSumOverSegmentss_density,...
@@ -669,11 +669,11 @@ for iChan = 1:nChannels
     end
 end
 
-res_power_bins = [];
-res_power_bins.ori = functionname;
-res_power_bins.type = 'power_full';
-res_power_bins.cfg = cfg;
-res_power_bins.table = table(...
+res_power_bin = [];
+res_power_bin.ori = functionname;
+res_power_bin.type = 'power_full';
+res_power_bin.cfg = cfg;
+res_power_bin.table = table(...
     chs,pFreqs,...
     band_ch_meanPowerMeanOverSegmentss,band_ch_meanPowerMeanOverSegments_density,...
     band_ch_meanPowerSumOverSegmentss,band_ch_meanPowerSumOverSegmentss_density,...

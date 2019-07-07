@@ -1175,11 +1175,16 @@ ch_detected_linear_regression_freq_R_squareds = zeros(nRowsCh,1);
 hypnEpochsEndsSamples = cumsum(repmat(cfg.scoring.epochlength,numel(cfg.scoring.epochs),1));
 hypnEpochsBeginsSamples = hypnEpochsEndsSamples - cfg.scoring.epochlength;
 
+hypnEpochsEndsSamples = hypnEpochsEndsSamples + cfg.scoring.dataoffset;
+hypnEpochsBeginsSamples = hypnEpochsBeginsSamples + cfg.scoring.dataoffset;
+
+
+
 for iChan = 1:nChannels
     
     ch = data.label{iChan};
     
-    epochs = {};
+    epochs = cell(length(ch_detectedTroughsSamples{iChan}),3);
     for iDet = 1:length(ch_detectedTroughsSamples{iChan})
         tempSample = ch_detectedTroughsSamples{iChan}(iDet);
         tempInd = ((hypnEpochsBeginsSamples <= tempSample) & (tempSample < hypnEpochsEndsSamples));
@@ -1189,9 +1194,9 @@ for iChan = 1:nChannels
         if ~any(tempInd)
             tempInd = ((hypnEpochsBeginsSamples <= tempSample) & (tempSample-1/fsample < hypnEpochsEndsSamples));
         end
-        epochs(iDet,:) = [hypnStages(tempInd,1) ...
-            hypnStages(tempInd,2) ...
-            hypnStages(tempInd,3)];
+        epochs{iDet,1} = hypnStages(tempInd,1);
+        epochs{iDet,2} = hypnStages(tempInd,2);
+        epochs{iDet,3} = hypnStages(tempInd,3);
     end;
     
     chs{iChan} = ch;
@@ -1250,9 +1255,9 @@ for iChan = 1:nChannels
         %             output(:,21) = num2cell(ch_detectedEnvelopeMaxSamples{iChan}'/fsample);
         
         output(indEv{iChan},14) = num2cell((1:ch_nDetected{iChan})');
-        output(indEv{iChan},15) = cellstr(epochs(:,1));
-        output(indEv{iChan},16) = cellstr(epochs(:,2));
-        output(indEv{iChan},17) = cellstr(epochs(:,3));
+        output(indEv{iChan},15) = [epochs{:,1}];
+        output(indEv{iChan},16) = [epochs{:,2}];
+        output(indEv{iChan},17) = [epochs{:,3}];%cellstr(epochs(:,3));
         
         output(indEv{iChan},18) = num2cell(ch_detectedSDofFilteredSignal{iChan}');
         output(indEv{iChan},19) = num2cell(ch_detectedMergeCount{iChan}');
