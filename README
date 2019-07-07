@@ -1,23 +1,15 @@
-FieldTrip is the MATLAB toolbox for MEG and EEG analysis that is being
-developed at the Donders Institute for Brain, Cognition and Behaviour
-together with collaborating institutes.
+SleepTrip 
+... is the MATLAB toolbox 
+... a branch of FieldTrip (https://github.com/fieldtrip/fieldtrip see http://www.fieldtriptoolbox.org for details)
+... adds 'FieldTrip-style' functionality to analyse sleep EEG and MEG data such as power analysis, sleep spindles, slow waves and other events.
 
-The toolbox includes algorithms for simple and advanced analysis
-of MEG and EEG data, such as time-frequency analysis, source
-reconstruction using dipoles, distributed sources and beamformers
-and non-parametric statistical testing. It supports the data formats
-of all major MEG systems (CTF, Neuromag, 4D/BTi) and of the most popular
-EEG systems, and new formats can be added easily. FieldTrip contains
-high-level functions that you can use to construct your own analysis
-protocol in MATLAB. Furthermore, it easily allows developers to
-incorporate low-level algorithms for new EEG/MEG analysis methods.
-
-For more information please visit http://www.fieldtriptoolbox.org
-
-The FieldTrip software is free but copyrighted software, distributed
+The SleepTrip software is free but copyrighted software, distributed
 under the terms of the GNU General Public Licence as published by
 the Free Software Foundation (either version 2, or at your option
 any later version). See the file COPYING for more details.
+
+The functions specific to SleepTrip are copyrighted by their respective authors:
+  Frederik D. Weber, DCCN
 
 The functions in the FieldTrip toolbox are copyrighted by their respective authors:
   Robert Oostenveld, DCCN, FCDC, SMI, MBFYS
