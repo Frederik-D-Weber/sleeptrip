@@ -4,7 +4,7 @@
 * adds 'FieldTrip-style' functionality to analyse sleep EEG and MEG data such as power analysis, sleep spindles, slow waves and other events.
 
 
-![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/sleeptrip_logo.png)
+![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_logo.png)
 
 
 The SleepTrip software is free but copyrighted software, distributed
