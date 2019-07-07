@@ -1,5 +1,5 @@
 # SleepTrip
-* is the MATLAB toolbox 
+* a MATLAB toolbox 
 * a branch of FieldTrip (https://github.com/fieldtrip/fieldtrip see http://www.fieldtriptoolbox.org for details)
 * adds 'FieldTrip-style' functionality to analyse sleep EEG and MEG data such as power analysis, sleep spindles, slow waves and other events.
 
