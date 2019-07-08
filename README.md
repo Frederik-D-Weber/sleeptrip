@@ -5,6 +5,8 @@
 
 for more details, visit https://www.sleeptrip.org
 
+download https://drive.google.com/open?id=15Of3TxU3k6PDCIafGyMnXTuw3Ne3caTa
+
 ![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_logo.png)
 
 
