@@ -5,7 +5,7 @@
 
 for more details, visit https://www.sleeptrip.org (not public yet, refers to SpiSOP)
 
-Download for an example **SleepTrip pipeline** and example datasets https://drive.google.com/open?id=15Of3TxU3k6PDCIafGyMnXTuw3Ne3caTa
+Download the example **SleepTrip pipeline** and example datasets https://drive.google.com/open?id=15Of3TxU3k6PDCIafGyMnXTuw3Ne3caTa
 
 ![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_logo.png)
 
