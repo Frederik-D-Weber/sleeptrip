@@ -3,9 +3,9 @@
 * a branch of FieldTrip (https://github.com/fieldtrip/fieldtrip see http://www.fieldtriptoolbox.org for details)
 * adds 'FieldTrip-style' functionality to analyse sleep EEG and MEG data such as power analysis, sleep spindles, slow waves and other events.
 
-for more details, visit https://www.sleeptrip.org
+for more details, visit https://www.sleeptrip.org (not public yet, refers to SpiSOP)
 
-download https://drive.google.com/open?id=15Of3TxU3k6PDCIafGyMnXTuw3Ne3caTa
+Download for an example **SleepTrip pipeline** and example datasets https://drive.google.com/open?id=15Of3TxU3k6PDCIafGyMnXTuw3Ne3caTa
 
 ![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_logo.png)
 
