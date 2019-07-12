@@ -607,7 +607,7 @@ end
 
 res_power_band = [];
 res_power_band.ori = functionname;
-res_power_band.type = 'power_full';
+res_power_band.type = 'power_band';
 res_power_band.cfg = cfg;
 res_power_band.table = table(...
     bandNames,chs,...
@@ -671,7 +671,7 @@ end
 
 res_power_bin = [];
 res_power_bin.ori = functionname;
-res_power_bin.type = 'power_full';
+res_power_bin.type = 'power_bin';
 res_power_bin.cfg = cfg;
 res_power_bin.table = table(...
     chs,pFreqs,...
