@@ -11,8 +11,8 @@ function [filepaths] = st_write_res(cfg, varargin)
 % if none of these is defined and no time stamp is chosen, files might be
 % overwritten.
 %   cfg.prefix  = string added before filename (default = '')
-%   cfg.infix  = string added inside filename (default = '')
-%   cfg.postfix  = string added after filename but before time stamp (default = '')
+%   cfg.infix   = string added inside filename (default = '')
+%   cfg.postfix = string added after filename but before time stamp (default = '')
 %
 % Optional configuration parameters are
 %   cfg.timestamp        = either 'yes' or 'no' if a time stamp should be

@@ -1,6 +1,7 @@
-function st = sleepStage2str_alt2(st)
+function st = sleepStage2str_alt2(st,varargin)
 %convert sleep stages to abstract level 3
 
+% if varargin is true, include N1 in NR
 % Copyright (C) 2019-, Frederik D. Weber
 %
 % This file is part of SleepTrip, see http://www.sleeptrip.org
@@ -24,7 +25,17 @@ function st = sleepStage2str_alt2(st)
 %    along with SleepTrip. If not, see <http://www.gnu.org/licenses/>.
 %
 % $Id$
+includeN1 = false;
+if nargin > 1
+    includeN1 = varargin{1}
+end
 switch st
+    case {'S1' 'N1' 'stage 1' 'Stage 1' 'Stage1' 'STAGE 1' 'STAGE1' 'S 1' 'Stadium 1' 'STADIUM 1' 'STADIUM1' '1' }
+    	if includeN1
+    	    st = 'NR';
+    	else
+    	    st = sleepStage2str(st);
+    	end
     case {'S2' 'N2' 'stage 2' 'Stage 2' 'Stage2' 'STAGE 2' 'STAGE2' 'S 2' 'Stadium 2' 'STADIUM 2' 'STADIUM2' '2' }
         st = 'NR';
     case {'S3' 'N3' 'stage 3' 'Stage 3' 'Stage3' 'STAGE 3' 'STAGE3' 'S 3' 'Stadium 3' 'STADIUM 3' 'STADIUM3' '3' 'SWS'}

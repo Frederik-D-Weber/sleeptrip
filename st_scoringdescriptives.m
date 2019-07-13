@@ -10,7 +10,7 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %
 % Optional configuration parameters are
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'NR' or 'XR', see ST_SLEEPONSET for details (default = 'N1_XR')
+%                        'NR' or 'N2R' or 'XR' or 'X2R' or 'AASM', see ST_SLEEPONSET for details (default = 'N1_XR')
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET
 

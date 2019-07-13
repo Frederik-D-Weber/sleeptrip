@@ -10,7 +10,7 @@ function [onsetnumber preoffsetnumber onsetepoch] = st_sleeponset(cfg,scoring)
 %
 % Optional configuration parameters are
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'NR' or 'XR', see below for details (default = 'N1_XR')
+%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R', see below for details (default = 'N1_XR')
 %
 %  Here are the possible sleep onset definitions, where NR referes to
 %  non-REM, R to REM and XR to any non-REM or REM sleep stage.
@@ -19,8 +19,11 @@ function [onsetnumber preoffsetnumber onsetepoch] = st_sleeponset(cfg,scoring)
 %         otherwise with first N2 or N3 or S4
 %  N1_XR  starting with first N1 directly followed by either N2, N3, (S4), or R,
 %         otherwise with first N2 or N3 or (S4) or R
-%  NR     starting with first one of N2, N3 or (S4)
-%  XR     starting with first one of N2, N3 or (S4) or R
+%  NR      starting with first one of N1, N2, N3 or (S4)
+%  N2R     starting with first one of N2, N3 or (S4)
+%  XR     starting with first one of N1, N2, N3 or (S4) or R
+%  AASM   starting with first one of N1, N2, N3 or (S4) or R
+%  X2R     starting with first one of N2, N3 or (S4) or R
 %
 %  For example N1_NR, sleep onset epoch in brackets:
 %  [N1] N1 N2, but not [N1] N1 X N2, where X is not NR
@@ -45,17 +48,33 @@ hypnStages = [cellfun(@sleepStage2str,epochs,'UniformOutput',0) ...
 onsetnumber = -1;
 
 switch cfg.sleeponsetdef
-    case 'NR'
+     case 'NR'
+        for iOnset = 1:numel(scoring.epochs)
+            if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR')) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end  
+        
+    case 'N2R'
         for iOnset = 1:numel(scoring.epochs)
             if strcmp(hypnStages(iOnset,3),'NR') && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
                 onsetnumber = iOnset;
                 break;
             end
-        end
-        
-    case 'XR'
+        end  
+
+     case 'X2R'
         for iOnset = 1:numel(scoring.epochs)
             if (strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end      
+        
+    case {'XR' 'AASM'}
+        for iOnset = 1:numel(scoring.epochs)
+            if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
                 onsetnumber = iOnset;
                 break;
             end
