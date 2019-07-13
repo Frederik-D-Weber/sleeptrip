@@ -15,7 +15,9 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotsleepoffset        = string, plot an indicator of sleep offset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                                'NR' or 'N2R' or 'XR' or 'X2R' or 'AASM', see ST_SLEEPONSET for details (default = 'N1_XR')
+%                                'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
+%                                'N2' or 'N3' or 'SWS' or 'S4' or 'R',
+%                                see ST_SLEEPONSET for details (default = 'N1_XR')
 %   cfg.title                  = string, title of the figure to export the figure
 %   cfg.timeticksdiff          = scalar, time difference in minutes the ticks are places from each other (default = 30);
 %   cfg.timemin                = scalar, minimal time in minutes the ticks 

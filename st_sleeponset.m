@@ -1,20 +1,27 @@
-function [onsetnumber preoffsetnumber onsetepoch] = st_sleeponset(cfg,scoring)
+function [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage] = st_sleeponset(cfg,scoring)
 % 
 % ST_SLEEPONSET determines the sleep onset of a sleep scoring
 % Use as
-%   [onsetnumber, preoffsetnumber, onsetepoch] = st_sleeponset(cfg,scoring)
-%   [onsetnumber, preoffsetnumber] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring)
 %   [onsetnumber] = st_sleeponset(cfg,scoring)
 %
 % Configutation parameter can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R', see below for details (default = 'N1_XR')
+%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
+%                        'N2' or 'N3' or 'SWS' or 'S4' or 'R', 
+%                        see below for details (default = 'N1_XR')
 %
 %  Here are the possible sleep onset definitions, where NR referes to
 %  non-REM, R to REM and XR to any non-REM or REM sleep stage.
 %  N1     starting with first N1 is sleep onset, nothing else
+%  N2     starting with first N2 is sleep onset, nothing else
+%  N3     starting with first N3 is sleep onset, nothing else
+%  S4     starting with first S4 is sleep onset, nothing else
+%  SWS    starting with first SWS is sleep onset, i.e. S3/N3 or S4, nothing else
+%  R      starting with first R is sleep onset, nothing else
 %  N1_NR  starting with first N1 followed directly by either N2, N3 (or S4),
 %         otherwise with first N2 or N3 or S4
 %  N1_XR  starting with first N1 directly followed by either N2, N3, (S4), or R,
@@ -55,7 +62,41 @@ switch cfg.sleeponsetdef
                 break;
             end
         end  
-        
+     case 'N2'
+        for iOnset = 1:numel(scoring.epochs)
+            if ( strcmp(hypnStages(iOnset,1),'N2') ) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end 
+      case 'N3'
+        for iOnset = 1:numel(scoring.epochs)
+            if ( strcmp(hypnStages(iOnset,1),'N3') ) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end  
+     case 'S4'
+        for iOnset = 1:numel(scoring.epochs)
+            if ( strcmp(hypnStages(iOnset,1),'S4') ) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end 
+    case 'R'
+        for iOnset = 1:numel(scoring.epochs)
+            if ( strcmp(hypnStages(iOnset,1),'R') ) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end  
+    case 'SWS'
+        for iOnset = 1:numel(scoring.epochs)
+            if ( strcmp(hypnStages(iOnset,1),'N3') || strcmp(hypnStages(iOnset,1),'S4') ) && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
+                onsetnumber = iOnset;
+                break;
+            end
+        end  
     case 'N2R'
         for iOnset = 1:numel(scoring.epochs)
             if strcmp(hypnStages(iOnset,3),'NR') && ((iOnset-1)*scoring.epochlength >= lightsOffMoment)
@@ -109,12 +150,14 @@ switch cfg.sleeponsetdef
         end
 end
 
-preoffsetnumber = max(find(strcmp(hypnStages(:,1),'N1') | strcmp(hypnStages(:,3),'NR') | strcmp(hypnStages(:,3),'R') | strcmp(hypnStages(:,3),'MT')));
+lastsleepstagenumber = max(find(strcmp(hypnStages(:,1),'N1') | strcmp(hypnStages(:,3),'NR') | strcmp(hypnStages(:,3),'R') | strcmp(hypnStages(:,3),'MT')));
 
-if isempty(preoffsetnumber);
+if isempty(lastsleepstagenumber);
     ft_warning('could not identify a sleep offset.\nAssume that sleep did not occur and thus not end.')
-    preoffsetnumber = numel(scoring.epochs);
+    lastsleepstagenumber = numel(scoring.epochs);
 end
+
+lastsleepstage = scoring.epochs{lastsleepstagenumber};
 
 if onsetnumber == -1;
     ft_warning('could not identify a sleep onset with the current sleep onset definitions.\nAssume that sleep did not occur.')
