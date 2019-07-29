@@ -95,7 +95,10 @@ function [cfg, p1gca, p2gca, p1gccb] = ft_fw_singleplotTFR_yy(cfg, data, xdata2,
 %
 % $Id: ft_singleplotTFR.m 8377 2013-08-02 16:19:13Z roboos $
 
-revision = '$Id: ft_singleplotTFR.m 8377 2013-08-02 16:19:13Z roboos $';
+% these are used by the ft_preamble/ft_postamble function and scripts
+ft_revision = '$Id$';
+ft_nargin   = nargin;
+ft_nargout  = nargout;
 
 % do the general setup of the function
 ft_defaults
@@ -592,7 +595,7 @@ if isempty(get(gcf, 'Name'))
     dataname = cfg.inputfile;
   end
   if isempty(cfg.figurename)
-    set(gcf, 'Name', sprintf('%d: %s: %s (%s)', gcf, mfilename, dataname, chans));
+    set(gcf, 'Name', sprintf('%d: %s: %s (%s)', get(gcf, 'Name'), mfilename, dataname, chans));
     set(gcf, 'NumberTitle', 'off');
   else
     set(gcf, 'name', cfg.figurename);

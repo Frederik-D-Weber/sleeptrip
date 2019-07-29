@@ -14,6 +14,8 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotsleeponset         = string, plot an indicator of sleep onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotsleepoffset        = string, plot an indicator of sleep offset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
+%   cfg.plotexcluded           = string, plot excluded epochs 'yes' or 'no' (default = 'yes')
+%   cfg.yaxdisteqi             = string, plot the y-axis ticks in equal distanve from each other 'yes' or 'no' (default = 'no')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
 %                                'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
 %                                'N2' or 'N3' or 'SWS' or 'S4' or 'R',
@@ -38,6 +40,11 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %   cfg.figureoutputresolution = scalar, choose resolution in pixesl per inches (1 in = 2.54 cm) of hypnograms. (default = 300)
 %   cfg.figureoutputfontsize   = scalar, Font size in units stated in
 %                                parameter cfg.figureoutputunit (default = 0.1)
+%   cfg.timestamp              = either 'yes' or 'no' if a time stamp should be
+%                                added to filename (default = 'yes')
+%   cfg.folderstructure        = either 'yes' or 'no' if a folder structure should
+%                                be created with the result origin and type 
+%                                all results will be stored in "/res/..." (default = 'yes')
 %
 %  Events can be plotted using the following options
 %
@@ -84,6 +91,14 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %    along with SleepTrip. If not, see <http://www.gnu.org/licenses/>.
 %
 % $Id$
+dt = now;
+
+tic
+memtic
+st = dbstack;
+functionname = st.name;
+fprintf([functionname ' function started\n']);
+
 
 % set the defaults
 cfg.title                   = ft_getopt(cfg, 'title', '');
@@ -93,6 +108,8 @@ cfg.considerdataoffset      = ft_getopt(cfg, 'considerdataoffset', 'yes');
 cfg.plotsleeponset          = ft_getopt(cfg, 'plotsleeponset', 'yes');
 cfg.plotsleepoffset         = ft_getopt(cfg, 'plotsleepoffset', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
+cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
+cfg.yaxdisteqi              = ft_getopt(cfg, 'yaxdisteqi', 'no');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 cfg.figureoutputformat      = ft_getopt(cfg, 'figureoutputformat', 'png');
 cfg.figureoutputunit        = ft_getopt(cfg, 'figureoutputunit', 'inches');
@@ -100,6 +117,9 @@ cfg.figureoutputwidth       = ft_getopt(cfg, 'figureoutputwidth', 9);
 cfg.figureoutputheight      = ft_getopt(cfg, 'figureoutputheight', 3);
 cfg.figureoutputresolution  = ft_getopt(cfg, 'figureoutputresolution', 300);
 cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
+cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
+cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
+
 
 
 if (isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventlabels')) || (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
@@ -149,6 +169,8 @@ if isfield(scoring, 'lightsoff')
     hasLightsOff = true;
 end
 
+fprintf([functionname ' function initialized\n']);
+
 dummySampleRate = 100;
 epochLengthSamples = scoring.epochlength * dummySampleRate;
 nEpochs = numel(scoring.epochs);
@@ -160,7 +182,7 @@ else
 end
 
 %convert the sleep stages to hypnogram numbers
-hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown)),scoring.epochs','UniformOutput',1) ...
+hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),istrue(cfg.yaxdisteqi)),scoring.epochs','UniformOutput',1) ...
     scoring.excluded'];
 
 
@@ -186,18 +208,37 @@ end
 
 switch scoring.standard
     case 'aasm'
+        if istrue(cfg.yaxdisteqi)
+        plot_exclude_offset = -6;
+        yTick      = [2  1        0     -1  -2   -3   -4 ];                
+        else
+                
         plot_exclude_offset = -5;
-        yTickLabel = {'?' 'A'      'W'    'R'  'N1' 'N2' 'N3'       'Excl'};
-        yTick      = [1.5  1        0     -0.5  -1   -2   -3         plot_exclude_offset];
+        yTick      = [1.5  1        0     -0.5  -1   -2   -3 ];
+            end
+
+        yTickLabel = {'?' 'A'      'W'    'R'  'N1' 'N2' 'N3'};
     case 'rk'
+            if istrue(cfg.yaxdisteqi)
+        plot_exclude_offset = -8;
+        yTick      = [3  2   1  0     -1  -2   -3   -4   -5 ];   
+            else
         plot_exclude_offset = -7;
-        yTickLabel = {'?' 'A' 'MT' 'Wake' 'REM' 'S1' 'S2' 'S3' 'S4' 'Excl'};
-        yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4   plot_exclude_offset];
+        yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4 ];
+            end
+        
+        yTickLabel = {'?' 'A' 'MT' 'Wake' 'REM' 'S1' 'S2' 'S3' 'S4'};
+
     otherwise
         ft_error('scring standard ''%s'' not supported for ploting', scoring.standard);
 end
 
-[hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset);
+if istrue(cfg.plotexcluded)
+    yTickLabel{end+1} = 'Excl';
+    yTick(end+1) = plot_exclude_offset;
+end
+
+[hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset,istrue(cfg.yaxdisteqi));
 
 if ~istrue(cfg.plotunknown)
     tempremind = strcmp(yTickLabel,'?');
@@ -257,6 +298,13 @@ end
 
 temp_max_y = max(yTick);
 
+if istrue(cfg.plotexcluded)
+    temp_min_y = plot_exclude_offset;
+else
+    temp_min_y = min(yTick) - 1;
+end
+
+
 if isfield(cfg, 'eventtimes')
     temp_max_y = temp_max_y + eventHeight;
 end
@@ -278,10 +326,16 @@ hold(axh,'on');
 if strcmp(cfg.plotsleepoffset, 'yes')
     scatter(axh,offset_time,offset_y_coord,'filled','^','MarkerFaceColor',[0 0 1])
 end
-plot(axh,x_time_hyp,hypn_plot_interpol_exclude,'Color',[1 0 0])
+
+if isfield(cfg,'plotexcluded')
+    if istrue(cfg.plotexcluded)
+        plot(axh,x_time_hyp,hypn_plot_interpol_exclude,'Color',[1 0 0])
+    end
+end
+
 xlim(axh,[0 (max([max(x_time),cfg.timemin,eventTimeMaxSeconds/60]))]);
 ylabel(axh,'Stages');
-ylim(axh,[plot_exclude_offset temp_max_y])
+ylim(axh,[temp_min_y temp_max_y])
 
 set(axh, 'yTick', flip(yTick));
 set(axh, 'yTickLabel', flip(yTickLabel));
@@ -334,9 +388,35 @@ set(hhyp,'PaperOrientation', 'portrait');
 
 
 if saveFigure
+    timestampfix = '';
+    if istrue(cfg.timestamp)
+        timestampfix = ['_' datestr(dt,'yyyy-mm-dd-HH-MM-SS-FFF')];
+    end
+    
+    subfolderpath = '';
+    if istrue(cfg.folderstructure)
+        subfolderpath = ['res' filesep];
+        if ~isdir([subfolderpath functionname])
+            mkdir([subfolderpath functionname]);
+        end
+        if ~isdir([subfolderpath functionname filesep 'hypnograms'])
+            mkdir([subfolderpath functionname filesep 'hypnograms']);
+        end
+        subfolderpath = [subfolderpath functionname filesep 'hypnograms'];
+        [path filename ext] = fileparts(cfg.figureoutputfile);
+        cfg.figureoutputfile = [subfolderpath filesep filename timestampfix ext];
+    else
+        [path filename ext] = fileparts(cfg.figureoutputfile);
+        cfg.figureoutputfile = [path filesep filename timestampfix ext];
+    end
+            
     switch cfg.figureoutputformat
         case 'fig'
-            saveas(hhyp, [cfg.figureoutputfile '.fig']);
+            [path filename ext] = fileparts(cfg.figureoutputfile);
+            if ~strcomp(ext,['.' cfg.figureoutputformat])
+                cfg.figureoutputfile = [cfg.figureoutputfile  '.fig'];
+            end
+            saveas(hhyp, [cfg.figureoutputfile  '.fig']);
         case 'eps'
             print(hhyp,['-d' 'epsc'],['-r' num2str(cfg.figureoutputresolution)],[cfg.figureoutputfile]);
         otherwise
@@ -347,46 +427,92 @@ fh = hhyp;
 
 %%% plot hypnogram figure end
 
-
+fprintf([functionname ' function finished\n']);
+toc
+memtoc
 end
 
 
-function st = sleepStage2hypnNum(st,unknownIsNaN)
+function st = sleepStage2hypnNum(st,unknownIsNaN,plot_yaxequidist)
 switch st
     case {'W' 'w' 'Wake' 'wake' 'WAKE' '0'}
         st = 0;
     case {'S1' 'N1' 'stage 1' 'Stage 1' 'Stage1' 'STAGE 1' 'STAGE1' 'S 1' 'Stadium 1' 'STADIUM 1' 'STADIUM1' '1'}
-        st = -1;
+        if plot_yaxequidist
+            st = -2;
+        else
+            st = -1;
+        end
     case {'S2' 'N2' 'stage 2' 'Stage 2' 'Stage2' 'STAGE 2' 'STAGE2' 'S 2' 'Stadium 2' 'STADIUM 2' 'STADIUM2' '2' }
-        st = -2;
+        if plot_yaxequidist
+            st = -3;
+        else
+            st = -2;
+        end
     case {'S3' 'N3' 'stage 3' 'Stage 3' 'Stage3' 'STAGE 3' 'STAGE3' 'S 3' 'Stadium 3' 'STADIUM 3' 'STADIUM3' '3' 'SWS'}
-        st = -3;
+        if plot_yaxequidist
+            st = -4;
+        else
+            st = -3;
+        end
     case {'S4' 'N4' 'stage 4' 'Stage 4' 'Stage4' 'STAGE 4' 'STAGE4' 'S 4' 'Stadium 4' 'STADIUM 4' 'STADIUM4' '4' 'SWS4'}
-        st = -4;
+        if plot_yaxequidist
+            st = -5;
+        else
+            st = -4;
+        end
     case {'REM' 'R' 'r' 'Rem' 'rem' 'Stage 5' 'Stage5' 'STAGE 5' 'STAGE5' 'S 5' 'Stadium 5' 'STADIUM 5' 'STADIUM5' '5'}
-        st = -0.5;
+        if plot_yaxequidist
+            st = -1;
+        else
+            st = -0.5;
+        end
     case {'MT' 'mt' 'movement' 'Movement' 'Movement Time' 'MovementTime' '8'}
-        st = 0.5;
+        if plot_yaxequidist
+            st = 1;
+        else
+            st = 0.5;
+        end
     case {'A' 'a' 'Artifact' 'Artefact' 'artifact' 'artefact' 'Artf' 'Artif.'}
-        st = 1;
+        if plot_yaxequidist
+            st = 2;
+        else
+            st = 1;
+        end
     case {'?' '???' 'unknown', 'Unknown' '-'  'X' 'x'}
         if unknownIsNaN
             st = NaN;
         else
-            st = 1.5;
+            if plot_yaxequidist
+                st = 3;
+            else
+                st = 1.5;
+            end
         end
     otherwise
         if unknownIsNaN
             st = NaN;
         else
-            st = 1.5;
+            if plot_yaxequidist
+                st = 3;
+            else
+                st = 1.5;
+            end;
         end
 end
 end
 
 
 
-function [hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset)
+function [hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset, plot_yaxequidist)
+
+if plot_yaxequidist
+    remY = -1;
+else
+    remY  = -0.5;
+end
+
+
 hypn_plot = hypn;
 hypn_plot_exclude = hypn_plot(:,2) ;
 %hypn_plot_exclude = hypn_plot_exclude*0.5;
@@ -396,9 +522,15 @@ hypn_plot_interpol = [];
 hypn_plot_interpol_exclude = [];
 for iEp = 1:length(hypn_plot)
     temp_samples = repmat(hypn_plot(iEp),epochLengthSamples,1);
-    if (hypn_plot(iEp) == -0.5) %REM
-        temp_samples(1:2:end) = -0.3;
-        temp_samples(2:2:end) = -0.7;
+    if (hypn_plot(iEp) == remY) %REM
+        if plot_yaxequidist
+            temp_samples(1:2:end) = -0.5;
+            temp_samples(2:2:end) = -1.5;
+        else
+            temp_samples(1:2:end) = -0.3;
+            temp_samples(2:2:end) = -0.7;
+        end
+
         %                 for iSamp = 1:length(temp_samples)
         %                     if mod(iSamp,2) == 0
         %                         temp_samples(iSamp) = -0.20;

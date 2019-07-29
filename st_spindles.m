@@ -69,7 +69,16 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 %                              (default 0)
 %  cfg.maxamplitude         = maximum absolute potential difference (i.e.
 %                               amplitude) to select as valid event (i.e.peak to peak or peak to trough)
-%                              (default 200)
+%                              (default 120)
+%  cfg.filterSDamp          = number of standard deviations to fiter for
+%                             amplitude within the range of +- those standard deviations around the
+%                             mean e.g. +-5 SD. This is applied after cfg.minamplitude and cfg.maxamplitude criterions applied already (default 5)
+%  cfg.filterSDdur          = number of standard deviations to fiter for
+%                             duration within the range of +- those standard deviations around the
+%                             mean e.g. +-5 SD. This is applied after cfg.minamplitude and cfg.maxamplitude criterions applied already (default 5)
+%  cfg.filterSDfreq         = number of standard deviations to fiter for
+%                             core frequency within the range of +- those standard deviations around the
+%                             mean e.g. +-5 SD. This is applied after cfg.minamplitude and cfg.maxamplitude criterions applied already (default 5)
 %  cfg.thresholdformbase    = gives the method in which the threshold is formed either 'mean' or 'std' (default = 'std')
 %  cfg.thresholdsignal      = what to use for threshold generation, either
 %                             'filtered_signal' or 'envelope' (default = 'filtered_signal')
@@ -123,6 +132,8 @@ memtic
 st = dbstack;
 functionname = st.name;
 
+fprintf([functionname ' function started\n']);
+
 if ~isfield(cfg, 'scoring')
     cfg.scoring = st_read_scoring(cfg);
 end
@@ -139,7 +150,10 @@ cfg.minduration  = ft_getopt(cfg, 'minduration', 0.5);
 cfg.maxduration  = ft_getopt(cfg, 'maxduration', 2.0);
 cfg.mergewithin  = ft_getopt(cfg, 'mergewithin', 0);
 cfg.minamplitude  = ft_getopt(cfg, 'minamplitude', 0);
-cfg.maxamplitude  = ft_getopt(cfg, 'maxamplitude', 200);
+cfg.maxamplitude  = ft_getopt(cfg, 'maxamplitude', 120);
+cfg.filterSDamp  = ft_getopt(cfg, 'filterSDamp', 5);
+cfg.filterSDdur  = ft_getopt(cfg, 'filterSDdur', 5);
+cfg.filterSDfreq  = ft_getopt(cfg, 'filterSDfreq', 5);
 cfg.downsamplefs     = ft_getopt(cfg, 'downsamplefs', 100);
 cfg.thresholdformbase  = ft_getopt(cfg, 'thresholdformbase', 'std');
 cfg.thresholdsignal  = ft_getopt(cfg, 'thresholdsignal', 'filtered_signal');
@@ -303,6 +317,9 @@ maxFreq = cfg.centerfrequency + postCenterFreqFilterTo_FpassRight;
 if ~(maxFreq*3 < fsample)
     error(['sample frequency of ' num2str(fsample) ' Hz must be MORE THAN three-fold (i.e. 3-fold) the maximal band frequency of ' num2str(maxBandFreq) ' Hz,\n even lower than requested by Nyquist-Shannon sample theorem.\n consider excludding higher frequency bands!'])
 end
+
+fprintf([functionname ' function initalized\n']);
+
 
 cfg_int = [];
 
@@ -995,9 +1012,25 @@ for iChan = 1:nChannels
     end
     
     fprintf('channel %s, select events\n',data.label{iChan});
-    tempIndexWithinThresholds = find((trl_detectedPeak2Peaks >= cfg.minamplitude) & (trl_detectedPeak2Peaks <= cfg.maxamplitude) & (trl_detectedEnvelopeMaxs >= thresholdForDetectionCriterion));
+    tempIndexWithinThresholds = (trl_detectedPeak2Peaks >= cfg.minamplitude) & (trl_detectedPeak2Peaks <= cfg.maxamplitude) & (trl_detectedEnvelopeMaxs >= thresholdForDetectionCriterion);
     
+    %filter events by SD of amplitude
+    std_ampl_filter = std(trl_detectedPeak2Peaks(tempIndexWithinThresholds));
+    mean_ampl_filter = mean(trl_detectedPeak2Peaks);
+    tempIndexWithinThresholds_filter_amp = (trl_detectedPeak2Peaks > (mean_ampl_filter + cfg.filterSDamp*std_ampl_filter)) | (trl_detectedPeak2Peaks < (mean_ampl_filter - cfg.filterSDamp*std_ampl_filter));
+
+    std_dur_filter = std(trl_detectedLengthSamples(tempIndexWithinThresholds));
+    mean_dur_filter = mean(trl_detectedLengthSamples);
+    tempIndexWithinThresholds_filter_dur = (trl_detectedLengthSamples > (mean_dur_filter + cfg.filterSDdur*std_dur_filter)) | (trl_detectedLengthSamples < (mean_dur_filter - cfg.filterSDdur*std_dur_filter));
+
+    std_freq_filter = std(trl_detected_linear_regression_freq_slope(tempIndexWithinThresholds));
+    mean_freq_filter = mean(trl_detected_linear_regression_freq_slope);
+    tempIndexWithinThresholds_filter_freq = (trl_detected_linear_regression_freq_slope > (mean_freq_filter + cfg.filterSDfreq*std_freq_filter)) | (trl_detected_linear_regression_freq_slope < (mean_freq_filter - cfg.filterSDfreq*std_freq_filter));
+
+    tempIndexWithinThresholds = tempIndexWithinThresholds & ~tempIndexWithinThresholds_filter_amp & ~tempIndexWithinThresholds_filter_dur & ~tempIndexWithinThresholds_filter_freq;
     
+
+    tempIndexWithinThresholds = find(tempIndexWithinThresholds);
     
     ch_detectedLengthSamples{iChan} = trl_detectedLengthSamples(tempIndexWithinThresholds);
     ch_detectedBeginSample{iChan} = trl_detectedBeginSample(tempIndexWithinThresholds);
@@ -1178,6 +1211,13 @@ hypnEpochsBeginsSamples = hypnEpochsEndsSamples - cfg.scoring.epochlength;
 hypnEpochsEndsSamples = hypnEpochsEndsSamples + cfg.scoring.dataoffset;
 hypnEpochsBeginsSamples = hypnEpochsBeginsSamples + cfg.scoring.dataoffset;
 
+
+
+% for iChan = 1:nChannels
+%     
+%     ch = data.label{iChan};
+%     
+% end
 
 
 for iChan = 1:nChannels
@@ -1428,7 +1468,7 @@ end
 data = [];%clear
 chData = [];%clear
 
-fprintf([functionname 'function finished\n']);
+fprintf([functionname ' function finished\n']);
 toc
 memtoc
 end

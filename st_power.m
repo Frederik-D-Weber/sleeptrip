@@ -89,6 +89,8 @@ tic
 memtic
 st = dbstack;
 functionname = st.name;
+fprintf([functionname ' function started\n']);
+
 
 if ~isfield(cfg, 'scoring')
     cfg.scoring = st_read_scoring(cfg);
@@ -225,7 +227,7 @@ NENBW = [];
 %NENBW.hamming = 1.3628;
 
 
-fprintf([functionname 'function initialized\n']);
+fprintf([functionname ' function initialized\n']);
 
 % signalMultiplicator = 1;
 % signalOffsetSamples = cfg.scoring.dataoffset*fsample;
@@ -697,7 +699,7 @@ pFreq = [];%clear
 
 
 
-fprintf([functionname 'function finished\n']);
+fprintf([functionname ' function finished\n']);
 toc
 memtoc
 end

@@ -1,10 +1,11 @@
-function [freqpeaks1 freqpeaks2] = st_freqpeak(cfg, res)
+function [res_freqpeaks] = st_freqpeak(cfg, res)
 
 % ST_FREQPEAK visaully determin peaks in the power spectrum
 %
 % Use as
-%   [freqpeaks1 freqpeaks2] = st_freqpeak(cfg, res)
-%   where res is a result structure obtained from ST_POWER of type power_full
+%   [res_freqpeaks] = st_freqpeak(cfg, res)
+%   where res is a result structure obtained from ST_POWER of type
+%   power_bin
 %
 % Required configuration parameters are:
 %   cfg.channel  = Nx1 cell-array with selection of channels (default = 'all'), see FT_CHANNELSELECTION
@@ -61,8 +62,8 @@ if ~isfield(res, 'type') || ~isfield(res, 'ori')
     ft_error('second argument is not a valid result structure.');
 end
 
-if ~(strcmp(res.ori, 'st_power') && strcmp(res.type, 'power_full'))
-    ft_error('provided result structure does not match origin of ''st_power'' and type ''power_full'' structure.');
+if ~(strcmp(res.ori, 'st_power') && strcmp(res.type, 'power_bin'))
+    ft_error('provided result structure does not match origin of ''st_power'' and type ''power_bin'' structure.');
 end
 
 hasResnum = false;
@@ -221,6 +222,16 @@ freqpeaks2(:) = NaN;
 if cfg.peaknum == 2
     freqpeaks2 = outputFreqPeaks(:,2);
 end
+
+res_freqpeaks = [];
+st = dbstack;
+res_freqpeaks.ori = st.name;
+res_freqpeaks.type = 'freqpeaks';
+res_freqpeaks.cfg = cfg;
+res_freqpeaks.table = table(...
+    freqpeaks1, ...
+    freqpeaks2, ...
+    'VariableNames',{'freqpeak1','freqpeak2'});
 
 fprintf('st_freqpeaks function finished\n');
 toc

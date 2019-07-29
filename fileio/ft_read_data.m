@@ -23,6 +23,7 @@ function [dat] = ft_read_data(filename, varargin)
 %   'fallback'       can be empty or 'biosig' (default = [])
 %   'blocking'       wait for the selected number of events (default = 'no')
 %   'timeout'        amount of time in seconds to wait when blocking (default = 5)
+%   'delcompr'       delete the compressed temporary files after non-use
 %
 % This function returns a 2-D matrix of size Nchans*Nsamples for continuous
 % data when begevent and endevent are specified, or a 3-D matrix of size
@@ -127,6 +128,9 @@ cache           = ft_getopt(varargin, 'cache', false);
 dataformat      = ft_getopt(varargin, 'dataformat');
 chanunit        = ft_getopt(varargin, 'chanunit');
 timestamp       = ft_getopt(varargin, 'timestamp');
+delcompr        = ft_getopt(varargin, 'delcompr', true);
+
+
 
 % this allows blocking reads to avoid having to poll many times for online processing
 blocking         = ft_getopt(varargin, 'blocking', false);  % true or false
@@ -1580,7 +1584,7 @@ elseif requestsamples && strcmp(dimord, 'chans_samples_trials')
   dat = dat(:,begselection2:endselection2);
 end
 
-if inflated
+if inflated && delcompr
   % compressed file has been unzipped on the fly, clean up
   if strcmp(dataformat, 'brainvision_eeg')
     % delete the complete directory, including the header and marker file

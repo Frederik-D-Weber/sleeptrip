@@ -36,7 +36,27 @@ tic
 memtic
 fprintf('st_append_res function started\n');
 
-nRes = nargin;
+% check if some are empty
+
+
+empty_res = [];
+iE = 0;
+for iArg = 1:nargin
+    if isempty(varargin{iArg})
+        iE = iE + 1;
+        empty_res(iE) = iArg;
+        ft_warning('Result number %d is empty and is thus ignored. Continous numbering is also ignoring this result',iArg)
+    end
+end
+
+if ~isempty(empty_res)
+    varargin(empty_res) = [];
+end
+
+
+
+
+nRes = numel(varargin);
 
 resIDs = cell(nargin,1);
 
@@ -50,13 +70,16 @@ anyAppended = false;
 
 for iRes = 1:nRes
     r = varargin{iRes};
-    if ~strcmp(r.ori, o) && ~strcmp(r.type, t)
-        ft_error('result of origin %s and type %s not compatible with result of origin %s and type %s',r.ori,r.type,o,t);
-    end
-    wasAppended = false;
-    if isfield(r,'appended')
-        wasAppended = r.appended;
-    end
+   % if ~isempty(r)
+        if ~strcmp(r.ori, o) && ~strcmp(r.type, t)
+            ft_error('result of origin %s and type %s not compatible with result of origin %s and type %s',r.ori,r.type,o,t);
+        end
+        wasAppended = false;
+        if isfield(r,'appended')
+            wasAppended = r.appended;
+        end
+   % end
+    
     anyAppended = anyAppended || wasAppended;
     allAppended = allAppended && wasAppended;
 end
@@ -69,6 +92,7 @@ iResnum = 1;
 restabs = cell(nRes,1);
 for iRes = 1:nRes
     r = varargin{iRes};
+    %if ~isempty(r)
     wasAppended = false;
     if isfield(r,'appended')
         wasAppended = r.appended;
@@ -87,8 +111,10 @@ for iRes = 1:nRes
         resIDs{iRes} = repmat(iResnum,size(r.table,1),1);
         iResnum = iResnum + 1;
     end
+    %end
     
     restabs{iRes} = r.table;
+    
 end
 
 resIDs = cat(1, resIDs{:});

@@ -654,7 +654,8 @@ else
       
       % read the raw data with padding on both sides of the trial - this
       % includes datapadding
-      dat = ft_read_data(cfg.datafile, 'header', hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', rawindx, 'checkboundary', strcmp(cfg.continuous, 'no'), 'dataformat', cfg.dataformat);
+      deleteTemporaryCompressedFiles = (i == ntrl) && (j == length(chnloop));
+      dat = ft_read_data(cfg.datafile, 'header', hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', rawindx, 'checkboundary', strcmp(cfg.continuous, 'no'), 'dataformat', cfg.dataformat, 'delcompr', deleteTemporaryCompressedFiles);
       
       % convert the data to another numeric precision, i.e. double, single or int32
       if ~isempty(cfg.precision)

@@ -1,4 +1,4 @@
-function [dat, label, time, cfg] = preproc(dat, label, time, cfg, begpadding, endpadding)
+function [dat, label, time, cfg] = preproc_fw(dat, label, time, cfg, begpadding, endpadding)
 
 % PREPROC applies various preprocessing steps on a piece of EEG/MEG data
 % that already has been read from a data file.
