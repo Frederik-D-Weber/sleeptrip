@@ -14,6 +14,7 @@ function [hdr] = ft_read_header(filename, varargin)
 %   'chanindx'       = list with channel indices in case of different sampling frequencies (only for EDF)
 %   'coordsys'       = string, 'head' or 'dewar' (default = 'head')
 %   'chantype'       = string or cell of strings, channel types to be read (NeuroOmega, BlackRock).
+%   'coilaccuracy'   = can be empty or a number (0, 1 or 2) to specify the accuracy (default = [])
 %
 % This returns a header structure with the following elements
 %   hdr.Fs                  sampling frequency
@@ -387,16 +388,27 @@ switch headerformat
     hdr.nTrials     = 1;
     hdr.label       = orig.label;
     
-  case 'biosig'
-    % this requires the biosig toolbox
-    ft_hastoolbox('BIOSIG', 1);
-    hdr = read_biosig_header(filename);
-    
-  case {'biosemi_bdf', 'bham_bdf'}
-    hdr = read_biosemi_bdf(filename);
-    if any(diff(hdr.orig.SampleRate))
-      ft_error('channels with different sampling rate not supported');
-    end
+    case 'biosig'
+        % this requires the biosig toolbox
+        ft_hastoolbox('BIOSIG', 1);
+        hdr = read_biosig_header(filename);
+        
+    case {'biosemi_bdf', 'bham_bdf'}
+        %     hdr = read_biosemi_bdf(filename);
+        %     if any(diff(hdr.orig.SampleRate))
+        %       ft_error('channels with different sampling rate not supported');
+        %     end
+        if isempty(chanindx)
+            hdr = read_edf(filename);
+        else
+            hdr = read_edf(filename,[],1);
+            if chanindx > hdr.orig.NS
+                error('FILEIO:InvalidChanIndx', 'selected channels are not present in the data');
+            else
+                hdr = read_edf(filename,[],chanindx);
+            end
+        end
+
     
     if ~ft_senstype(hdr, 'ext1020')
       % assign the channel type and units for the known channels

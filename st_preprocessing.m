@@ -273,7 +273,9 @@ end
 
 % data can be passed by the user, but might also have been loaded from cfg.inputfile
 hasdata = exist('data', 'var');
-
+if hasdata 
+    hasdata = hasdata && ~isempty(data);
+end
 if hasdata
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % do preprocessing of data that has already been read into memory
@@ -398,10 +400,10 @@ else
   cfg = ft_checkconfig(cfg, 'renamed',    {'datatype', 'continuous'});
   cfg = ft_checkconfig(cfg, 'renamedval', {'continuous', 'continuous', 'yes'});
   
-  % read the header
+  % read the header 
   hdr = ft_read_header(cfg.headerfile, 'headerformat', cfg.headerformat,...
     'coordsys', cfg.coordsys, 'coilaccuracy', cfg.coilaccuracy,...
-    'checkmaxfilter', istrue(cfg.checkmaxfilter), 'chantype', cfg.chantype);
+    'checkmaxfilter', istrue(cfg.checkmaxfilter), 'chantype', cfg.chantype, 'chanindx', chanindx);
   
   
 %    % ST BEGIN

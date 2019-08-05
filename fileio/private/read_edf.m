@@ -47,7 +47,8 @@ function [dat] = read_edf(filename, hdr, begsample, endsample, chanindx, rereadh
 %    hdr             header structure, see above
 % This returns an Nsamples data vector of just the annotation channel
 
-% Copyright (C) 2006, Robert Oostenveld and others
+% Copyright (C) 2006-2017, Robert Oostenveld
+% Adapted       2014-2019, Frederik Weber
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -97,7 +98,12 @@ if needhdr
   cname=computer;
   if cname(1:2)=='PC' SLASH=BSLASH; end
 
-  fid=fopen_or_error(FILENAME,'r','ieee-le');
+  try
+    fid=fopen_or_error(FILENAME,'r','ieee-le');
+  catch err
+    fprintf(2,['Error LOADEDF: File ' FILENAME ' not found\n']);
+    return;
+  end;
 
   EDF.FILE.FID=fid;
   EDF.FILE.OPEN = 1;
@@ -114,7 +120,7 @@ if needhdr
   end
   EDF.FileName = [EDF.FILE.Path SLASH EDF.FILE.Name '.' EDF.FILE.Ext];
 
-  H1=char(fread(EDF.FILE.FID,256,'char')');
+  H1=char(fread(EDF.FILE.FID,256,'char')');     %
   EDF.VERSION=H1(1:8);                          % 8 Byte  Versionsnummer
   %if 0 fprintf(2,'LOADEDF: WARNING  Version EDF Format %i',ver); end
   EDF.PID = deblank(H1(9:88));                  % 80 Byte local patient identification
@@ -259,7 +265,11 @@ if needhdr
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % convert the header to Fieldtrip-style
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if all(EDF.SampleRate(chanindx)==EDF.SampleRate(chanindx(1)))
+  allowed = any(EDF.SampleRate~=EDF.SampleRate(1))
+  if ~isempty(chanindx)
+    allowed = all(EDF.SampleRate(chanindx)==EDF.SampleRate(chanindx(1)))
+  end
+  if allowed
     chansel=chanindx;
     hdr.Fs           = EDF.SampleRate(chanindx(1));
     hdr.nChans       = length(chansel);
@@ -390,9 +400,14 @@ if needdat || needevt
   end
 
   % determine the trial containing the begin and end sample
+  epochlength = EDF.Dur * EDF.SampleRate(1);
   begepoch    = floor((begsample-1)/epochlength) + 1;
   endepoch    = floor((endsample-1)/epochlength) + 1;
   nepochs     = endepoch - begepoch + 1;
+  nchans      = EDF.NS;
+  if nargin<5
+    chanindx = 1:nchans;
+  end
 
   % allocate memory to hold the data
   dat = zeros(length(chanindx),nepochs*epochlength);
@@ -454,9 +469,9 @@ read_16bit_success = true;
 if is_below_2GB
   % use the external mex file, only works for <2GB
   try
-  buf = read_16bit(filename, offset, numwords);
+    buf = read_16bit(filename, offset, numwords);
   catch e
-      read_16bit_success = false;
+    read_16bit_success = false;
   end
 end
 if ~is_below_2GB || ~read_16bit_success

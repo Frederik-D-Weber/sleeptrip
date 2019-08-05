@@ -83,6 +83,7 @@ else % do auto scaling
     
     scaling_factor = (32767 + 32768 - 2)./(2*max(abs(maxV_temp), abs(minV_temp)));
     uV_accuracies = 1/scaling_factor;
+    uV_accuracy = min(uV_accuracies);
     for iCh = 1:size(data,1)
         data(iCh,:) = scaling_factor(iCh).*data(iCh,:);
     end
@@ -108,10 +109,32 @@ end
 maxV = double(max(data, [], 2));
 minV = double(min(data, [], 2));
 
-digMin = sprintf('%-8i', minV);
-digMax = sprintf('%-8i', maxV);
-physMin = sprintf('%-8i', int32(minV./scaling_factor));
-physMax = sprintf('%-8i', int32(maxV./scaling_factor));
+% the following lines avoid issue of not being able to open due to digital or
+% physical minimum and maximum being the same, e.g. in EDFbrowser
+
+digMin = minV;
+digMax = maxV;
+
+iDigMinEqMax = (digMin == digMax);
+if any(iDigMinEqMax)
+   digMin(iDigMinEqMax) = max(-32768, digMin(iDigMinEqMax) - 1);
+   digMax(iDigMinEqMax) = min(32767, digMax(iDigMinEqMax) + 1);
+end
+
+physMin = int32(digMin./scaling_factor);
+physMax = int32(digMax./scaling_factor);
+
+iPhysMinEqMax = (physMin == physMax);
+if any(iPhysMinEqMax)
+   physMin(iPhysMinEqMax) = physMin(iPhysMinEqMax) - 1;
+   physMax(iPhysMinEqMax) = physMax(iPhysMinEqMax) + 1;
+end
+
+digMin = sprintf('%-8i', digMin);
+digMax = sprintf('%-8i', digMax);
+physMin = sprintf('%-8i', physMin);
+physMax = sprintf('%-8i', physMax);
+
 
 fid = fopen(filename, 'wb', 'ieee-le');
 % first write fixed part

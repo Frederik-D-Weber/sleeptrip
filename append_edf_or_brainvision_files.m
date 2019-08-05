@@ -36,7 +36,7 @@ FileNamePostfixString = '_all_appended';
 
 %fieldtripPath = [mainSpiSOPPath '\fieldtrip_fw2016'];
 fieldtripPath = uigetdir(pwd,'choose sleeptrip path, e.g. D:\sleeptrip');
-external_codePath = [fieldtripPath 'external' filesep 'enhanced_rdir'];
+external_codePath = [fieldtripPath filesep 'external' filesep 'enhanced_rdir'];
 
 %folderPathWithFiles = 'B:\merge\merge';
 folderPathWithFiles = uigetdir(fieldtripPath,'choose the input folder, e.g. C:\...\input');
@@ -192,6 +192,9 @@ for k=1:length(edfFilePathAndNames)
     else
         data.trial{1} = [data.trial{1} data_temp.trial{1}];
         data.time{1} = 0:(1/data.fsample):(size(data.trial{1},2)/data.fsample);
+        if length(data.time{1}) == (1+length(data.trial{1}))
+            data.time{1} = data.time{1}(1:(end-1));
+        end
         data.sampleinfo = [1 size(data.trial{1},2)];
     end
     data_temp = [];
@@ -251,9 +254,13 @@ switch data_format_output
         hdr.edf_accuracy = 1;
         hdr.edf_docutoff = true;
 end
-
-data_file_name = [pathOutputFolder filesep oriDataFilename FileNamePostfixString oriDataExt];
-
+if strcmp(oriDataExt, '.zip')
+    data_file_name = [pathOutputFolder filesep oriDataFilename FileNamePostfixString oriDataExt];
+elseif strcmp(tempOutputDataformat, 'edf')
+    data_file_name = [pathOutputFolder filesep oriDataFilename FileNamePostfixString '.edf'];
+else
+    data_file_name = [pathOutputFolder filesep oriDataFilename FileNamePostfixString];
+end
 ft_write_data([data_file_name], data.trial{:},'dataformat',tempOutputDataformat,'header',hdr);
 
 close(w)

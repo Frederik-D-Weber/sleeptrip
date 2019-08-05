@@ -1,7 +1,21 @@
-function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx)
+function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx, rereadhdr)
 % READ_BIOSEMI_BDF reads specified samples from a BDF continuous datafile
 % It neglects all trial boundaries as if the data was acquired in
 % non-continuous mode.
+%
+% Note that since FieldTrip only accommodates a single sampling rate in a given
+% dataset, whereas BDF allows specification of a sampling rate for each channel.  If
+% there are heterogenous sampling rates then this function will automatically choose
+% a subset.  If the last such channel is different from the rest, the assumption will
+% be made that it is the annotation channel and the rest will be selected.  If that
+% is not the case, then the largest subset of channels with a consistent sampling
+% rate will be chosen.  To avoid this automatic selection process, the user may
+% specify their own choice of channels using chanindx.  In this case, the automatic
+% selection will only occur if the user selected channels still have heterogenous
+% sampling rates.  In this case the automatic selection will occur amongst the user
+% specified channels.  While reading the header the resulting channel selection
+% decision will be stored in hdr.orig.chansel and the contents of this field will
+% override chanindx during data reading.
 %
 % Use as
 %   [hdr] = read_biosemi_bdf(filename);
@@ -26,7 +40,15 @@ function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx)
 %    chanindx        index of channels to read (optional, default is all)
 % This returns a Nchans X Nsamples data matrix
 %
+% Or use as
+%   [evt] = read_edf(filename, hdr)
+% where
+%    filename        name of the datafile, including the .edf extension
+%    hdr             header structure, see above
+% This returns an Nsamples data vector of just the annotation channel
+
 % Copyright (C) 2006-2017, Robert Oostenveld
+% Adapted       2014-2019, Frederik Weber
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -55,11 +77,15 @@ switch nargin
   case 4
 end
 
-needhdr = (nargin==1)||(nargin==3);
-needevt = (nargin==2);
-needdat = (nargin==5);
+if nargin < 6
+    rereadhdr = false;
+end
 
-if nargin==1
+needhdr = (nargin==1)||(nargin==3)||rereadhdr;
+needevt = (nargin==2);
+needdat = (nargin>=5);
+
+if needhdr
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % read the header, this code is from EEGLAB's openbdf
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -91,12 +117,12 @@ if nargin==1
     EDF.FILE.Path = pwd;
   else
     EDF.FILE.Path = FILENAME(1:SPos-1);
-  end;
+  end
   EDF.FileName = [EDF.FILE.Path SLASH EDF.FILE.Name '.' EDF.FILE.Ext];
 
   H1=char(fread(EDF.FILE.FID,256,'char')');     %
   EDF.VERSION=H1(1:8);                          % 8 Byte  Versionsnummer
-  %if 0 fprintf(2,'LOADEDF: WARNING  Version EDF Format %i',ver); end;
+  %if 0 fprintf(2,'LOADEDF: WARNING  Version EDF Format %i',ver); end
   EDF.PID = deblank(H1(9:88));                  % 80 Byte local patient identification
   EDF.RID = deblank(H1(89:168));                % 80 Byte local recording identification
   %EDF.H.StartDate = H1(169:176);               % 8 Byte
@@ -109,25 +135,25 @@ if nargin==1
       EDF.T0(1)=2000+EDF.T0(1);
     else
       EDF.T0(1)=1900+EDF.T0(1);
-    end;
-  else ;
+    end
+  else
     % in a future version, this is hopefully not needed
-  end;
+  end
 
   EDF.HeadLen = str2num(H1(185:192));  % 8 Byte  Length of Header
   % reserved = H1(193:236);            % 44 Byte
   EDF.NRec = str2num(H1(237:244));     % 8 Byte  # of data records
-  EDF.Dur = str2num(H1(245:252));      % 8 Byte  # duration of data record in sec
-  EDF.NS = str2num(H1(253:256));       % 8 Byte  # of signals
-
-  EDF.Label = char(fread(EDF.FILE.FID,[16,EDF.NS],'char')');
+  EDF.Dur  = str2num(H1(245:252));     % 8 Byte  # duration of data record in sec
+  EDF.NS   = str2num(H1(253:256));     % 8 Byte  # of signals
+  
+  EDF.Label      = char(fread(EDF.FILE.FID,[16,EDF.NS],'char')');
   EDF.Transducer = char(fread(EDF.FILE.FID,[80,EDF.NS],'char')');
-  EDF.PhysDim = char(fread(EDF.FILE.FID,[8,EDF.NS],'char')');
-
-  EDF.PhysMin= str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.PhysMax= str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.DigMin = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.DigMax = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.PhysDim    = char(fread(EDF.FILE.FID,[ 8,EDF.NS],'char')');
+  
+  EDF.PhysMin = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.PhysMax = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.DigMin  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.DigMax  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
   
   % match physical and digital maximum numbers in case one erronously
   % exedes the maximum number of channels.
@@ -175,9 +201,9 @@ if nargin==1
 
   EDF.Cal = (EDF.PhysMax-EDF.PhysMin)./(EDF.DigMax-EDF.DigMin);
   EDF.Off = EDF.PhysMin - EDF.Cal .* EDF.DigMin;
-  tmp = find(EDF.Cal < 0);
-  EDF.Cal(tmp) = ones(size(tmp));
-  EDF.Off(tmp) = zeros(size(tmp));
+  %tmp = find(EDF.Cal < 0);
+  %EDF.Cal(tmp) = ones(size(tmp));
+  %EDF.Off(tmp) = zeros(size(tmp));
 
   % the following adresses https://github.com/fieldtrip/fieldtrip/pull/395
   tmp = find(strcmpi(cellstr(EDF.Label), 'STATUS'));
@@ -203,7 +229,7 @@ if nargin==1
     EDF.NRec = floor((endpos - EDF.FILE.POS) / (sum(EDF.SPR) * 2));
     fseek(EDF.FILE.FID, EDF.FILE.POS, 'bof');
     H1(237:244)=sprintf('%-8i',EDF.NRec);      % write number of records
-  end;
+  end
 
   EDF.Chan_Select=(EDF.SPR==max(EDF.SPR));
   for k=1:EDF.NS
@@ -211,7 +237,7 @@ if nargin==1
       EDF.ChanTyp(k)='N';
     else
       EDF.ChanTyp(k)=' ';
-    end;
+    end
     if contains(upper(EDF.Label(k,:)),'ECG')
       EDF.ChanTyp(k)='C';
     elseif contains(upper(EDF.Label(k,:)),'EKG')
@@ -222,8 +248,8 @@ if nargin==1
       EDF.ChanTyp(k)='O';
     elseif contains(upper(EDF.Label(k,:)),'EMG')
       EDF.ChanTyp(k)='M';
-    end;
-  end;
+    end
+  end
 
   if isempty(chanindx)
     chanindx=1:EDF.NS;
@@ -250,7 +276,11 @@ if nargin==1
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % convert the header to Fieldtrip-style
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if any(EDF.SampleRate~=EDF.SampleRate(1))
+  allowed = any(EDF.SampleRate~=EDF.SampleRate(1))
+  if ~isempty(chanindx)
+  	allowed = all(EDF.SampleRate(chanindx)==EDF.SampleRate(chanindx(1)))
+  end
+  if allowed
     chansel=chanindx;
     hdr.Fs           = EDF.SampleRate(chanindx(1));
     hdr.nChans       = length(chansel);
@@ -280,7 +310,7 @@ if nargin==1
     % continue with the subset of channels that has a consistent sampling frequency
     hdr.Fs           = EDF.SampleRate(chansel(1));
     hdr.nChans       = length(chansel);
-    warning('Skipping "%s" as continuous data channel because of inconsistent sampling frequency (%g Hz)', deblank(EDF.Label(end,:)), EDF.SampleRate(end));
+    ft_warning('Skipping "%s" as continuous data channel because of inconsistent sampling frequency (%g Hz)', deblank(EDF.Label(end,:)), EDF.SampleRate(end));
     hdr.label        = cellstr(EDF.Label(chansel,:));
     % it is continuous data, therefore append all records in one trial
     hdr.nSamples     = EDF.NRec * EDF.SPR(chansel(1));
@@ -315,23 +345,25 @@ if nargin==1
     hdr.orig.chansel    = chansel;
     hdr.orig.annotation = find(strcmp(cellstr(hdr.orig.Label), 'EDF Annotations'));
     
-    warning('channels with different sampling rate not supported, selecting subset of %d channels at %f Hz', length(hdr.label), hdr.Fs);
+    ft_warning('channels with different sampling rate not supported, selecting subset of %d channels at %f Hz', length(hdr.label), hdr.Fs);
   end
 
   % return the header
   dat = hdr;
 
-else
+end
+if needdat || needevt
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % read the data
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % retrieve the original header
-  EDF = hdr.orig;
+  if ~needhdr
+    EDF = hdr.orig;
+  end
 
-  
   % There can be an optional chansel field containing a list of predefined channels.
   % These channels are in that case also the only ones represented in the FieldTrip
-  % header, which means that teh other channels are simply not visible to the naive
+  % header, which means that the other channels are simply not visible to the naive
   % user. This field can be present because the user specified an explicit channel
   % selection in FT_READ_HEADER or because the read_edf function had to automatically
   % choose a subset to cope with heterogenous sampling rates or even both.  In any
@@ -395,7 +427,7 @@ else
   for i=begepoch:endepoch
     if useChanindx
       % only a subset of channels with consistent sampling frequency is read
-      offset = EDF.HeadLen + (i-1)*blocksize*2; % in bytes
+      offset = EDF.HeadLen + (i-1)*blocksize*3; % in bytes
       % read the complete data block
       buf = readLowLevel(filename, offset, blocksize); % see below in subfunction
       for j=1:length(chanindx)
@@ -405,15 +437,15 @@ else
       
     elseif length(chanindx)==1
       % this is more efficient if only one channel has to be read, e.g. the status channel
-      offset = EDF.HeadLen + (i-1)*blocksize*2; % in bytes
-      offset = offset + (chanindx-1)*epochlength*2;
+      offset = EDF.HeadLen + (i-1)*blocksize*3; % in bytes
+      offset = offset + (chanindx-1)*epochlength*3;
       % read the data for a single channel
       buf = readLowLevel(filename, offset, epochlength); % see below in subfunction
       dat(:,((i-begepoch)*epochlength+1):((i-begepoch+1)*epochlength)) = buf;
       
     else
       % read the data from all channels, subsequently select the desired channels
-      offset = EDF.HeadLen + (i-1)*blocksize*2; % in bytes
+      offset = EDF.HeadLen + (i-1)*blocksize*3; % in bytes
       % read the complete data block
       buf = readLowLevel(filename, offset, blocksize); % see below in subfunction
       buf = reshape(buf, epochlength, nchans);
@@ -443,18 +475,22 @@ end
 % SUBFUNCTION for reading the 24 bit values
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function buf = readLowLevel(filename, offset, numwords);
-if offset < 2*1024^3
+is_below_2GB = offset < 2*1024^3;
+read_24bit_success = true;
+if is_below_2GB
   % use the external mex file, only works for <2GB
-  buf = read_24bit(filename, offset, numwords);
-  % this would be the only difference between the bdf and edf implementation
-  % buf = read_16bit(filename, offset, numwords);
-else
+  try
+    buf = read_24bit(filename, offset, numwords);
+  catch e
+    read_24bit_success = false;
+  end
+end
+if ~is_below_2GB || ~read_24bit_success
   % use plain matlab, thanks to Philip van der Broek
   fp = fopen(filename,'r','ieee-le');
   status = fseek(fp, offset, 'bof');
   if status
     ft_error(['failed seeking ' filename]);
-
   end
   [buf,num] = fread(fp,numwords,'bit24=>double');
   fclose(fp);
