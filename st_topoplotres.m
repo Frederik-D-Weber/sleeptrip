@@ -7,6 +7,7 @@ function [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 %
 % Use as
 %   [cfg] = st_topoplotRes(cfg, res)
+%   [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 %
 % Required configuration parameters are:
 %   cfg.property      = string, with the columname/property in the result
@@ -194,9 +195,12 @@ if isfield(cfg,'maskproperty')
     data.mask = res.table.(cfg.maskproperty);
 end
 
-ft_topoplotER(cfg2,data);
+cfg2 = ft_topoplotER(cfg2,data);
 
-ch = colorbar;
+ch = [];
+if ~strcmp(cfg2.colorbar, 'no')
+    ch = colorbar;
+end
 fh = gcf;
 ah = gca;
 %cfg = cfg2;

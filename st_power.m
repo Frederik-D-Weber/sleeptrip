@@ -342,7 +342,7 @@ if hasdata
     if isempty(data_t.trial)
         hasROIs = false;
         % read in dummy data
-        cfg_int.trl = [1 round(cfg.segmentlength*fsample) 0];
+        cfg_int.trl = [1 round(cfg.segmentlength*fsample)+1 0];
         data = st_preprocessing(cfg_int, data); 
 %         data.time = {};
 %         data.trial = {};
@@ -358,7 +358,7 @@ else
     if isempty(cfg_int.trl) 
         hasROIs = false;
         % read in dummy data
-        cfg_int.trl = [1 round(cfg.segmentlength*fsample) 0];
+        cfg_int.trl = [1 round(cfg.segmentlength*fsample)+1 0];
         data = st_preprocessing(cfg_int); 
 %         data.time = {};
 %         data.trial = {};
@@ -385,12 +385,13 @@ fsample = data.fsample;
 
 trlSampleLengths = cellfun(@numel, data.time)';
 
-cfg_int = [];
-cfg_int.length    = cfg.segmentlength;%single number (in unit of time, typically seconds) of the required snippets
-cfg_int.overlap   = cfg.segmentoverlap;%single number (between 0 and 1 (exclusive)) specifying the fraction of overlap between snippets (0 = no overlap)
-cfg_int.feedback = core_cfg.feedback;
-data = ft_redefinetrial(cfg_int,data);
-
+%if hasROIs
+    cfg_int = [];
+    cfg_int.length    = cfg.segmentlength;%single number (in unit of time, typically seconds) of the required snippets
+    cfg_int.overlap   = cfg.segmentoverlap;%single number (between 0 and 1 (exclusive)) specifying the fraction of overlap between snippets (0 = no overlap)
+    cfg_int.feedback = core_cfg.feedback;
+    data = ft_redefinetrial(cfg_int,data);
+%end
 
 NSegments = length(data.time);
 
@@ -401,6 +402,7 @@ else
     NSegments = 0;
     NSamplesPerSegment = round(cfg.segmentlength*data.fsample);
     NconsecutiveROIs = 0;
+    trlSampleLengths = 0;
 end
 sampleLengthsAcrossROIs = sum(trlSampleLengths);
 lengthsAcrossROIsSeconds = sampleLengthsAcrossROIs/fsample; % in seconds
