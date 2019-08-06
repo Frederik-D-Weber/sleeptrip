@@ -145,18 +145,33 @@ REMind = find(strcmp(hypnStages(:,1),'R'));
 
 if ~isempty(N1ind)
     N1OnsetTime = (min(N1ind(N1ind >= onsetCandidate)) - onsetCandidate)*scoring.epochlength;
+    if isempty(N1OnsetTime)
+        N1OnsetTime = NaN;
+    end
 end
 if ~isempty(N2ind)
     N2OnsetTime = (min(N2ind(N2ind >= onsetCandidate)) - onsetCandidate)*scoring.epochlength;
+    if isempty(N2OnsetTime)
+        N2OnsetTime = NaN;
+    end
 end
 if ~isempty(SWSind)
     SWSonsetTime = (min(SWSind(SWSind >= onsetCandidate)) - onsetCandidate)*scoring.epochlength;
+    if isempty(SWSind)
+        SWSind = NaN;
+    end
 end
 if ~isempty(S4ind)
     S4onsetTime = (min(S4ind(S4ind >= onsetCandidate)) - onsetCandidate)*scoring.epochlength;
+    if isempty(S4onsetTime)
+        S4onsetTime = NaN;
+    end
 end
 if ~isempty(REMind)
     REMonsetTime = (min(REMind(REMind >= onsetCandidate)) - onsetCandidate)*scoring.epochlength;
+    if isempty(REMonsetTime)
+        REMonsetTime = NaN;
+    end
 end
 
 preOnsetCandidate = onsetCandidate;
