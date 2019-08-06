@@ -1,4 +1,4 @@
-function [cfg, fh, ah, ch, res] = st_topoplotRes(cfg, res)
+function [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 
 % ST_TOPOPLOTRES plots the topographic distribution over the head
 % of a 2-dimensional property (column of a table in the) result structure as
