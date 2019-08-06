@@ -333,7 +333,7 @@ if isfield(cfg,'plotexcluded')
     end
 end
 
-xlim(axh,[0 (max([max(x_time),cfg.timemin,eventTimeMaxSeconds/60]))]);
+xlim(axh,[0 (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))]);
 ylabel(axh,'Stages');
 ylim(axh,[temp_min_y temp_max_y])
 

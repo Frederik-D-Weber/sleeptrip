@@ -276,9 +276,9 @@ if needhdr
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % convert the header to Fieldtrip-style
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  allowed = any(EDF.SampleRate~=EDF.SampleRate(1))
+  allowed = any(EDF.SampleRate~=EDF.SampleRate(1));
   if ~isempty(chanindx)
-  	allowed = all(EDF.SampleRate(chanindx)==EDF.SampleRate(chanindx(1)))
+  	allowed = all(EDF.SampleRate(chanindx)==EDF.SampleRate(chanindx(1)));
   end
   if allowed
     chansel=chanindx;
