@@ -1,4 +1,4 @@
-function [cfg] = st_select_scoring(cfg, data)
+function [cfg ends] = st_select_scoring(cfg, data)
 
 % ST_SELECT_SCORING selects trials of sleep stages and returns them in a
 % "trl" structure like FT_DEFINETRIAL
@@ -7,6 +7,7 @@ function [cfg] = st_select_scoring(cfg, data)
 % Use as
 %   [data] = st_select_scoring(cfg, data)
 %   [cfg]  = st_select_scoring(cfg)
+%   [begins ends] = st_select_scoring(cfg, data)
 %
 %  with the necessary parameters for the configuration
 %   cfg.scoring  = a scoring structure as defined in ST_READ_SCORING
@@ -16,6 +17,7 @@ function [cfg] = st_select_scoring(cfg, data)
 %
 %  if no data structure is provided as parameter then you need to define
 %   cfg.dataset  = string with the filename
+% 
 %
 % See also ST_READ_SCORING, ST_PREPROCESSING, FT_DEFINETRIAL
 
@@ -60,7 +62,7 @@ if nargin > 1
     data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'hassampleinfo', 'yes');
     if isfield(data, 'trial') && isfield(data, 'time')
         % check if data structure is likely continous data
-        if (numel(data.trial) ~= 1) || ~all(size(data.sampleinfo) == [1 2])
+        if ((numel(data.trial) ~= 1) || ~all(size(data.sampleinfo) == [1 2])) && ~(nargout > 1)
             ft_error('data structure does not look like continous data and has more than one trial')
         end
     end
@@ -82,12 +84,14 @@ excluded = cfg.scoring.excluded;
 epochLengthSamples = cfg.scoring.epochlength*fsample;
 offsetSamples = cfg.scoring.dataoffset*fsample;
 
-nPossibleEpochsInData = floor((nSamplesInData-offsetSamples)/epochLengthSamples);
-nEpochsInScoring = numel(epochs);
-if (nEpochsInScoring > nPossibleEpochsInData)
-    epochs = epochs(1:nPossibleEpochsInData);
-    excluded = excluded(1:nPossibleEpochsInData);
-    ft_warning('only %d epochs possible in data with epoch length of %d and scoring offset of %f seconds \nbut scoring has %d epochs.\nPlease check if scoring matches to the data.\nScoring was shortened to fit data, and some epochs were discarded.',nPossibleEpochsInData,cfg.scoring.epochlength,cfg.scoring.dataoffset,nEpochsInScoring);
+if nargout <= 1
+    nPossibleEpochsInData = floor((nSamplesInData-offsetSamples)/epochLengthSamples);
+    nEpochsInScoring = numel(epochs);
+    if (nEpochsInScoring > nPossibleEpochsInData)
+        epochs = epochs(1:nPossibleEpochsInData);
+        excluded = excluded(1:nPossibleEpochsInData);
+        ft_warning('only %d epochs possible in data with epoch length of %d and scoring offset of %f seconds \nbut scoring has %d epochs.\nPlease check if scoring matches to the data.\nScoring was shortened to fit data, and some epochs were discarded.',nPossibleEpochsInData,cfg.scoring.epochlength,cfg.scoring.dataoffset,nEpochsInScoring);
+    end
 end
 
 hypnEpochs = 1:numel(epochs);
@@ -115,7 +119,16 @@ if isempty(cfg.trl)
     ft_warning('requested sleep stages are not present in the scoring, will return empty trials.');
 end
 
+ends = [];
 if hasdata
+    if nargout > 1
+        if ~isempty(cfg.trl)
+            ends = cfg.trl(:,2)/data.fsample;
+            cfg = cfg.trl(:,1)/data.fsample; % cfg = begins
+        else
+            cfg = [];
+        end
+    else
     if isempty(cfg.trl)
         data.time = {};
         data.trial = {};
@@ -123,8 +136,7 @@ if hasdata
     else
         data = ft_redefinetrial(cfg, data);
     end
-    cfg = data;
+        %FIXME set data.cfg.prev
+        cfg = data;
+    end
 end
-
-
-

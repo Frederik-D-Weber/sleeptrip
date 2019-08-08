@@ -271,27 +271,29 @@ if isfield(cfg, 'eventtimes')
     nEvents = numel(cfg.eventtimes);
     tempcolors = lines(nEvents);
     for iEventTypes = 1:nEvents
-        offset_event_y = offset_event_y + offset_step;
         currEvents = cfg.eventtimes{iEventTypes};
-        currEventLabel = cfg.eventlabels{iEventTypes};
-        
-        yTick = [offset_event_y yTick];
-        yTickLabel = {currEventLabel yTickLabel{:}};
-        
-        color = tempcolors(iEventTypes,:);
-        eventTimeMaxSeconds = max([eventTimeMaxSeconds currEvents]);
-        temp_x = (currEvents/60)';
-        temp_y = repmat(offset_event_y,numel(currEvents),1);
-        if isfield(cfg, 'eventvalues')
-            currEventValues = cfg.eventvalues{iEventTypes};
-            currEventRanges = cfg.eventranges{iEventTypes};
-            event_scale = fw_normalize(currEventValues, min(currEventRanges),  max(currEventRanges), 0.1, 1)';
-            text(max(temp_x)+1,temp_y(1),['[' num2str(min(currEventRanges)) ' ' num2str(max(currEventRanges)) ']']);
-        else
-        	event_scale = 1;
+        if ~isempty(currEvents)
+            offset_event_y = offset_event_y + offset_step;
+            currEventLabel = cfg.eventlabels{iEventTypes};
+            
+            yTick = [offset_event_y yTick];
+            yTickLabel = {currEventLabel yTickLabel{:}};
+            
+            color = tempcolors(iEventTypes,:);
+            eventTimeMaxSeconds = max([eventTimeMaxSeconds currEvents]);
+            temp_x = (currEvents/60)';
+            temp_y = repmat(offset_event_y,numel(currEvents),1);
+            if isfield(cfg, 'eventvalues')
+                currEventValues = cfg.eventvalues{iEventTypes};
+                currEventRanges = cfg.eventranges{iEventTypes};
+                event_scale = fw_normalize(currEventValues, min(currEventRanges),  max(currEventRanges), 0.1, 1)';
+                text(max(temp_x)+1,temp_y(1),['[' num2str(min(currEventRanges)) ' ' num2str(max(currEventRanges)) ']']);
+            else
+                event_scale = 1;
+            end
+            temp_plot_y = [temp_y-(eventHeight*event_scale)/2 temp_y+(eventHeight*event_scale)/2]';
+            plot(axh,[temp_x temp_x]',temp_plot_y,'Color',color)
         end
-        temp_plot_y = [temp_y-(eventHeight*event_scale)/2 temp_y+(eventHeight*event_scale)/2]';
-        plot(axh,[temp_x temp_x]',temp_plot_y,'Color',color)
     end
 end
 

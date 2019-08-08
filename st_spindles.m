@@ -4,8 +4,8 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 % results are stored it in a result structure
 %
 % Use as
-%   [res_channel res_events] = st_spindles(cfg)
-%   [res_channel res_events] = st_spindles(cfg, data)
+%   [res_channel, res_event, res_filter] = st_spindles(cfg)
+%   [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 %
 % Required configuration parameters are:
 %   cfg.scoring         = structure provided by ST_READ_SCORING
@@ -32,6 +32,10 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 %                            provide this parameter, possible stages are a subset of
 %                            {'W', 'N1', 'N2', 'N3', 'S4', 'R'}
 %                            (default = {'N2', 'N3', 'S4'} as the stages in which spindles typically appear)
+%  cfg.thresholdstages    = either a string or a Nx1 cell-array with
+%                            strings that indicate sleep stages to detemine the
+%                            thresholds on. This must be a subset of cfg.stages 
+%                            (default = cfg.stages)
 %  cfg.leftofcenterfreq   = scalar, left of of the center frequency of the spindles in Hz,
 %                            see cfg.rightofcenterfreq (default = 1)
 %  cfg.rightofcenterfreq  = scalar, right of of the center frequency of the spindles in Hz,
@@ -90,6 +94,8 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 %                             then cfg.factorthresholdbeginend and
 %                             cfg.factorthresholdcriterion do not apply to those
 %                             thresholds and are ignored.
+%   cfg.downsamplefs        = downsample the data to this frequency in Hz before doing the anlysis (default = 100)
+
 %
 % Some additional parameters from FT_PREPROCESSING can also be included
 % including the reprocessing options that you can only use for EEG data are:
@@ -141,6 +147,7 @@ end
 % set defaults
 cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
 cfg.stages  = ft_getopt(cfg, 'stages', {'N2', 'N3', 'S4'});
+cfg.thresholdstages  = ft_getopt(cfg, 'thresholdstages', cfg.stages);
 cfg.leftofcenterfreq  = ft_getopt(cfg, 'leftofcenterfreq', 1);
 cfg.rightofcenterfreq  = ft_getopt(cfg, 'rightofcenterfreq', 1);
 cfg.thresholdaggmeth  = ft_getopt(cfg, 'thresholdaggmeth', 'respectivechan');
@@ -186,7 +193,10 @@ if isfield(cfg, 'envelopethresholds')
 end
 
 
-
+if ~all(ismember(cfg.thresholdstages, cfg.stages))
+	ft_error(['cfg.thresholdstages must be a subset of cfg.stages'])
+end
+thresholdingInDifferentStages = ~all(strcmp(cfg.stages,cfg.thresholdstages));
 
 hasdata = false;
 if nargin > 1
@@ -315,7 +325,7 @@ minFreq = cfg.centerfrequency - preCenterFreqFilterTo_FpassLeft;
 maxFreq = cfg.centerfrequency + postCenterFreqFilterTo_FpassRight;
 
 if ~(maxFreq*3 < fsample)
-    error(['sample frequency of ' num2str(fsample) ' Hz must be MORE THAN three-fold (i.e. 3-fold) the maximal band frequency of ' num2str(maxBandFreq) ' Hz,\n even lower than requested by Nyquist-Shannon sample theorem.\n consider excludding higher frequency bands!'])
+    error(['sample frequency of ' num2str(fsample) ' Hz must be MORE THAN three-fold (i.e. 3-fold) the maximal band frequency of ' num2str(maxFreq) ' Hz,\n even lower than requested by Nyquist-Shannon sample theorem.\n consider excludding higher frequency bands!'])
 end
 
 fprintf([functionname ' function initalized\n']);
@@ -385,11 +395,14 @@ cfg_int.stages   = cfg.stages;
 cfg_int.scoring  = cfg.scoring;
 
 hasROIs = true;
+hasROIs_threshold = true;
+
 
 if hasdata
     data_t = st_select_scoring(cfg_int, data);
     if isempty(data_t.trial)
         hasROIs = false;
+        hasROIs_threshold = false;
         % read in dummy data
         cfg_int.trl = [1 round(fsample*60) 0];
         data = st_preprocessing(cfg_int, data);
@@ -406,6 +419,8 @@ else
     cfg_int.continuous   = 'yes';
     if isempty(cfg_int.trl)
         hasROIs = false;
+        hasROIs_threshold = false;
+
         % read in dummy data
         cfg_int.trl = [1 round(fsample*60) 0];
         data = st_preprocessing(cfg_int);
@@ -416,6 +431,12 @@ else
         data = st_preprocessing(cfg_int);
     end
     
+end
+
+if ~hasROIs
+    for iT = 1:numel(data.trial)
+        data.trial{iT}(:) = NaN;
+    end
 end
 
 
@@ -538,6 +559,8 @@ else
 end
 
 
+nChannels = length(data.label);
+
 SDfrqBndPssSignal = [];
 if ~strcmp(UseAbsoluteEnvelopeThreshold,'yes')
     
@@ -551,31 +574,69 @@ if ~strcmp(UseAbsoluteEnvelopeThreshold,'yes')
         end
     end;
     
+    if thresholdingInDifferentStages && hasROIs_threshold
+        cfg_int = [];
+        cfg_int.stages   = cfg.thresholdstages;
+        cfg_int.scoring  = cfg.scoring;
+        [begins, ends]   = st_select_scoring(cfg_int, data);
+        if isempty(begins)
+            hasROIs_threshold = false;
+            ft_warning('cfg.thresholdstages not present in the data! This will result in no detection')
+        end
+        
+        if ~hasROIs_threshold
+            for iT = 1:numel(data.trial)
+                data.trial{iT}(:) = NaN;
+            end
+        end
+        
+        tempAllDataValuesTimes = [];
+        for iTr = 1:size(data.trial,2)
+                tempAllDataValuesTimes = cat(2,tempAllDataValuesTimes,data.time{iTr});
+        end
+        
+        indInStage = repmat(false,1,size(tempAllDataValues,2));
+        for iBegins = 1:numel(begins)
+            indInStage = indInStage | ((begins(iBegins) >= tempAllDataValuesTimes) & (tempAllDataValuesTimes <= ends(iBegins)));
+        end
+        
+        tempAllDataValues = tempAllDataValues(:,indInStage);
+        indInStage = [];
+        tempAllDataValuesTimes = [];
+        
+    end
+    
     if strcmp(cfg.thresholdsignal,'filtered_signal')
     elseif strcmp(cfg.thresholdsignal,'envelope')
         for iChan_temp = 1:size(tempAllDataValues,1)
+            iNaN = isnan(tempAllDataValues(iChan_temp,:));
+            tempAllDataValues(iChan_temp,iNaN) = 0;
             tempAllDataValues(iChan_temp,:) = abs(hilbert(tempAllDataValues(iChan_temp,:)));
+            tempAllDataValues(iChan_temp,iNaN) = NaN;
         end
     end
     
     
     if strcmp('meanoverchan',cfg.thresholdaggmeth)
         if strcmp(cfg.thresholdformbase,'mean')
-            SDfrqBndPssSignal = mean(mean(tempAllDataValues,2));
+            SDfrqBndPssSignal = nanmean(nanmean(tempAllDataValues,2));
         elseif strcmp(cfg.thresholdformbase,'std')
-            SDfrqBndPssSignal = mean(std(tempAllDataValues,0,2));
+            SDfrqBndPssSignal = nanmean(nanstd(tempAllDataValues,0,2));
         end
     elseif strcmp('valuesoverchan',cfg.thresholdaggmeth)
         if strcmp(cfg.thresholdformbase,'mean')
-            SDfrqBndPssSignal = mean(tempAllDataValues(:));
+            SDfrqBndPssSignal = nanmean(tempAllDataValues(:));
         elseif strcmp(cfg.thresholdformbase,'std')
-            SDfrqBndPssSignal = std(tempAllDataValues(:));
+            SDfrqBndPssSignal = nanstd(tempAllDataValues(:));
         end
     elseif strcmp('respectivechan',cfg.thresholdaggmeth)
         if strcmp(cfg.thresholdformbase,'mean')
-            SDfrqBndPssSignal = mean(tempAllDataValues,2);
+            SDfrqBndPssSignal = nanmean(tempAllDataValues,2);
         elseif strcmp(cfg.thresholdformbase,'std')
-            SDfrqBndPssSignal = std(tempAllDataValues,0,2);
+            SDfrqBndPssSignal = nanstd(tempAllDataValues,0,2);
+        end
+        if (1 == numel(SDfrqBndPssSignal)) && any(isnan(SDfrqBndPssSignal))
+           SDfrqBndPssSignal = repmat(NaN,nChannels,1);   
         end
     else
         error('cfg.thresholdaggmeth for calculating mean or standard deviation over channels is unknown');
@@ -589,10 +650,11 @@ dataset_factorThresholdCriterion = factorThresholdCriterion;
 
 
 
-nChannels = length(data.label);
 
 maxPeaksOrTroughsPerSpindle = ceil(maxFreq*cfg.maxduration+1);
 
+
+%cell(1,nChannels)
 ch_detectedLengthSamples = [];
 ch_detectedBeginSample = [];
 ch_detectedEndSample = [];
@@ -621,6 +683,7 @@ ch_detectedPeaksPotential = [];
 
 ch_contigSegment = [];
 
+%if hasROIs && hasROIs_threshold
 for iChan = 1:nChannels
     %iChan = 1;
     
@@ -672,7 +735,12 @@ for iChan = 1:nChannels
         fprintf('channel %s, subpart %i, preselect events in envelope\n',data.label{iChan},iTr);
         
         frqBndPssSignal = chData.trial{iTr};
-        frqBndPssSignal_hilbert = hilbert(frqBndPssSignal);
+        
+        frqBndPssSignal_hilbert = frqBndPssSignal;
+        iNaN = isnan(frqBndPssSignal_hilbert);
+        frqBndPssSignal_hilbert(iNaN) = 0;
+        frqBndPssSignal_hilbert = hilbert(frqBndPssSignal_hilbert);
+        frqBndPssSignal_hilbert(iNaN) = NaN;
         
         thresholdForDetectionBeginEnd = ch_SDfrqBndPssSignal{iChan}*dataset_factorThresholdBeginEnd;
         thresholdForDetectionCriterion = ch_SDfrqBndPssSignal{iChan}*dataset_factorThresholdCriterion;
@@ -685,7 +753,7 @@ for iChan = 1:nChannels
         elseif strcmp(cfg.envelopemeth,'smoothedRMSwd')
             envelope = smoothRMSwd(frqBndPssSignal,smplsRMSTimeWndw);
             if exist('smooth','file') == 2
-                envelope = smooth(envelope,smplsMovAvgTimeWndw);
+                envelope = smooth(envelope,smplsMovAvgTimeWndw,'moving');
             else
                 envelope = smoothwd(envelope,smplsMovAvgTimeWndw)';
             end
@@ -944,7 +1012,7 @@ for iChan = 1:nChannels
                 detectedTroughsSamples(iIterCand) = candSignalminSample;
                 detectedSignalTroughsSamples(iIterCand,1:nCandSignalTroughs) = candSignalTroughsSamples;
                 detectedSignalPeaksSamples(iIterCand,1:nCandSignalPeaks) = candSignalPeaksSamples;
-                detectedSDofFilteredSignal(iIterCand) = std(candSignal);
+                detectedSDofFilteredSignal(iIterCand) = nanstd(candSignal);
                 
                 detectedEnvelopeMaxs(iIterCand) = candSignalEnvelopemax;
                 detectedEnvelopeMaxSamples(iIterCand) = candSignalEnvelopemaxSample;
@@ -1015,16 +1083,16 @@ for iChan = 1:nChannels
     tempIndexWithinThresholds = (trl_detectedPeak2Peaks >= cfg.minamplitude) & (trl_detectedPeak2Peaks <= cfg.maxamplitude) & (trl_detectedEnvelopeMaxs >= thresholdForDetectionCriterion);
     
     %filter events by SD of amplitude
-    std_ampl_filter = std(trl_detectedPeak2Peaks(tempIndexWithinThresholds));
-    mean_ampl_filter = mean(trl_detectedPeak2Peaks);
+    std_ampl_filter = nanstd(trl_detectedPeak2Peaks(tempIndexWithinThresholds));
+    mean_ampl_filter = nanmean(trl_detectedPeak2Peaks);
     tempIndexWithinThresholds_filter_amp = (trl_detectedPeak2Peaks > (mean_ampl_filter + cfg.filterSDamp*std_ampl_filter)) | (trl_detectedPeak2Peaks < (mean_ampl_filter - cfg.filterSDamp*std_ampl_filter));
 
-    std_dur_filter = std(trl_detectedLengthSamples(tempIndexWithinThresholds));
-    mean_dur_filter = mean(trl_detectedLengthSamples);
+    std_dur_filter = nanstd(trl_detectedLengthSamples(tempIndexWithinThresholds));
+    mean_dur_filter = nanmean(trl_detectedLengthSamples);
     tempIndexWithinThresholds_filter_dur = (trl_detectedLengthSamples > (mean_dur_filter + cfg.filterSDdur*std_dur_filter)) | (trl_detectedLengthSamples < (mean_dur_filter - cfg.filterSDdur*std_dur_filter));
 
-    std_freq_filter = std(trl_detected_linear_regression_freq_slope(tempIndexWithinThresholds));
-    mean_freq_filter = mean(trl_detected_linear_regression_freq_slope);
+    std_freq_filter = nanstd(trl_detected_linear_regression_freq_slope(tempIndexWithinThresholds));
+    mean_freq_filter = nanmean(trl_detected_linear_regression_freq_slope);
     tempIndexWithinThresholds_filter_freq = (trl_detected_linear_regression_freq_slope > (mean_freq_filter + cfg.filterSDfreq*std_freq_filter)) | (trl_detected_linear_regression_freq_slope < (mean_freq_filter - cfg.filterSDfreq*std_freq_filter));
 
     tempIndexWithinThresholds = tempIndexWithinThresholds & ~tempIndexWithinThresholds_filter_amp & ~tempIndexWithinThresholds_filter_dur & ~tempIndexWithinThresholds_filter_freq;
@@ -1060,7 +1128,7 @@ for iChan = 1:nChannels
     
     ch_contigSegment{iChan} = trl_contigSegment(tempIndexWithinThresholds);
 end
-
+%end
 fprintf('write results\n');
 
 if PreDownSampleHighPassFilter_FpassLeft_or_F3dBcutoff == 0
@@ -1179,7 +1247,7 @@ for iChan = 1:nChannels
     indEv{iChan} = iStart:iEnd;
 end
 
-output = cell(nRowsEv,25);
+output = cell(nRowsEv,28);
 
 chs = cell(nRowsCh,1);
 % ch_nDetected
@@ -1192,6 +1260,8 @@ epochlengths = repmat(cfg.scoring.epochlength,nRowsCh,1);
 % ch_nMerged
 lengthsAcrossROIsSecondss = repmat(lengthsAcrossROIsSeconds,nRowsCh,1);
 % ch_SDfrqBndPssSignal
+
+
 dataset_factorThresholdBeginEnds = repmat(dataset_factorThresholdBeginEnd,nRowsCh,1);
 dataset_factorThresholdCriterions = repmat(dataset_factorThresholdCriterion,nRowsCh,1);
 minFreqs = repmat(minFreq,nRowsCh,1);
@@ -1240,23 +1310,23 @@ for iChan = 1:nChannels
     end;
     
     chs{iChan} = ch;
-    tempLengthMeanSeconds = mean(ch_detectedLengthSamples{iChan}');
-    ch_detectedLengthSampless(iChan) = mean(ch_detectedLengthSamples{iChan}');
+    tempLengthMeanSeconds = nanmean(ch_detectedLengthSamples{iChan}');
+    ch_detectedLengthSampless(iChan) = nanmean(ch_detectedLengthSamples{iChan}');
     
-    ch_detectedPeak2Peakss(iChan) = mean(ch_detectedPeak2Peaks{iChan});
+    ch_detectedPeak2Peakss(iChan) = nanmean(ch_detectedPeak2Peaks{iChan});
     tempNtroughsMean = (length(find(~isnan(ch_detectedSignalTroughsSamples{iChan}))))/size(ch_detectedSignalTroughsSamples{iChan},1);
     tempNpeaksMean = (length(find(~isnan(ch_detectedSignalPeaksSamples{iChan}))))/size(ch_detectedSignalPeaksSamples{iChan},1);
     ch_freqbypeaks(iChan) = ((tempNtroughsMean + tempNpeaksMean)/2)/tempLengthMeanSeconds;
     
-    ch_detectedSDofFilteredSignals(iChan) = mean(ch_detectedSDofFilteredSignal{iChan});
+    ch_detectedSDofFilteredSignals(iChan) = nanmean(ch_detectedSDofFilteredSignal{iChan});
     
     tempNtroughsMeans(iChan) = tempNtroughsMean;
     tempNpeaksMeans(iChan) = tempNpeaksMean;
 
     
-    ch_detected_linear_regression_freq_slopes(iChan) = mean(ch_detected_linear_regression_freq_slope{iChan});
-    ch_detected_linear_regression_freq_offsets(iChan) = mean(ch_detected_linear_regression_freq_offset{iChan});
-    ch_detected_linear_regression_freq_R_squareds(iChan) = mean(ch_detected_linear_regression_freq_R_squared{iChan});
+    ch_detected_linear_regression_freq_slopes(iChan) = nanmean(ch_detected_linear_regression_freq_slope{iChan});
+    ch_detected_linear_regression_freq_offsets(iChan) = nanmean(ch_detected_linear_regression_freq_offset{iChan});
+    ch_detected_linear_regression_freq_R_squareds(iChan) = nanmean(ch_detected_linear_regression_freq_R_squared{iChan});
 
     
     
@@ -1323,6 +1393,8 @@ for iChan = 1:nChannels
         output(indEv{iChan},25) = num2cell(tempNTroughs);
         output(indEv{iChan},26) = num2cell(tempNPeaks);
         output(indEv{iChan},27) = num2cell(ch_detectedEnvelopeMaxSamples{iChan});
+        output(indEv{iChan},28) = cellstr(repmat(strjoin(cfg.thresholdstages,' '), ch_nDetected{iChan}, 1));
+
 
 
 
@@ -1412,28 +1484,28 @@ tempvarnames = {...
     'channel',...
     'count','density_per_epoch','mean_duration_seconds','mean_amplitude_trough2peak_potential',...
     'mean_frequency_by_mean_pk_trgh_cnt_per_dur','epoch_length_seconds','merged_count','lengths_ROI_seconds',...
-    'used_threshold_basis',...
+    'used_stages_for_detection','used_stages_for_thresholds','used_threshold_basis',...
     'used_factor_for_threshold_basis_begin_end','used_factor_for_threshold_basis_criterion',...
     'used_min_detection_pass_or_cutoff_freq','used_max_detection_pass_or_cutoff_freq',...
     'used_center_freq','mean_SD_of_filtered_signal',...
     'mean_troughs_per_event','mean_peaks_per_event',...
     'mean_linear_regression_freq_slope','mean_linear_regression_freq_offset','mean_linear_regression_freq_R_squared'};
 
-if isempty(output)
-    res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
-else
+% if isempty(output)
+%     res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+% else
     res_channel.table = table(...
         chs,...
         [ch_nDetected{:}]', [ch_densityPerEpoch{:}]', ch_detectedLengthSampless,ch_detectedPeak2Peakss,...
         ch_freqbypeaks,epochlengths,[ch_nMerged{:}]',lengthsAcrossROIsSecondss,...
-        [ch_SDfrqBndPssSignal{:}]',...
+        cellstr(repmat(strjoin(cfg.stages,' '), nRowsCh, 1)),cellstr(repmat(strjoin(cfg.thresholdstages,' '), nRowsCh, 1)),[ch_SDfrqBndPssSignal{:}]',...
         dataset_factorThresholdBeginEnds,dataset_factorThresholdCriterions,...
         minFreqs,maxFreqs,...
         centerFreqFilters,ch_detectedSDofFilteredSignals,...
         tempNtroughsMeans,tempNpeaksMeans,...
         ch_detected_linear_regression_freq_slopes,ch_detected_linear_regression_freq_offsets,ch_detected_linear_regression_freq_R_squareds,...
         'VariableNames',tempvarnames);
-end
+% end
 
 res_event = [];
 res_event.ori = functionname;
@@ -1442,7 +1514,7 @@ res_event.cfg = cfg;
 tempvarnames = {...
     'channel','duration_seconds','amplitude_peak2trough_max','envelope_max','frequency_by_mean_pk_trgh_cnt_per_dur',...
     'seconds_begin','seconds_end','seconds_peak_max','seconds_trough_max','seconds_envelope_max',...  %'duration_samples','sample_begin','sample_end','sample_peak_max','sample_trough_max','envelope_max',...
-    'used_stages_for_detection','used_threshold_basis','used_min_pass_or_cutoff_detection_freq','used_max_detection_pass_or_cutoff_freq','used_center_freq',...
+    'used_stages_for_detection','used_stages_for_thresholds','used_threshold_basis','used_min_pass_or_cutoff_detection_freq','used_max_detection_pass_or_cutoff_freq','used_center_freq',...
     'id_within_channel',...
     'stage','stage_alt','stage_alt2',...
     'contig_segment',...
@@ -1456,7 +1528,7 @@ else
     res_event.table = table(...
         output(:,1),[output{:,2}]',[output{:,7}]',[output{:,8}]',[output{:,24}]',...
         [output{:,3}]',[output{:,4}]',[output{:,5}]',[output{:,6}]',[output{:,27}]',...
-        output(:,9),[output{:,10}]',[output{:,11}]',[output{:,12}]',[output{:,13}]',...
+        output(:,9),output(:,28),[output{:,10}]',[output{:,11}]',[output{:,12}]',[output{:,13}]',...
         [output{:,14}]',...
         output(:,15),output(:,16),output(:,17),...
         [output{:,23}]',...
