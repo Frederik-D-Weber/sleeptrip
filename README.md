@@ -1,3 +1,5 @@
+![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_logo.png)
+
 # SleepTrip
 * a MATLAB toolbox 
 * a branch of FieldTrip (https://github.com/fieldtrip/fieldtrip see http://www.fieldtriptoolbox.org for details)
@@ -5,12 +7,10 @@
 
 for more details, visit https://www.sleeptrip.org (not public yet, refers to SpiSOP)
 
-Download the example **SleepTrip pipeline** and example datasets https://drive.google.com/open?id=15Of3TxU3k6PDCIafGyMnXTuw3Ne3caTa
+## Try it
+Example [**SleepTrip pipeline**](https://github.com/Frederik-D-Weber/sleeptrip/sleeptrip_pipeline.m) and requires also the [**example datasets**](https://drive.google.com/open?id=160i_FG3zSZrBf9mr2zxZQX-u30OnLDMf)
 
-![SleepTrip logo](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_logo.png)
-
-
-### Copyright and Licence
+## Copyright and Licence
 The SleepTrip software is free but copyrighted software, distributed
 under the terms of the GNU General Public Licence as published by
 the Free Software Foundation (either version 2, or at your option
@@ -58,4 +58,3 @@ The functions in the FieldTrip toolbox are copyrighted by their respective autho
 The FieldTrip software is a toolbox, i.e. a library with functions. The release 
 of this toolbox includes functions from other toolboxes that are covered under 
 their respective licenses. See fieldtrip/external for details.
-
