@@ -370,6 +370,10 @@ switch dataformat
   case 'AnyWave'
     dat = read_ah5_data(filename, hdr, begsample, endsample, chanindx);
     
+  case 'axograph'
+      
+    [dat, orig_hdr] = read_axograph(datafile, true, chanindx);
+    
   case 'bci2000_dat'
     % this requires the load_bcidat mex file to be present on the path
     ft_hastoolbox('BCI2000', 1);

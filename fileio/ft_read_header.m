@@ -78,6 +78,7 @@ function [hdr] = ft_read_header(filename, varargin)
 %   MPI - Max Planck Institute (*.dap)
 %   Neurosim  (neurosim_spikes, neurosim_signals, neurosim_ds)
 %   Windaq (*.wdq)
+%   AxoGraph (*.axgd *.axgx)
 %
 % The following NIRS dataformats are supported
 %   BUCN - Birkbeck college, London (*.txt)
@@ -92,6 +93,9 @@ function [hdr] = ft_read_header(filename, varargin)
 % FT_CHANTYPE, FT_CHANUNIT
 
 % Copyright (C) 2003-2016 Robert Oostenveld
+%               2019      Frederik Weber for addition in file formats 
+%                               Hypnodyne Corp Zmax
+%                               Axograph Files 
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -312,7 +316,25 @@ switch headerformat
     hdr.reference = orig.reference(:);
     hdr.chanunit = orig.unit(:);
     hdr.chantype = orig.type(:);
+  case 'axograph'
     
+    [dummy, orig] = read_axograph(datafile,false);
+    
+    hdr.orig = orig;
+    hdr.Fs = orig.fsample;
+    hdr.nChans = orig.nChannel;
+    hdr.nSamples = orig.nPoints;
+    hdr.nTrials = 1;
+    hdr.nSamplesPre = 0;
+    hdr.label = orig.labels;
+    %hdr.reference = orig.reference(:);
+    hdr.chanunit = {};
+    hdr.chantype = {};
+    for iCh = 1:numel(hdr.nChans)
+        hdr.chanunit{iCh} = 'unknown';
+        hdr.chantype{iCh} = 'unknown';
+    end
+      
   case 'bci2000_dat'
     % this requires the load_bcidat mex file to be present on the path
     ft_hastoolbox('BCI2000', 1);
