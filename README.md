@@ -8,7 +8,7 @@
 for more details, visit https://www.sleeptrip.org (not public yet, refers to SpiSOP)
 
 ## Try it
-Example [**SleepTrip pipeline**](https://github.com/Frederik-D-Weber/sleeptrip/sleeptrip_pipeline.m) and requires also the [**example datasets**](https://drive.google.com/open?id=160i_FG3zSZrBf9mr2zxZQX-u30OnLDMf)
+Example [**SleepTrip pipeline**](https://github.com/Frederik-D-Weber/sleeptrip/blob/master/sleeptrip_pipeline.m) and requires also the [**example datasets**](https://drive.google.com/open?id=160i_FG3zSZrBf9mr2zxZQX-u30OnLDMf)
 
 ## Copyright and Licence
 The SleepTrip software is free but copyrighted software, distributed

@@ -34,7 +34,10 @@
 %%% 4. NO FieldTrip NOR related toolboxes like EEGLAB are loaded or in the 
 %%%    PATH of your MATLAB
 %%% 5. You have downloaded the example datasets here:
-%%%    
+%%%    https://drive.google.com/open?id=160i_FG3zSZrBf9mr2zxZQX-u30OnLDMf
+%%% 6. ...and the files from the example datasets are in the 
+%%%    same folder as this script or somewhere in the matlab path
+   
 
 
 %% initialization
