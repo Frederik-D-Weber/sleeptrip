@@ -35,6 +35,7 @@ function [type] = ft_filetype(filename, desired, varargin)
 %  - ASA
 %  - Analyse
 %  - Analyze/SPM
+%  - AxoGraph Files (*.axgd *.axgx)
 %  - BESA
 %  - Bioimage Suite (*.mgrid)
 %  - BrainSuite
@@ -67,6 +68,9 @@ function [type] = ft_filetype(filename, desired, varargin)
 %  - AnyWave *.ades
 
 % Copyright (C) 2003-2018 Robert Oostenveld
+%               2019      Frederik Weber for addition in file formats 
+%                               Hypnodyne Corp Zmax
+%                               Axograph Files 
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -1426,6 +1430,10 @@ elseif contains(filename, '_events.tsv')
   type = 'events_tsv';
   manufacturer = 'BIDS';
   content = 'events';
+elseif filetype_check_extension(filename, '.axgx') || filetype_check_extension(filename, '.axgd')
+  type = 'axograph';
+  manufacturer = 'AxoGraph';
+  content = 'physiological signals';
 end
 
 

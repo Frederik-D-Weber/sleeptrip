@@ -8,16 +8,24 @@ function [res_freqpeaks] = st_freqpeak(cfg, res)
 %   power_bin
 %
 % Required configuration parameters are:
-%   cfg.channel  = Nx1 cell-array with selection of channels (default = 'all'), see FT_CHANNELSELECTION
+%   cfg.channel     = Nx1 cell-array with selection of channels (default = 'all'), 
+%                      see FT_CHANNELSELECTION
 %   cfg.foilim      = [begin end], frequency band of interest (default = [6 18])
-%                     a wider band of 2 frequency steps is required to
-%                     perform the analysis, e.g. [5.6 18.4] for a resolution
-%                     of 0.2 Hz
+%                      a wider band of 2 frequency steps is required to
+%                      perform the analysis, e.g. [5.6 18.4] for a resolution
+%                      of 0.2 Hz
 %   cfg.peaknum     = number of expected peaks to search for either 1 or 2 (default = 2)
-%   cfg.smooth      = smoothing window size in Hz to make the power spectra
-%                     appear cleaner (default = 0.3)
+%   cfg.smooth      = smoothing window of moving symmetric mean of the
+%                      size specified here in Hz to make the power spectra
+%                      appear cleaner (default = 0.3)
 %   cfg.minpeakdist = minimal difference between automatically suggested
-%                     peaks in Hz (default = 2)
+%                      peaks in Hz (default = 2)
+%   cfg.powlawnorm  = if the signal should be normalized by the frequency 1/f 
+%                      (i.e. mulitply each power bin by its frequency),
+%                      either 'yes' or 'no' (default = 'no')
+%   cfg.pownorm    = if the signal should be normalized by all power
+%                      (i.e. divide by average of power of all frequency bins),
+%                      either 'yes' or 'no' (default = 'no')
 %
 % See also ST_POWER
 
@@ -54,9 +62,11 @@ cfg.foilim        = ft_getopt(cfg, 'foilim', [6 18]);
 cfg.peaknum       = ft_getopt(cfg, 'peaknum', 2);
 cfg.smooth        = ft_getopt(cfg, 'smooth', 0.3);
 cfg.minpeakdist   = ft_getopt(cfg, 'minpeakdist', 1);
+cfg.powlawnorm    = ft_getopt(cfg, 'powlawnorm', 'no');
+cfg.pownorm       = ft_getopt(cfg, 'pownorm', 'no');
+
 
 MinFreqStepPadding = 1;
-
 
 if ~isfield(res, 'type') || ~isfield(res, 'ori')
     ft_error('second argument is not a valid result structure.');
@@ -129,10 +139,11 @@ for iResnum = 1:numel(resnums)
             tempWD = tempWD + 1;
         end
         if exist('smooth','file') == 2
-            pPower = smooth(pPower,tempWD,'lowess');
-            tempiDataString = [tempiDataString ': lowess[' num2str(tempWD) ' point(s)] at f_{res} = ' num2str(resolution) ' Hz.'];
+            method = 'moving';
+            pPower = smooth(pPower,tempWD,method);
+            tempiDataString = [tempiDataString ': ' 'mean' '[' num2str(tempWD) ' point(s)] at f_{res} = ' num2str(resolution) ' Hz.'];
             for iChannel = 1:length(pPowerChanLabels)
-                pPowerChan(iChannel,:) = smooth(pPowerChan(iChannel,:),tempWD,'lowess');
+                pPowerChan(iChannel,:) = smooth(pPowerChan(iChannel,:),tempWD,method);
             end
             
         else
@@ -141,6 +152,22 @@ for iResnum = 1:numel(resnums)
             for iChannel = 1:length(pPowerChanLabels)
                 pPowerChan(iChannel,:) = smoothwd(pPowerChan(iChannel,:),tempWD);
             end
+        end
+    else
+        pPower = pPower';
+    end
+    
+    if istrue(cfg.powlawnorm)
+        pPower = pPower .* pFreq;
+        for iChannel = 1:length(pPowerChanLabels)
+        	pPowerChan(iChannel,:) = pPowerChan(iChannel,:) .* pFreq';
+        end
+    end
+    
+    if istrue(cfg.pownorm)
+        pPower = pPower / nanmean(pPower);
+        for iChannel = 1:length(pPowerChanLabels)
+        	pPowerChan(iChannel,:) = pPowerChan(iChannel,:) / nanmean(pPowerChan(iChannel,:));
         end
     end
     
