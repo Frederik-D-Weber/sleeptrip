@@ -114,6 +114,10 @@ for iRes = 1:nRes
     
     end
     
+%     postpostfix = '';
+%     if nRes > 1
+%             postpostfix = ['_resnum_' num2str(iRes)];
+%     end
     filepath = [subfolderpath prefix res.ori '_' res.type infix appfix postfix timestampfix '.csv'];
     writetable(res.table,filepath,...
         'FileType','text',...
