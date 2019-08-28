@@ -86,6 +86,7 @@ if read_data
 end
 
 iDat = 0;
+
 for iYCol = 1:(hdr.NDatCol-1)
     hdr.YCol(iYCol,1).nPoints   = fread(fid,1,'int32');
     hdr.YCol(iYCol,1).YColType  = fread(fid,1,'int32');
@@ -167,7 +168,6 @@ hdr.labels = hdr.labels';
 if ~isempty(dat)
     dat = dat(iReorder,:);
 end
-
 
 %Acquisition settings - from additional ~1700 bytes
 ft = fread(fid,'int16=>char')';
