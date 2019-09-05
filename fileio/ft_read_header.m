@@ -326,13 +326,29 @@ switch headerformat
     hdr.nSamples = orig.nPoints;
     hdr.nTrials = 1;
     hdr.nSamplesPre = 0;
-    hdr.label = orig.labels;
+    
+    %hdr.label = orig.labels;
     %hdr.reference = orig.reference(:);
     hdr.chanunit = {};
     hdr.chantype = {};
-    for iCh = 1:numel(hdr.nChans)
-        hdr.chanunit{iCh} = 'unknown';
+    for iCh = 1:hdr.nChans
+        unitcharnum = strfind(orig.labels{iCh},'(');
+        unitcharnum2 = strfind(orig.labels{iCh},')');
+        if ~isempty(unitcharnum) && ~isempty(unitcharnum2)
+           hdr.chanunit{iCh} = orig.labels{iCh}((unitcharnum(end)+1):(unitcharnum2(end)-1));
+        else
+           hdr.chanunit{iCh} = 'unknown';
+        end
         hdr.chantype{iCh} = 'unknown';
+    end
+    
+    for iCh = 1:hdr.nChans
+        unitcharnum = strfind(orig.labels{iCh},'(');
+        if ~isempty(unitcharnum)
+            hdr.label{iCh} = orig.labels{iCh}(1:(unitcharnum(end)-2));
+        else
+            hdr.label{iCh} = orig.labels{iCh};
+        end
     end
       
   case 'bci2000_dat'

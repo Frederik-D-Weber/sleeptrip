@@ -1,4 +1,4 @@
-function [scoring] = st_read_scoring(cfg)
+function [scoring] = st_read_scoring(cfg,tableScoring)
 
 % ST_READ_SCORING reads sleep scoring files and returns
 % them in a well defined structure. It is a wrapper around a reader for 
@@ -6,6 +6,8 @@ function [scoring] = st_read_scoring(cfg)
 %
 % Use as
 %   [scoring] = st_read_scoring(cfg)
+%   [scoring] = st_read_scoring(cfg, tableScoring)
+
 % 
 % The configuration structure needs to specify
 %   cfg.scoringfile      = string, the scoring file (and path)
@@ -43,6 +45,18 @@ function [scoring] = st_read_scoring(cfg)
 %   cfg.exclepochs       = string, either 'yes' or 'no' (default = 'no')
 %   cfg.exclcolumnnum    = scalar, the column in which the exclusion of epochs is stored (default = 2)
 %   cfg.exclcolumnstr    = Nx1 cell-array with strings that mark exclusing of epochs (default = {'1', '2', '3'})
+%
+% Alternatively, if using the funciont like 
+%   [scoring] = st_read_scoring(cfg, tableScoring)
+% 
+%   cfg.ignorelines      = Nx1 cell-array with strings that mark filtering/ignoring lines (default = {}, nothing ignored)
+%   cfg.selectlines      = Nx1 cell-array with strings that should be selected (default = {}, not specified, all selected) 
+%   cfg.datatype         = string, time in seconds
+%   cfg.columnnum        = scalar, the column in which the scoring is stored (default = 1)
+%   cfg.exclepochs       = string, either 'yes' or 'no' (default = 'no')
+%   cfg.exclcolumnnum    = scalar, the column in which the exclusion of epochs is stored (default = 2)
+%   cfg.exclcolumnstr    = Nx1 cell-array with strings that mark exclusing of epochs (default = {'1', '2', '3'})
+%
 %
 % A scoremap is specified as a structure with the fields
 %   scoremap.labelold      = Nx1 cell-array of old labels in file
@@ -120,6 +134,9 @@ cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
 
 % flag to determine which reading option to take
 readoption = 'readtable'; % either 'readtable' or 'load'
+if nargin > 1
+    readoption = 'table';
+end
 
 if strcmp(cfg.standard,'custom') && ~isfield(cfg,'scoremap')
 	ft_error('if the standard paramter is set to ''scoremap'' it requires also a ''scoremap'' as parameter in the configuration.');
@@ -193,12 +210,18 @@ if ~strcmp(cfg.datatype, 'columns')
 end
 
 % optionally get the data from the URL and make a temporary local copy
+if nargin<2
 filename = fetch_url(cfg.scoringfile);
 if ~exist(filename, 'file')
     ft_error('The scoring file "%s" file was not found, cannot read in scoring information. No scoring created.', filename);
 end
+else
+    cfg.scoringfile = [];
+end
 
 switch readoption
+    case 'table';
+        tableScoring = tableScoring;
     case 'readtable'
         parampairs = {};
         parampairs = [parampairs, {'ReadVariableNames',false}];
@@ -216,7 +239,7 @@ switch readoption
         
     case 'load'
         hyp = load(filename);
-        tableScoring = table(hyp(:,1),hyp(:,2));
+        tableScoring = tableScoring(hyp(:,1),hyp(:,2));
         
     otherwise
         ft_error('the type %s to read scoring files is not handled. please choose a valid option', readoption);
@@ -295,6 +318,7 @@ end
 scoring.ori.scoremap   = cfg.scoremap;
 scoring.ori.scoringfile   = cfg.scoringfile;
 scoring.ori.scoringformat   = cfg.scoringformat;
+scoring.ori.table = tableScoring;
 
 scoring.cfg = cfg;
 scoring.epochlength = cfg.epochlength;

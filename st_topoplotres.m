@@ -16,14 +16,14 @@ function [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 %                       the supported ways (see below).
 %
 % Optional configuration parameters are:
-%   cfg.channel      = the channels you want to select (default = 'all');
-%   cfg.renderer     = string, the Renderer of the figure,
-%                      either 'painters' use for vector graphic export (recommended)
+%   cfg.channel       = the channels you want to select (default = 'all');
+%   cfg.renderer      = string, the Renderer of the figure,
+%                        either 'painters' use for vector graphic export (recommended)
 %                         'zbuffer'  fast and accurate
 %                         'OpenGL'   when you have a good opengl function
-%   cfg.filtercolumns = cellstr of the columns you want to filter for, e.g.
+%   cfg.filtercolumns = either a string or a cellstr of the columns you want to filter for, e.g.
 %                        {'resnum', 'freq'}
-%   cfg.filtervalues  = cellstr of cells, with the corresponding values to
+%   cfg.filtervalues  = either a string/value or cell of cells/cellstr, with the corresponding values to
 %                       the columns defined cfg.filtercolumns, e.g. 
 %                        {{1}, {4:5}}
 %   cfg.average       = if (after filtering) the property values should be
@@ -160,6 +160,12 @@ res.table = res.table(ismember(res.table.channel,ft_channelselection(cfg.channel
 if isfield(cfg,'filtercolumns')
     if ~isfield(cfg,'filtervalues')
         ft_error(['if cfg.filtercolumns is defined then cfg.filtervalues also needs to be defined'])
+    end
+    if ~iscell(cfg.filtercolumns)
+        cfg.filtercolumns = {cfg.filtercolumns};
+    end
+    if ~iscell(cfg.filtervalues)
+        cfg.filtervalues = {cfg.filtervalues};
     end
     if numel(cfg.filtercolumns) ~= numel(cfg.filtervalues)
         ft_error(['cfg.filtercolumns needs to have the same amount of elements as cfg.filtervalues'])
