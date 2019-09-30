@@ -239,7 +239,7 @@ switch readoption
         
     case 'load'
         hyp = load(filename);
-        tableScoring = tableScoring(hyp(:,1),hyp(:,2));
+        tableScoring = table(hyp(:,1),hyp(:,2));
         
     otherwise
         ft_error('the type %s to read scoring files is not handled. please choose a valid option', readoption);

@@ -362,7 +362,7 @@ if needdat || needevt
   % user channel selection as well as any correction that might have been made due to
   % heterogenous sampling rates.
 
-  if     ~isempty(chanindx) && ~isfield(EDF, 'chansel')
+  if ~isempty(chanindx) && ~isfield(EDF, 'chansel')
     % a subset of channels should been selected from the full list of channels in the file
     chanindx = chanindx; % keep as it is
     useChanindx = true;
@@ -400,11 +400,11 @@ if needdat || needevt
   end
 
   % determine the trial containing the begin and end sample
-  epochlength = EDF.Dur * EDF.SampleRate(1);
+  %epochlength = EDF.Dur * EDF.SampleRate(1);
   begepoch    = floor((begsample-1)/epochlength) + 1;
   endepoch    = floor((endsample-1)/epochlength) + 1;
   nepochs     = endepoch - begepoch + 1;
-  nchans      = EDF.NS;
+  %nchans      = EDF.NS;
   if nargin<5
     chanindx = 1:nchans;
   end

@@ -285,7 +285,7 @@ if (isfield(cfg,'EventsTestIDColumns') && ~isfield(cfg,'EventsTargetIDColumns'))
     error('cfg.EventsTestIDColumns and cfg.EventsTargetIDColumns need to be defined together')
 end
 
-if isfield(cfg,'EventsTestIDColumns') && isfield(cfg,'EventsTargetIDColumns')
+if isfield(cfg,'EventsTestIDColumns') && isfield(cfg,'EventsTargetIDColumns') && ~istrue(cfg.UseSecondColumnAndOnlyOffsetsForTimeWindow)
     if ~(all(size(cfg.EventsTestIDColumns) == size(cfg.EventsTargetIDColumns)))
         error('number of columns in cfg.EventsTestIDColumns and cfg.EventsTargetIDColumns do not aggree')
     end
@@ -509,7 +509,7 @@ for iEvTest = 1:nEventsTest
     
     if strcmp(cfg.UseSecondColumnAndOnlyOffsetsForTimeWindow,'yes')
         matchIndicator = matchIndicator & ( (eventTest.(cfg.EventsTestTimePointColumn) + cfg.EventTestTimePointOffsetTime ) >= (EventsTargetTable.(cfg.EventsTargetTimePointColumn) + cfg.EventTargetTimeWindowOffsetTime) );
-        matchIndicator = matchIndicator & ( (eventTest.(cfg.EventsTestTimePointColumn) + cfg.EventTestTimePointOffsetTime ) <= (EventsTargetTable.(cfg.EventsTargetTimePointColumn2) + cfg.cfg.EventTargetTimeWindowOffsetTime2) );
+        matchIndicator = matchIndicator & ( (eventTest.(cfg.EventsTestTimePointColumn) + cfg.EventTestTimePointOffsetTime ) <= (EventsTargetTable.(cfg.EventsTargetTimePointColumn2) + cfg.EventTargetTimeWindowOffsetTime2) );
     else
         matchIndicator = matchIndicator & ( (eventTest.(cfg.EventsTestTimePointColumn) + cfg.EventTestTimePointOffsetTime ) <= ((EventsTargetTable.(cfg.EventsTargetTimePointColumn) + cfg.EventTargetTimeWindowOffsetTime) + cfg.EventTargetTimeWindowPostOffsetTime) );
         matchIndicator = matchIndicator & ( (eventTest.(cfg.EventsTestTimePointColumn) + cfg.EventTestTimePointOffsetTime ) >= ((EventsTargetTable.(cfg.EventsTargetTimePointColumn) + cfg.EventTargetTimeWindowOffsetTime) - cfg.EventTargetTimeWindowPreOffsetTime) );
