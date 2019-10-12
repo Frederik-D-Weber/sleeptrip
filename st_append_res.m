@@ -34,7 +34,9 @@ function [res] = st_append_res(varargin)
 
 tic
 memtic
-fprintf('st_append_res function started\n');
+st = dbstack;
+functionname = st.name;
+fprintf([functionname ' function started\n']);
 
 % check if some are empty
 
@@ -129,7 +131,7 @@ if isfield(res, 'cfg'); res = rmfield(res,'cfg'); end
 res.appended = true;
 res.table = restab;
 
-fprintf('st_append_res function finished\n');
+fprintf([functionname ' function finished\n']);
 toc
 memtoc
 end

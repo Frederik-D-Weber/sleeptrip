@@ -94,8 +94,7 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 %                             then cfg.factorthresholdbeginend and
 %                             cfg.factorthresholdcriterion do not apply to those
 %                             thresholds and are ignored.
-%   cfg.downsamplefs        = downsample the data to this frequency in Hz before doing the anlysis (default = 100)
-
+%  cfg.downsamplefs       = downsample the data to this frequency in Hz before doing the anlysis (default = 100/128)
 %
 % Some additional parameters from FT_PREPROCESSING can also be included
 % including the reprocessing options that you can only use for EEG data are:
@@ -142,6 +141,11 @@ fprintf([functionname ' function started\n']);
 
 if ~isfield(cfg, 'scoring')
     cfg.scoring = st_read_scoring(cfg);
+end
+
+downsamplefsNotSet = false;
+if ~isfield(cfg, 'downsamplefs')
+    downsamplefsNotSet = true;
 end
 
 % set defaults
@@ -399,7 +403,8 @@ hasROIs_threshold = true;
 
 
 if hasdata
-    data_t = st_select_scoring(cfg_int, data);
+    data_t = st_preprocessing(cfg_int, data);
+    data_t = st_select_scoring(cfg_int, data_t);
     if isempty(data_t.trial)
         hasROIs = false;
         hasROIs_threshold = false;
@@ -439,6 +444,10 @@ if ~hasROIs
     end
 end
 
+if (data.fsample == 128) && downsamplefsNotSet
+    ft_warning('leaving 128 Hz sampling rate as default sampling rate')
+    cfg.downsamplefs = 128;
+end
 
 preDownsampleFreq = data.fsample;
 if (cfg.downsamplefs < data.fsample)
@@ -1304,9 +1313,15 @@ for iChan = 1:nChannels
         if ~any(tempInd)
             tempInd = ((hypnEpochsBeginsSamples <= tempSample) & (tempSample-1/fsample < hypnEpochsEndsSamples));
         end
-        epochs{iDet,1} = hypnStages(tempInd,1);
-        epochs{iDet,2} = hypnStages(tempInd,2);
-        epochs{iDet,3} = hypnStages(tempInd,3);
+         if any(tempInd)
+            epochs{iDet,1} = hypnStages(tempInd,1);
+            epochs{iDet,2} = hypnStages(tempInd,2);
+            epochs{iDet,3} = hypnStages(tempInd,3);
+        else
+            epochs{iDet,1} = '?';
+            epochs{iDet,2} = '?';
+            epochs{iDet,3} = '?';  
+         end
     end;
     
     chs{iChan} = ch;

@@ -50,7 +50,9 @@ dt = now;
 
 tic
 memtic
-fprintf('st_write_res function started\n');
+st = dbstack;
+functionname = st.name;
+fprintf([functionname ' function started\n']);
 
 % set the defaults
 cfg.prefix                 = ft_getopt(cfg, 'prefix',  '');
@@ -123,14 +125,14 @@ for iRes = 1:nRes
         'FileType','text',...
         'WriteVariableNames',true,...
         'WriteRowNames',false,...
-        'Delimiter',',',...
-        'QuoteStrings',false...
-        );
+        'Delimiter',',');%,...
+        %'QuoteStrings',false...
+        %);
     filepaths{iRes} = filepath;
 end
 
 
-fprintf('st_write_res function finished\n');
+fprintf([functionname ' function finished\n']);
 toc
 memtoc
 end

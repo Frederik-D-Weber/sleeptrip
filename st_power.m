@@ -47,7 +47,7 @@ function [res_power_bin, res_power_band] = st_power(cfg, data)
 %                          cfg.segmentoverlap should be adpated to at least
 %                          half this values (which is the optimal for speed or calulation, higher overlaps will increase computation time)
 %                          (default = 0.2)
-%   cfg.downsamplefs       = downsample the data to this frequency in Hz before doing the anlysis (default = 100)
+%  cfg.downsamplefs       = downsample the data to this frequency in Hz before doing the anlysis (default = 100/128)
 %
 % Some additional parameters from FT_PREPROCESSING can also be included
 % including the reprocessing options that you can only use for EEG data are:
@@ -94,6 +94,11 @@ fprintf([functionname ' function started\n']);
 
 if ~isfield(cfg, 'scoring')
     cfg.scoring = st_read_scoring(cfg);
+end
+
+downsamplefsNotSet = false;
+if ~isfield(cfg, 'downsamplefs')
+    downsamplefsNotSet = true;
 end
 
 % set defaults
@@ -338,7 +343,8 @@ cfg_int.scoring  = cfg.scoring;
 hasROIs = true;
 
 if hasdata
-    data_t = st_select_scoring(cfg_int, data);
+    data_t = st_preprocessing(cfg_int, data);
+    data_t = st_select_scoring(cfg_int, data_t);
     if isempty(data_t.trial)
         hasROIs = false;
         % read in dummy data
@@ -369,6 +375,10 @@ else
 
 end
 
+if (data.fsample == 128) && downsamplefsNotSet
+    ft_warning('leaving 128 Hz sampling rate as default sampling rate')
+    cfg.downsamplefs = 128;
+end
 
 if (cfg.downsamplefs < data.fsample)
         fprintf('resample data from %i to %i Hz\n',data.fsample,cfg.downsamplefs);
