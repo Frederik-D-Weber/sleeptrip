@@ -63,6 +63,7 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %                                 {[20 40]; ...
 %                                  [18, 36]; ...
 %                                  [39, 80.0]}
+%   cfg.eventrangernddec       = round event ranges to that amount of decimal (default = 2)
 %
 %
 %
@@ -119,6 +120,8 @@ cfg.figureoutputresolution  = ft_getopt(cfg, 'figureoutputresolution', 300);
 cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
 cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
+cfg.eventrangernddec        = ft_getopt(cfg, 'eventrangernddec', 2);
+
 
 
 
@@ -266,6 +269,16 @@ offset_step = 0.5;
 eventHeight = 0.4;
 offset_event_y = max(yTick);
 
+
+%find the maximal time of all events
+max_temp_x_all = 0;
+if isfield(cfg, 'eventvalues')
+    for iEvent = 1:numel(cfg.eventtimes)
+        max_temp_x_all = max(max_temp_x_all,max(cfg.eventtimes{iEvent}));
+    end
+end
+max_temp_x_all = max_temp_x_all/60;
+
 if isfield(cfg, 'eventtimes')
     
     nEvents = numel(cfg.eventtimes);
@@ -286,8 +299,9 @@ if isfield(cfg, 'eventtimes')
             if isfield(cfg, 'eventvalues')
                 currEventValues = cfg.eventvalues{iEventTypes};
                 currEventRanges = cfg.eventranges{iEventTypes};
+                currEventRanges = round(currEventRanges,cfg.eventrangernddec);
                 event_scale = fw_normalize(currEventValues, min(currEventRanges),  max(currEventRanges), 0.1, 1)';
-                text(max(temp_x)+1,temp_y(1),['[' num2str(min(currEventRanges)) ' ' num2str(max(currEventRanges)) ']']);
+                text(max_temp_x_all+1,temp_y(1),['[' num2str(min(currEventRanges)) ' ' num2str(max(currEventRanges)) ']']);
             else
                 event_scale = 1;
             end

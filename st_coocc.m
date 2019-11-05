@@ -210,13 +210,13 @@ end
 tempidx = ismember(cfg.EventsTestCompareColumns, res_test.table.Properties.VariableNames);
 cfg.EventsTestCompareColumns = cfg.EventsTestCompareColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestCompareColumns{~tempidx},' ') 'in cfg.EventsTestCompareColumns']);
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestCompareColumns(~tempidx),' ') ' in cfg.EventsTestCompareColumns']);
 end
 
 tempidx = ismember(cfg.EventsTargetCompareColumns, res_target.table.Properties.VariableNames);
-cfg.EventsTestCompareColumns = cfg.EventsTestCompareColumns(tempidx);
+cfg.EventsTargetCompareColumns = cfg.EventsTargetCompareColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetCompareColumns{~tempidx},' ') 'in cfg.EventsTestCompareColumns']);
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetCompareColumns(~tempidx),' ') ' in cfg.EventsTestCompareColumns']);
 end
 
 if ~(all(size(cfg.EventsTestCompareColumns) == size(cfg.EventsTargetCompareColumns)))
@@ -259,27 +259,34 @@ tempidx = ismember(cfg.EventsTestFilterForColumns, res_test.table.Properties.Var
 cfg.EventsTestFilterForColumns = cfg.EventsTestFilterForColumns(tempidx);
 cfg.EventsTestFilterValues = cfg.EventsTestFilterValues(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestFilterForColumns{~tempidx},' ') 'in cfg.EventsTestFilterForColumns']);
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestFilterForColumns(~tempidx),' ') ' in cfg.EventsTestFilterForColumns']);
 end
 
 tempidx = ismember(cfg.EventsTargetFilterForColumns, res_target.table.Properties.VariableNames);
 cfg.EventsTargetFilterForColumns = cfg.EventsTargetFilterForColumns(tempidx);
 cfg.EventsTargetFilterValues = cfg.EventsTargetFilterValues(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetFilterForColumns{~tempidx},' ') 'in cfg.EventsTargetFilterForColumns']);
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetFilterForColumns(~tempidx),' ') ' in cfg.EventsTargetFilterForColumns']);
 end
 
 tempidx = ismember(cfg.EventsTestIDColumns, res_test.table.Properties.VariableNames);
 cfg.EventsTestIDColumns = cfg.EventsTestIDColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestIDColumns{~tempidx},' ') 'in cfg.EventsTestIDColumns']);
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestIDColumns(~tempidx),' ') ' in cfg.EventsTestIDColumns']);
 end
 
 tempidx = ismember(cfg.EventsTargetIDColumns, res_target.table.Properties.VariableNames);
 cfg.EventsTargetIDColumns = cfg.EventsTargetIDColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetIDColumns{~tempidx},' ') 'in cfg.EventsTargetIDColumns']);
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetIDColumns(~tempidx),' ') ' in cfg.EventsTargetIDColumns']);
 end
+
+tempidx = ismember(cfg.EventsTestGroupSummaryByColumns, res_target.table.Properties.VariableNames);
+cfg.EventsTestGroupSummaryByColumns = cfg.EventsTestGroupSummaryByColumns(tempidx);
+if ~all(tempidx)
+    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestGroupSummaryByColumns(~tempidx),' ') ' in cfg.EventsTestGroupSummaryByColumns']);
+end
+
 
 if (isfield(cfg,'EventsTestIDColumns') && ~isfield(cfg,'EventsTargetIDColumns')) || (~isfield(cfg,'EventsTestIDColumns') && isfield(cfg,'EventsTargetIDColumns'))
     error('cfg.EventsTestIDColumns and cfg.EventsTargetIDColumns need to be defined together')
@@ -290,6 +297,7 @@ if isfield(cfg,'EventsTestIDColumns') && isfield(cfg,'EventsTargetIDColumns') &&
         error('number of columns in cfg.EventsTestIDColumns and cfg.EventsTargetIDColumns do not aggree')
     end
 end
+
 
 fprintf([functionname ' function initialized\n']);
 
