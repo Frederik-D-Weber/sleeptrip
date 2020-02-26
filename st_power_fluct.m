@@ -1,4 +1,4 @@
-function [res_power_bin, res_power_band] = st_power_fluct(cfg, data)
+function [res_power_fluct_bin, res_power_fluct_signal] = st_power_fluct(cfg, data)
 
 % ST_POWER_FLUCT calculates power fluctuations
 % results are stored it in a result structure
@@ -428,9 +428,11 @@ for iFreqBand = 1:numel(cfg.bands)
     freq2_fig = freq2;
     
     freq_complete_temp = ft_selectdata(cfg_temp,freq_complete);
+    freq_complete = [];
     
     freq2_complete = freq_complete_temp;
     freq2_complete.powspctrm = nanmean(freq_complete_temp.powspctrm,3);
+    freq_complete_temp = [];
     sz = size(freq2_complete.powspctrm);
     freq2_complete.powspctrm = reshape(freq2_complete.powspctrm(:),sz([2 4]));
     freq2_complete.trial = {};
@@ -493,11 +495,12 @@ for iFreqBand = 1:numel(cfg.bands)
     
     power_signal_freq2{iFreqBand} = freq2;
     power_signal_freq2_complete{iFreqBand} = freq2_complete;
+    freq2_complete = [];
     
     power_signal_freq2_fig{iFreqBand} = freq2_fig;
     power_signal_freq2_complete_fig{iFreqBand} = freq2_complete_fig;
     
-    
+    freq2_complete_fig = []
     
     
     freq2.time = freq2.time2;
@@ -520,7 +523,9 @@ for iFreqBand = 1:numel(cfg.bands)
     
     freq2_fig.fsample = 1/cfg.FreqSteps;
     
-    
+    freq2_fig = []   
+
+
     
     
     
@@ -625,19 +630,25 @@ for iFreqBand = 1:numel(cfg.bands)
     end
     
 end
-res_power_bin.flucs_powers = flucs_powers;
-res_power_bin.flucs_powers_norm = flucs_powers_norm;
-res_power_bin.flucs_powers_freqs = flucs_powers_freqs;
+res_power_fluct_bin.flucs_powers = flucs_powers;
+res_power_fluct_bin.flucs_powers_norm = flucs_powers_norm;
+res_power_fluct_bin.flucs_powers_freqs = flucs_powers_freqs;
+res_power_fluct_bin.ori = functionname;
+res_power_fluct_bin.type = 'power_fluct_bin';
+res_power_fluct_bin.cfg = cfg;
 
-res_power_band.number_of_bouts = number_of_bouts;
-res_power_band.mean_used_of_bout_length = mean_used_of_bout_length;
+res_power_fluct_signal.number_of_bouts = number_of_bouts;
+res_power_fluct_signal.mean_used_of_bout_length = mean_used_of_bout_length;
 
-res_power_band.power_signal_freq2 = power_signal_freq2;
-res_power_band.power_signal_freq2_complete = power_signal_freq2_complete;
+res_power_fluct_signal.power_signal_freq2 = power_signal_freq2;
+res_power_fluct_signal.power_signal_freq2_complete = power_signal_freq2_complete;
 
-res_power_band.power_signal_freq2_fig = power_signal_freq2_fig;
-res_power_band.power_signal_freq2_complete_fig = power_signal_freq2_complete_fig;
-res_power_band.norm_mean = norm_mean;
+res_power_fluct_signal.power_signal_freq2_fig = power_signal_freq2_fig;
+res_power_fluct_signal.power_signal_freq2_complete_fig = power_signal_freq2_complete_fig;
+res_power_fluct_signal.norm_mean = norm_mean;
+res_power_fluct_signal.ori = functionname;
+res_power_fluct_signal.type = 'power_fluct_signal';
+res_power_fluct_signal.cfg = cfg;
 
 fprintf([functionname ' function finished\n']);
 toc

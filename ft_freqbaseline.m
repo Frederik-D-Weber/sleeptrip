@@ -205,6 +205,14 @@ elseif (strcmp(baselinetype, 'normchange')) || (strcmp(baselinetype, 'vssum'))
   data = (data - meanVals) ./ (data + meanVals);
 elseif (strcmp(baselinetype, 'db'))
   data = 10*log10(data ./ meanVals);
+elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
+  data = log10(data+1);
+elseif (strcmp(baselinetype, 'db_absolute'))
+  data = 10*log10(data);
+elseif (strcmp(baselinetype, 'log10_absolute'))
+  data = log10(data);
+elseif (strcmp(baselinetype, 'log10(data+1)_absolute'))
+  data = log10(data+1);
 elseif (strcmp(baselinetype,'zscore'))
     stdVals = repmat(nanstd(data(:,:,baselineTimes),1, 3), [1 1 size(data, 3)]);
     data=(data-meanVals)./stdVals;

@@ -32,7 +32,8 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 % 
 % ...and additional options
 %   cfg.datatype         = string, either 'columns' (e.g. *.tsv, *.csv, *.txt) 
-%                          or 'xml' (e.g. *.xml), or 'spisop', (default =
+%                          or 'xml' (e.g. *.xml), or 'spisop' for (SpiSOP) like input, or 'fasst' (for FASST toolbox
+%                          export), (default =
 %                          'columns')
 %   cfg.columndelimimter = string, of the column delimiter, must be either
 %                          ',', ' ', '|' or '\t' (a tab) (default = '\t')
@@ -42,9 +43,9 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   cfg.selectlines      = Nx1 cell-array with strings that should be selected (default = {}, not specified, all selected) 
 %   cfg.datatype         = string, time in seconds
 %   cfg.columnnum        = scalar, the column in which the scoring is stored (default = 1)
-%   cfg.exclepochs       = string, either 'yes' or 'no' (default = 'no')
-%   cfg.exclcolumnnum    = scalar, the column in which the exclusion of epochs is stored (default = 2)
-%   cfg.exclcolumnstr    = Nx1 cell-array with strings that mark exclusing of epochs (default = {'1', '2', '3'})
+%   cfg.exclepochs       = string, if you want to read in a column with excluded epochs indicated either 'yes' or 'no' (default = 'no')
+%   cfg.exclcolumnnum    = scalar, if cfg.exclepochs is 'yes' then this is the column in which the exclusion of epochs is stored (default = 2)
+%   cfg.exclcolumnstr    = Nx1 cell-array with strings that mark exclusing of epochs, only if cfg.exclepochs is 'yes' this is relevant, (default = {'1', '2', '3'})
 %
 % Alternatively, if using the funciont like 
 %   [scoring] = st_read_scoring(cfg, tableScoring)
@@ -53,9 +54,9 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   cfg.selectlines      = Nx1 cell-array with strings that should be selected (default = {}, not specified, all selected) 
 %   cfg.datatype         = string, time in seconds
 %   cfg.columnnum        = scalar, the column in which the scoring is stored (default = 1)
-%   cfg.exclepochs       = string, either 'yes' or 'no' (default = 'no')
-%   cfg.exclcolumnnum    = scalar, the column in which the exclusion of epochs is stored (default = 2)
-%   cfg.exclcolumnstr    = Nx1 cell-array with strings that mark exclusing of epochs (default = {'1', '2', '3'})
+%   cfg.exclepochs       = string, if you want to read in a column with excluded epochs indicated either 'yes' or 'no' (default = 'no')
+%   cfg.exclcolumnnum    = scalar, if cfg.exclepochs is 'yes' then this is the column in which the exclusion of epochs is stored (default = 2)
+%   cfg.exclcolumnstr    = Nx1 cell-array with strings that mark exclusing of epochs, only if cfg.exclepochs is 'yes' this is relevant, (default = {'1', '2', '3'})
 %
 %
 % A scoremap is specified as a structure with the fields
@@ -68,7 +69,6 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   scoremap = [];
 %   scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '8'};
 %   scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', 'W'};
-%   scoremap.unknown   = '?';
 %   scoremap.unknown   = '?';
 %
 % See also ST_PREPROCESSING
@@ -181,7 +181,7 @@ switch  cfg.scoringformat
         cfg.skiplines        = 7;
         cfg.columnnum        = 2;
         
-    case {'spisop' 'schlafaus'}
+    case {'spisop' 'schlafaus' 'sleepin'}
         scoremap = [];
         scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '8', '-1'};
         switch cfg.standard
@@ -194,11 +194,24 @@ switch  cfg.scoringformat
         
         cfg.scoremap         = scoremap;
         cfg.columnnum        = 1;
+        cfg.exclepochs       = 'yes';
         cfg.exclcolumnnum    = 2;
         cfg.columndelimimter = '';
         cfg.exclcolumnstr = {'1' '2' '3' '4' '5' '6' '7' '8' '9' '10'};
         readoption = 'load';
-
+    case {'fasst'}
+        scoremap = [];
+        scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '7'};
+        switch cfg.standard
+            case 'aasm'
+                scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?'};
+            case 'rk'
+                scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
+        end
+        scoremap.unknown   = '?';
+        
+        cfg.scoremap         = scoremap;
+        cfg.columnnum        = 1;
         
     otherwise
 end
@@ -291,13 +304,17 @@ end
 scoring = [];
 scoring.ori = [];
 scoring.ori.epochs = tableScoring{:,cfg.columnnum};
-scoring.ori.excluded = tableScoring{:,cfg.exclcolumnnum};
+if strcmp(cfg.exclepochs, 'yes')
+    scoring.ori.excluded = tableScoring{:,cfg.exclcolumnnum};
+end
 if isfloat(scoring.ori.epochs)
     scoring.ori.epochs = cellstr(arrayfun(@(x) sprintf('%d', x), scoring.ori.epochs, 'UniformOutput', false));
 end
 
-if isfloat(scoring.ori.excluded)
-    scoring.ori.excluded = cellstr(arrayfun(@(x) sprintf('%d', x), scoring.ori.excluded, 'UniformOutput', false));
+if strcmp(cfg.exclepochs, 'yes')
+    if isfloat(scoring.ori.excluded)
+        scoring.ori.excluded = cellstr(arrayfun(@(x) sprintf('%d', x), scoring.ori.excluded, 'UniformOutput', false));
+    end
 end
 
 scoring.epochs = cell(1,numel(scoring.ori.epochs));
@@ -310,9 +327,11 @@ for iLabel = 1:numel(cfg.scoremap.labelold)
 end
 
 scoring.excluded = logical(zeros(1,numel(scoring.ori.epochs)));
-for iLabel = 1:numel(cfg.scoremap.labelold)
-    match = cellfun(@(x)  any(ismember(cfg.exclcolumnstr, x)), scoring.ori.excluded, 'UniformOutput', 1);
-    scoring.excluded(match) = true;
+if strcmp(cfg.exclepochs, 'yes')
+    for iLabel = 1:numel(cfg.scoremap.labelold)
+        match = cellfun(@(x)  any(ismember(cfg.exclcolumnstr, x)), scoring.ori.excluded, 'UniformOutput', 1);
+        scoring.excluded(match) = true;
+    end
 end
 
 scoring.ori.scoremap   = cfg.scoremap;

@@ -202,7 +202,7 @@ for k=1:length(edfFilePathAndNames)
 end
 
 
-prompt = {'resample at sampling rate (Hz)\nPlease do NOT save in sampling rates that divide 2^n\n(e.g. 64 ,128 , 256, 512'};
+prompt = {'resample at sampling rate (Hz)\nPlease do NOT save in sampling rates that divide 2^n\n(e.g. 64 ,128 , 256, 512, ...)'};
 title = 'Update sampling rate?';
 dims = [1 35];
 definput = cellstr(num2str([data.fsample]))';

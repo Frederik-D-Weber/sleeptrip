@@ -87,7 +87,7 @@ if issvn
   if status > 0
     if ~ispc
       % the command line tools will probably not be available on windows
-      ft_warning('you seem to have an SVN development copy of FieldTrip, yet ''svn info'' does not work as expected');
+      ft_warning('you seem to have an SVN development copy of SleepTrip, yet ''svn info'' does not work as expected');
     end
     ftver = 'unknown';
   else
@@ -102,7 +102,7 @@ elseif isgit
   if status>0
     if ~ispc
       % the command line tools will probably not be available on windows
-      ft_warning('you seem to have an GIT development copy of FieldTrip, yet ''git'' does not work as expected');
+      ft_warning('you seem to have an GIT development copy of SleepTrip, yet ''git'' does not work as expected');
     end
     ftver = 'unknown';
     
@@ -148,11 +148,11 @@ else
   
 end % if issvn, isgit or otherwise
 
-if strcmp(command, 'clean') && strcmp(ftver, 'unknown')
+if strcmp(command, 'clean') && strcmp(ftver, 'unknown SleepTrip version')
   ftver = 'no';
 end
 
 if nargout==0
-  fprintf('\nThis is FieldTrip, %s %s.\n\n', command, ftver);
+  fprintf('\nThis is SleepTrip, %s %s.\n\n', command, ftver);
   clear ftver ftpath
 end
