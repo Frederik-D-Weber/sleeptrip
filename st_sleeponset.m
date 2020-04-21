@@ -36,7 +36,7 @@ function [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage] = st_sleep
 %  [N1] N1 N2, but not [N1] N1 X N2, where X is not NR
 
 % set the defaults
-cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+cfg.sleeponsetdef  = upper(ft_getopt(cfg, 'sleeponsetdef', 'N1_XR'));
 
 hasLightsOff = false;
 lightsOffMoment = 0;

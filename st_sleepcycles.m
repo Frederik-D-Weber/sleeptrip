@@ -1,25 +1,51 @@
-function [startepochs endepochs Rstarts Rends otherstarts otherends] = st_sleepcycles(cfg,scoring)
+function [res_cycle] = st_sleepcycles(cfg,scoring)
 
 % ST_SLEEPCYCLES find the sleep cycles
 %
 % Use as
-%   [startepochs endepochs] = st_sleepcycles(cfg,scoring)
-%   [startepochs endepochs Rstarts Rends otherstarts otherends] = st_sleepcycles(cfg,scoring)
+%   res_cycle = st_sleepcycles(cfg, scoring)
 %
 % Configutation parameter can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
+%   either
 %   cfg.smoothepochs   = number of epochs to smooth and find REM, default
 %                        is the amount of epochs that fill 15 minutes
-%   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'NR' or 'XR', see below for details (default = 'N1_XR')
+%   or
+%   cfg.smoothminutes  = minutes to smooth and find REM, default
+%                        is 15 minutes and. This option overwrites
+%                        cfg.smoothepochs if present
 %
-% See also ST_READ_SCORING
+%   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
+%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
+%                        'N2' or 'N3' or 'SWS' or 'S4' or 'R, see ST_SLEEPONSET for details (default = 'AASM')
+%   cfg.maxduration    = duration in minutes a sleep cycle can maximally
+%                        have cannot be lower than 2. (default = Inf) 
+%
+% result table has columns with: cycle startepochs endepochs Rstarts Rends NRstarts NRends
+%
+% See also ST_READ_SCORING, ST_SLEEPONSET
+
+tic
+memtic
+st = dbstack;
+functionname = st.name;
+
+fprintf([functionname ' function started\n']);
 
 
+cfg.smoothepochs      = ft_getopt(cfg, 'smoothepochs', 15*60/scoring.epochlength);
 
-cfg.smoothepochs       = ft_getopt(cfg, 'smoothepochs', 15*60/scoring.epochlength);
-cfg.sleeponsetdef      = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+if isfield(cfg, 'smoothminutes')
+    cfg.smoothepochs       = ft_getopt(cfg, 'smoothepochs', floor(cfg.smoothminutes*60/scoring.epochlength));
+else
+    cfg.smoothepochs       = ft_getopt(cfg, 'smoothepochs', floor(15*60/scoring.epochlength));
+end
+
+cfg.maxduration        = ft_getopt(cfg, 'maxduration', Inf);
+cfg.sleeponsetdef      = upper(ft_getopt(cfg, 'sleeponsetdef', 'AASM'));
+
+maxDurationEpochs = max(2,floor(cfg.maxduration*60/scoring.epochlength));
 
 hasLightsOff = false;
 if isfield(scoring, 'lightsoff')
@@ -57,18 +83,77 @@ for iREM_ends = 2:numel(Rends)
     cycleEnds   = [cycleEnds;   Rends(iREM_ends)];
 end
 
+
+
+cycleLengths = (cycleEnds - cycleStarts + 1);
+
+whichCycleLengthsExcede = find(cycleLengths > maxDurationEpochs);
+for iCycleIndex = 1:numel(whichCycleLengthsExcede)
+    iCycle = whichCycleLengthsExcede(iCycleIndex);
+    ft_warning(['Cyle ' num2str(iCycle) ' exceded the maximal duration of the epochs'])
+    
+%     %convert the sleep stages to hypnogram numbers
+%     hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),false),scoring.epochs','UniformOutput',1), scoring.excluded'];
+%     
+%     
+%     smoothingepochlength = cfg.smoothepochs;
+%     if exist('smooth','file') == 2
+%         smoothhyp = smooth(hypn(:,1),smoothingepochlength,'moving');
+%     else
+%         smoothhyp = smoothwd(hypn(:,1),smoothingepochlength)';
+%     end
+%     
+%     hypn_part = smoothhyp(startepochs(iCycle):cycleEnds(iCycle));
+%     
+%     
+    
+    
+
+end
+
+
+
+
+
 startepochs = cycleStarts;
 endepochs = cycleEnds;
 
 
-otherstarts = cycleStarts;
-otherends = Rstarts-1;
+NRstarts = cycleStarts;
+NRends = Rstarts-1;
 
 if Rends(end) < preOffsetCandidate
-    otherstarts = [otherstarts; Rends(end)+1];
-    otherends   = [otherends; preOffsetCandidate];
+    NRstarts = [NRstarts; Rends(end)+1];
+    NRends   = [NRends; preOffsetCandidate];
 end
 
+maxCycle = max([numel(startepochs),numel(endepochs),numel(Rstarts),numel(Rends),numel(NRstarts),numel(NRends)]);
+
+startepochs((end+1):maxCycle) = NaN;
+endepochs((end+1):maxCycle) = NaN;
+Rstarts((end+1):maxCycle) = NaN;
+Rends((end+1):maxCycle) = NaN;
+NRstarts((end+1):maxCycle) = NaN;
+NRends((end+1):maxCycle) = NaN;
+
+
+res_cycle = [];
+res_cycle.ori = functionname;
+res_cycle.type = 'cycle';
+res_cycle.cfg = cfg;
+res_cycle.table = table(...
+    (1:maxCycle)', startepochs, endepochs, NRstarts, NRends, Rstarts, Rends,...
+    'VariableNames',{...
+    'cycle', 'startepoch', 'endepoch', 'NRstartepoch', 'NRendepoch', 'Rstartepoch', 'Rendepoch'}...
+    );
+
+res_cycle.table.durationepochs = res_cycle.table.endepoch - res_cycle.table.startepoch + 1;
+res_cycle.table.durationNRepochs = res_cycle.table.NRendepoch - res_cycle.table.NRstartepoch + 1;
+res_cycle.table.durationRepochs = res_cycle.table.Rendepoch - res_cycle.table.Rstartepoch + 1;
+
+fprintf([functionname ' function finished\n']);
+toc
+memtoc
 end
 
 function [starts, ends] = getCycleStartEndsByLabel(label,max_merge_inbetween_stages,stages)

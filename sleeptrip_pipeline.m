@@ -524,7 +524,9 @@ end
 
 %full sleep cycles
 cfg = [];
-[cfg.start, cfg.end] = st_sleepcycles([],scoring);
+res_cycle = st_sleepcycles([],scoring);
+cfg.start = res_cycle.table.startepoch;
+cfg.end = res_cycle.table.endepoch;
 scoring_cycles = st_cutscoring(cfg,scoring);
 
 cfg = [];
@@ -537,7 +539,9 @@ end
 
 %what remains? non-REM?
 cfg = [];
-[d1, d2, d3, d4, cfg.start, cfg.end] = st_sleepcycles([],scoring);
+res_cycle = st_sleepcycles([],scoring);
+cfg.start = res_cycle.table.NRstartepoch;
+cfg.end = res_cycle.table.NRendepoch;
 [scoring_remains] = st_cutscoring(cfg,scoring);
 
 cfg = [];
@@ -626,9 +630,12 @@ for iSubject = 1:numel(subjects)
     
     scorings{iSubject} = scoring;
 
-    %cut into sleep cycles
+    % cut into sleep cycles
     cfg = [];
-    [cfg.start, cfg.end] = st_sleepcycles([],scoring);
+    res_cycle = st_sleepcycles([],scoring);
+    cfg.start = res_cycle.table.startepoch;
+    cfg.end = res_cycle.table.endepoch;
+
     scoring_cycles = st_cutscoring(cfg,scoring);
     
     scoring_cycles_firsts{iSubject} = scoring_cycles{1};
@@ -803,3 +810,5 @@ for iSubject = 1:numel(subjects)
                        ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}]};
     figure_handle = st_hypnoplot(cfg, scoring);
 end
+
+

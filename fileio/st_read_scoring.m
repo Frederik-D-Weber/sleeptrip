@@ -139,7 +139,7 @@ if nargin > 1
 end
 
 if strcmp(cfg.standard,'custom') && ~isfield(cfg,'scoremap')
-	ft_error('if the standard paramter is set to ''scoremap'' it requires also a ''scoremap'' as parameter in the configuration.');
+	ft_error('if the cfg.standard is set to ''custom'' it requires also a cfg.scoremap as parameter in the configuration.');
 end
 
 switch  cfg.scoringformat
