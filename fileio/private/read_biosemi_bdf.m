@@ -190,8 +190,8 @@ if needhdr
   idx_PhysMin_ge_PhysMax = EDF.PhysMin >= EDF.PhysMax;
   if (any(idx_PhysMin_ge_PhysMax))
     tmplabel = cellfun(@(x) [x ' '], cellstr(EDF.Label(idx_PhysMin_ge_PhysMax,:)),'UniformOutput',false)';
-    fprintf(2,['Warning OPENEDF: Physical Minimum larger than Maximum.\nPLEASE recheck if the scaling and polarity in the following channels are still correct if used:\n' tmplabel{:} '\n']);
-    %EDF.PhysMin = EDF.DigMin;
+    fprintf(2,['Warning OPENEDF: Physical Minimum larger than Maximum.\nPLEASE recheck if the scaling and polarity in the following channels are still correct if used:\n' tmplabel{:} '\n'...
+               'Typically this is intentional as to indicate to a visualizer/browser to plot negative values up and the positive down.\n']);    %EDF.PhysMin = EDF.DigMin;
     %EDF.PhysMax = EDF.DigMax;
   end
   EDF.PreFilt= char(fread(EDF.FILE.FID,[80,EDF.NS],'char')');
