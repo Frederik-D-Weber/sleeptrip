@@ -49,6 +49,10 @@ function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cyc
 %                           (i.e. no further properties but the count
 %                           itself)
 %
+%  cfg.defaultvalues      = either a vector or a cell of vectors with the default values of the
+%                           repective cfg.meanColumns, default =
+%                           {nan(1,numel(cfg.meanColumns)), ...}
+%
 %  cfg.eventinterpolmethd = interpolation method for res_event sturcture value-time normalization
 %                           e.g. 'nearest' or 'linear' or 'pchip' see
 %                           interp1 help for details on further methods
@@ -56,6 +60,9 @@ function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cyc
 %
 %  cfg.resorientation =     string, orientation of res_events_normed epochs 
 %                           either 'long' or 'wide' format default = 'wide'
+%
+%  cfg.considerexclusion =  string, either 'yes' or 'no' if the scoring.exclusion 
+%                           should also be applied to events. default = 'yes';
 %
 %
 % See also ST_SLEEPCYCLES, ST_READ_SCORING, ST_SCORINGCONVERT, ST_SLOWAVES,
@@ -165,6 +172,20 @@ if Nres>0
     end
 end
 
+
+if Nres>0 
+    if isfield(cfg,'defaultvalues')
+        if Nres > 1 && (Nres ~= numel(cfg.defaultvalues))
+            ft_error(['Number of cells in cfg.meanColumns does not match the number of res_event structures = ' num2str(Nres) '\nCheck that there is a cell of values for each res_event sturcture given as an argument.'])
+        end
+    else
+    cfg.defaultvalues = {};
+     for iResEvent = 1:Nres
+         cfg.defaultvalues{iResEvent} = nan(1,numel(cfg.meanColumns{iResEvent}));
+     end
+    end
+end
+
 if adjust_res
     if ~iscell(cfg.eventdatatimecolumn)
         cfg.eventdatatimecolumn = {cfg.eventdatatimecolumn};
@@ -176,6 +197,10 @@ if adjust_res
     
     if ~iscell(cfg.meanColumns)
         cfg.meanColumns = {cfg.meanColumns};
+    end
+    
+    if ~iscell(cfg.defaultvalues)
+        cfg.defaultvalues = {cfg.defaultvalues};
     end
     
     if (Nres == 1) && ~defaultGroupByColumns
@@ -197,6 +222,10 @@ end
 
 cfg.eventinterpolmethd = ft_getopt(cfg, 'eventinterpolmethd', 'nearest');
 cfg.resorientation     = ft_getopt(cfg, 'resorientation', 'wide');
+
+cfg.considerexclusion     = ft_getopt(cfg, 'considerexclusion', 'yes');
+
+
 
 fprintf([functionname ' function initialized\n']);
 
@@ -242,10 +271,10 @@ for iCycle = 1:completeCycleCount
         hyp_part_R_excluded = scoring.excluded(iR);
 
         
-        hyp_part_NR_adjusted = interp1(iNR,hyp_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest');
-        hyp_part_R_adjusted = interp1(iR,hyp_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest');
-        hyp_part_NR_excluded_adjusted = interp1(iNR,single(hyp_part_NR_excluded),linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest');
-        hyp_part_R_excluded_adjusted = interp1(iR,single(hyp_part_R_excluded),linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest');
+        hyp_part_NR_adjusted = interp1_or_repeat(iNR,hyp_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+        hyp_part_R_adjusted = interp1_or_repeat(iR,hyp_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
+        hyp_part_NR_excluded_adjusted = interp1_or_repeat(iNR,single(hyp_part_NR_excluded),linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+        hyp_part_R_excluded_adjusted = interp1_or_repeat(iR,single(hyp_part_R_excluded),linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
         
         
         chunk_scorings_NR_prop_adjusted = [];
@@ -254,8 +283,8 @@ for iCycle = 1:completeCycleCount
             hyp_part_NR_prob = scoring.prob(iLabel,iNR);
             hyp_part_R_prob = scoring.prob(iLabel,iR);
 
-            hyp_part_NR_prob_adjusted = interp1(iNR,hyp_part_NR_prob,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'linear');
-            hyp_part_R_prob_adjusted  = interp1(iR, hyp_part_R_prob, linspace(min(iR), max(iR), cfg.newcycledurations(iCycle,2)),'linear');
+            hyp_part_NR_prob_adjusted = interp1_or_repeat(iNR,hyp_part_NR_prob,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'linear',NaN);
+            hyp_part_R_prob_adjusted  = interp1_or_repeat(iR, hyp_part_R_prob, linspace(min(iR), max(iR), cfg.newcycledurations(iCycle,2)),'linear',NaN);
 
             chunk_scorings_NR_prop_adjusted(iLabel,:) = hyp_part_NR_prob_adjusted;
             chunk_scorings_R_prop_adjusted(iLabel,:)  = hyp_part_R_prob_adjusted;
@@ -272,14 +301,14 @@ for iCycle = 1:completeCycleCount
         hyp_part_cycle_excluded = scoring.excluded(iC);
 
         
-        hyp_part_cycle_adjusted = interp1(iC,hyp_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest');
-        hyp_part_cycle_excluded_adjusted = interp1(iC,hyp_part_cycle_excluded,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest');
+        hyp_part_cycle_adjusted = interp1_or_repeat(iC,hyp_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+        hyp_part_cycle_excluded_adjusted = interp1_or_repeat(iC,hyp_part_cycle_excluded,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
 
         
         chunk_scorings_cycle_prop_adjusted = [];
         for iLabel = 1:nLabels
             hyp_part_cycle_prob = scoring.prob(iLabel,iC);
-            hyp_part_cycle_prob_adjusted = interp1(iC,hyp_part_cycle_prob,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'linear');
+            hyp_part_cycle_prob_adjusted = interp1_or_repeat(iC,hyp_part_cycle_prob,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'linear',NaN);
             chunk_scorings_cycle_prop_adjusted(iLabel,:) = hyp_part_cycle_prob_adjusted;
         end
         
@@ -326,6 +355,10 @@ if adjust_res
         event_count = grpstats(res_event.table(:,cat(2,groupBy,meanColumns)),groupBy,'mean');
         event_count.Properties.VariableNames(strcmp(event_count.Properties.VariableNames,['GroupCount'])) = {'count'};
         event_count.Properties.VariableNames((end-numel(meanColumns)+1):end) = meanColumns;
+        
+        if istrue(cfg.considerexclusion)
+            event_count(ismember(event_count.epochnumber,find(scoring.excluded)'),:) = [];
+        end
                 
         completeCycleCount = sum(~isnan(res_cycle.table.endepoch));
         
@@ -333,7 +366,7 @@ if adjust_res
         
         
         adjust_columns = cat(2,{'count'}, meanColumns);
-        default_values = cat(2,0,nan(1,numel(meanColumns)));
+        default_values = cat(2,0,cfg.defaultvalues{iResEvent});
         
         for iGroup = 1:size(event_count_group,1)
             
@@ -373,14 +406,14 @@ if adjust_res
                         event_part_NR = event_values_by_epoch(iNR);
                         event_part_R = event_values_by_epoch(iR);
                         
-                        event_part_NR_adjusted = interp1(iNR,event_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest');
-                        event_part_R_adjusted = interp1(iR,event_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest');
+                        event_part_NR_adjusted = interp1_or_repeat(iNR,event_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
+                        event_part_R_adjusted = interp1_or_repeat(iR,event_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventinterpolmethd,default_value);
                         event_values_cycle_adjusted = cat(2,event_values_cycle_adjusted,event_part_NR_adjusted,event_part_R_adjusted);
                     else
                         iC = (res_cycle.table.startepoch(iCycle):res_cycle.table.endepoch(iCycle));
                         event_part_cycle = event_values_by_epoch(iC);
                         
-                        event_part_cycle_adjusted = interp1(iC,event_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd);
+                        event_part_cycle_adjusted = interp1_or_repeat(iC,event_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
                         event_values_cycle_adjusted = cat(2,event_values_cycle_adjusted,event_part_cycle_adjusted);
                     end
                 end
@@ -437,4 +470,17 @@ end
 fprintf([functionname ' function finished\n']);
 toc
 memtoc
+end
+
+function vq = interp1_or_repeat(x,v,xq,method,defaultvalue) 
+
+ if numel(x) > 1
+    vq = interp1(x,v,xq,method);
+ else
+    if numel(x) == 1
+        vq = repmat(x,size(xq));
+    else
+        vq = repmat(defaultvalue,size(xq));
+    end
+ end
 end

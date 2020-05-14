@@ -101,7 +101,7 @@ end
 
 
 
-epochs = scoring.epochs;
+epochs = repmat({scoremap.unknown},size(scoring.epochs));
 for iLabel = 1:numel(scoremap.labelold)
     old = scoremap.labelold{iLabel};
     new = scoremap.labelnew{iLabel};
