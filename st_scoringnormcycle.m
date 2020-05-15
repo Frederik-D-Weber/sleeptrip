@@ -372,7 +372,7 @@ if adjust_res
             
             groupValues = event_count_group(iGroup,:);
             
-            matchIndicator = ones(size(event_count,1),1);
+            matchIndicator = logical(ones(size(event_count,1),1));
             
             groupNames = event_count_group.Properties.VariableNames;
             for iComb = 1:numel(groupNames)

@@ -137,12 +137,20 @@ NRstarts((end+1):maxCycle) = NaN;
 NRends((end+1):maxCycle) = NaN;
 
 
+startepochs = startepochs(:).'';
+endepochs = endepochs(:).'';
+Rstarts = Rstarts(:).'';
+Rends = Rends(:).'';
+NRstarts = NRstarts(:).'';
+NRends = NRends(:).'';
+
+
 res_cycle = [];
 res_cycle.ori = functionname;
 res_cycle.type = 'cycle';
 res_cycle.cfg = cfg;
 res_cycle.table = table(...
-    (1:maxCycle)', startepochs, endepochs, NRstarts, NRends, Rstarts, Rends,...
+    (1:maxCycle)', startepochs(:), endepochs, NRstarts, NRends, Rstarts, Rends,...
     'VariableNames',{...
     'cycle', 'startepoch', 'endepoch', 'NRstartepoch', 'NRendepoch', 'Rstartepoch', 'Rendepoch'}...
     );
