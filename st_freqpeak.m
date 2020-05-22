@@ -26,6 +26,8 @@ function [res_freqpeaks] = st_freqpeak(cfg, res)
 %   cfg.pownorm    = if the signal should be normalized by all power
 %                      (i.e. divide by average of power of all frequency bins),
 %                      either 'yes' or 'no' (default = 'no')
+%   cfg.prepeak    =  frequency surminus to highlight next to peak (default = 1)
+%   cfg.postpeak   =  frequency surplus to highlight next to peak (default = 1)
 %
 % See also ST_POWER
 
@@ -64,6 +66,9 @@ cfg.smooth        = ft_getopt(cfg, 'smooth', 0.3);
 cfg.minpeakdist   = ft_getopt(cfg, 'minpeakdist', 1);
 cfg.powlawnorm    = ft_getopt(cfg, 'powlawnorm', 'no');
 cfg.pownorm       = ft_getopt(cfg, 'pownorm', 'no');
+cfg.prepeak       = ft_getopt(cfg, 'prepeak', 1);
+cfg.postpeak       = ft_getopt(cfg, 'postpeak', 1);
+
 
 
 MinFreqStepPadding = 1;
@@ -184,9 +189,10 @@ for iResnum = 1:numel(resnums)
     candSignalPowerPeaks = candSignalPowerPeaks(tempValidSamples);
     candSignalFreqPeaks = pFreq(candSignalPowerPeaksSamples);
     
-    if (cfg.peaknum ~= length(candSignalFreqPeaks))
-        tempiDataString = [tempiDataString ' Peak(s) not trusted!'];
-    end
+%     if (cfg.peaknum ~= length(candSignalFreqPeaks))
+%         tempiDataString = [tempiDataString ' Peak(s) not trusted!'];
+%     end
+
     %fill with pseudo peaks if necessary
     tempNpeaks = length(candSignalFreqPeaks);
     if tempNpeaks == 0
@@ -212,7 +218,9 @@ for iResnum = 1:numel(resnums)
     %outputFreqPeaks(tempIndex,1:cfg.peaknum) = candSignalFreqPeaks(1:cfg.peaknum);
     %outputFreqPeaks(tempIndex,1:cfg.peaknum) = spd_peakdet_gui(pFreq,pPower,candSignalFreqPeaks(1:cfg.peaknum),candSignalPowerPeaks(1:cfg.peaknum),tempiDataString);
     
-    tempiDataString = sprintf('%s\n%s',tempiDataString,strrep(strjoin(pPowerChanLabels',','),'_','\_'));
+    %tempiDataString = sprintf('%s\n%s',tempiDataString,strrep(strjoin(pPowerChanLabels',','),'_','\_'));
+    %tempiDataString = sprintf('%s\n%s',tempiDataString);
+
     
     par_pFreq{resnum} = pFreq;
     par_pPower{resnum} = pPower;
@@ -233,7 +241,7 @@ while ~tempAllAccepted
     iData = resnums(conseciData);
     tempIndex = find(resnums == iData);
     if any(outputFreqPeaks(tempIndex,1:cfg.peaknum) < 0)
-        outputFreqPeaks(tempIndex,1:cfg.peaknum) = spd_peakdet_gui_new(par_pFreq{conseciData},par_pPower{conseciData},par_pPowerChan{conseciData},par_pPowerChanLabels{conseciData},par_candSignalFreqPeaks{conseciData},par_candSignalPowerPeaks{conseciData},par_tempiDataString{conseciData},'',iData);
+        outputFreqPeaks(tempIndex,1:cfg.peaknum) = spd_peakdet_gui_new(par_pFreq{conseciData},par_pPower{conseciData},par_pPowerChan{conseciData},par_pPowerChanLabels{conseciData},par_candSignalFreqPeaks{conseciData},par_candSignalPowerPeaks{conseciData},par_tempiDataString{conseciData},'',iData,cfg.prepeak,cfg.postpeak);
     end
     tempAllAccepted = ~any(any(outputFreqPeaks(:,1:cfg.peaknum) < 0));
     conseciData = conseciData + 1;
