@@ -1,19 +1,19 @@
-function [filename] = st_wait_exists(cfg, filename, varargin)
+function [filename, waited_seconds] = st_wait_exists(cfg, filename)
 
 % ST_WAIT_EXISTS pauses program until filename exists
 %
 % Use as
-%   [waited_seconds] = st_wait_load(cfg, filename, varargin)
+%   [filename]                 = st_wait_exists(cfg, filename)
+%   [filename, waited_seconds] = st_wait_exists(cfg, filename)
 %
-%   cfg can be empty (cfg = [];)
-%   varargin is passed to 'load' function
+%   cfg can be empty (i.e., cfg = [];)
 %
 % Optional configuration parameters are:
 %
 %   cfg.timeout         = scalar, time in seconds to wait at most (default = Inf)
 %   cfg.checkinterval   = scalar, interval in seconds to check (default = 1)
 %   cfg.writerateapprox = scalar, assumed write speed in Bytes per second of a modified file (default = 1000000)
-%   cfg.minmodwait      = scalar, minimal waiting time afte file has been modified in seconds (default = 10)
+%   cfg.minmodwait      = scalar, minimal waiting time after file has been modified in seconds (default = 10)
 %
 % See also FT_PREPROCESSING, LOAD
 
@@ -51,39 +51,63 @@ fprintf([functionname ' function started\n']);
 cfg.timeout  = ft_getopt(cfg, 'timeout', Inf);
 cfg.checkinterval  = ft_getopt(cfg, 'checkinterval', 1);
 cfg.writerateapprox  = ft_getopt(cfg, 'writerateapprox', 1000000); % ~1 MByte
-cfg.minmodwait  = ft_getopt(cfg, 'minmodwait', 10); % ~1 MByte
-
-
+cfg.minmodwait  = ft_getopt(cfg, 'minmodwait', 10); % 10 seconds
 
                                     
 fprintf([functionname ' function initialized\n']);
 
+fprintf(['waiting for file ' filename ' to be present'  '\n']);
 
-while ~available([filename '.mat'],cfg.writerateapprox,cfg.minmodwait)
+
+avail = false;
+present = (exist(filename)==2);
+already_present = false;
+locked = true;
+f = dir(filename);
+if ~isempty(f) && present
+    already_present = ~isempty(f) && present;
+    if already_present
+        already_present = true;
+        waited_seconds = toc;
+        fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be present'  '\n']);
+        fprintf(['now waiting for file ' filename ' to be unlocked...'  '\n']);
+    end
+    seconds_past_since_modification = (now()-f.datenum)*100000;
+    seconds_to_write_approx = f.bytes/cfg.writerateapprox;
+    locked = (seconds_to_write_approx > seconds_past_since_modification) || (seconds_past_since_modification < cfg.minmodwait);
+end
+avail = present && ~locked;
+
+while ~avail
  pause(cfg.checkinterval)
  waited_seconds = toc;
  if waited_seconds > cfg.timeout
    ft_warning([functionname ' timeout after waiting for ' num2str(waited_seconds) 'seconds']);
    break
  end
-end
-
-disp(['... attempting to load ' filename '.mat' ' ...'])
-
-
-fprintf([functionname ' function finished\n']);
-waited_seconds = toc;
-memtoc
-end
-
-function avail = available(filename,standard_write_rate_Byte_per_second,minmodwaitseconds)
+ 
+ 
+ 
 present = (exist(filename)==2);
 locked = true;
 f = dir(filename);
 if ~isempty(f) && present
+    if ~already_present
+        already_present = true;
+        waited_seconds = toc;
+        fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be present'  '\n']);
+        fprintf(['now waiting for file ' filename ' to be unlocked...'  '\n']);
+    end
     seconds_past_since_modification = (now()-f.datenum)*100000;
-    seconds_to_write_approx = f.bytes/standard_write_rate_Byte_per_second;
-    locked = (seconds_to_write_approx > seconds_past_since_modification) || (seconds_past_since_modification < minmodwaitseconds);
+    seconds_to_write_approx = f.bytes/cfg.writerateapprox;
+    locked = (seconds_to_write_approx > seconds_past_since_modification) || (seconds_past_since_modification < cfg.minmodwait);
 end
 avail = present && ~locked;
+
+end
+
+waited_seconds = toc;
+fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be finally available'  '\n']);
+fprintf([functionname ' function finished\n']);
+memtoc
 end

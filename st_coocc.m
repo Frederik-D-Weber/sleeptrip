@@ -208,16 +208,17 @@ if ~iscell(cfg.EventsTargetFilterValues)
 end
 
 tempidx = ismember(cfg.EventsTestCompareColumns, res_test.table.Properties.VariableNames);
-cfg.EventsTestCompareColumns = cfg.EventsTestCompareColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestCompareColumns(~tempidx),' ') ' in cfg.EventsTestCompareColumns']);
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTestCompareColumns(~tempidx),' ') ' in cfg.EventsTestCompareColumns']);
 end
+cfg.EventsTestCompareColumns = cfg.EventsTestCompareColumns(tempidx);
 
 tempidx = ismember(cfg.EventsTargetCompareColumns, res_target.table.Properties.VariableNames);
-cfg.EventsTargetCompareColumns = cfg.EventsTargetCompareColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetCompareColumns(~tempidx),' ') ' in cfg.EventsTestCompareColumns']);
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTargetCompareColumns(~tempidx),' ') ' in cfg.EventsTestCompareColumns']);
 end
+cfg.EventsTargetCompareColumns = cfg.EventsTargetCompareColumns(tempidx);
+
 
 if ~(all(size(cfg.EventsTestCompareColumns) == size(cfg.EventsTargetCompareColumns)))
     error('number of test events and target events columns do not aggree')
@@ -256,36 +257,38 @@ if isfield(cfg,'EventsTargetFilterForColumns')
 end
 
 tempidx = ismember(cfg.EventsTestFilterForColumns, res_test.table.Properties.VariableNames);
+if ~all(tempidx)
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTestFilterForColumns(~tempidx),' ') ' in cfg.EventsTestFilterForColumns']);
+end
 cfg.EventsTestFilterForColumns = cfg.EventsTestFilterForColumns(tempidx);
 cfg.EventsTestFilterValues = cfg.EventsTestFilterValues(tempidx);
-if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestFilterForColumns(~tempidx),' ') ' in cfg.EventsTestFilterForColumns']);
-end
 
 tempidx = ismember(cfg.EventsTargetFilterForColumns, res_target.table.Properties.VariableNames);
+if ~all(tempidx)
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTargetFilterForColumns(~tempidx),' ') ' in cfg.EventsTargetFilterForColumns']);
+end
 cfg.EventsTargetFilterForColumns = cfg.EventsTargetFilterForColumns(tempidx);
 cfg.EventsTargetFilterValues = cfg.EventsTargetFilterValues(tempidx);
-if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetFilterForColumns(~tempidx),' ') ' in cfg.EventsTargetFilterForColumns']);
-end
 
 tempidx = ismember(cfg.EventsTestIDColumns, res_test.table.Properties.VariableNames);
-cfg.EventsTestIDColumns = cfg.EventsTestIDColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestIDColumns(~tempidx),' ') ' in cfg.EventsTestIDColumns']);
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTestIDColumns(~tempidx),' ') ' in cfg.EventsTestIDColumns']);
 end
+cfg.EventsTestIDColumns = cfg.EventsTestIDColumns(tempidx);
 
 tempidx = ismember(cfg.EventsTargetIDColumns, res_target.table.Properties.VariableNames);
-cfg.EventsTargetIDColumns = cfg.EventsTargetIDColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTargetIDColumns(~tempidx),' ') ' in cfg.EventsTargetIDColumns']);
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTargetIDColumns(~tempidx),' ') ' in cfg.EventsTargetIDColumns']);
 end
+cfg.EventsTargetIDColumns = cfg.EventsTargetIDColumns(tempidx);
+
 
 tempidx = ismember(cfg.EventsTestGroupSummaryByColumns, res_target.table.Properties.VariableNames);
-cfg.EventsTestGroupSummaryByColumns = cfg.EventsTestGroupSummaryByColumns(tempidx);
 if ~all(tempidx)
-    ft_warning(['dropped not existent column with the names ' strjoin(cfg.EventsTestGroupSummaryByColumns(~tempidx),' ') ' in cfg.EventsTestGroupSummaryByColumns']);
+    ft_warning(['dropped not existent columns with the names ' strjoin(cfg.EventsTestGroupSummaryByColumns(~tempidx),' ') ' in cfg.EventsTestGroupSummaryByColumns']);
 end
+cfg.EventsTestGroupSummaryByColumns = cfg.EventsTestGroupSummaryByColumns(tempidx);
+
 
 
 if (isfield(cfg,'EventsTestIDColumns') && ~isfield(cfg,'EventsTargetIDColumns')) || (~isfield(cfg,'EventsTestIDColumns') && isfield(cfg,'EventsTargetIDColumns'))
@@ -300,6 +303,7 @@ end
 
 
 fprintf([functionname ' function initialized\n']);
+ft_progress('init', 'text', ['Please wait...']);
 
 GroupByConcatString = '<#%%#>';
 
@@ -408,9 +412,6 @@ if strcmp(cfg.MismatchIdenticalEvents,'yes') || strcmp(cfg.MismatchDuplicateTest
     
 end
 
-overlap_test_target = [];
-nonoverlap_test = [];
-
 
 
 temp_overlap_collector_iterator = 1;
@@ -421,11 +422,9 @@ temp_nonoverlap_collector_iterator = 1;
 temp_nonoverlap_collector = {};
 temp_nonoverlap_collector{temp_nonoverlap_collector_iterator} = [];
 
-ft_progress('init', 'text', ['Please wait...']);
 
 column_prefix_test = 'te_';
 column_prefix_target = 'ta_';
-
 
 columnNamesTestNew = strcat(column_prefix_test,EventsTestTable.Properties.VariableNames);
 columnNamesTargetNew = strcat(column_prefix_target,EventsTargetTable.Properties.VariableNames);
@@ -443,6 +442,11 @@ for iCol = 1:numel(columnNamesTargetNew)
     end
 end
 
+
+overlap_test_target = [];
+nonoverlap_test = [];
+
+
 timeStartPar = toc(ttic);
 progress_count = 0;
 mismatchIndicator_target = ones(nEventsTarget,1);
@@ -450,10 +454,11 @@ for iEvTest = 1:nEventsTest
     %iEvTest = 1
     
     progress_count = progress_count + 1;
-    tempTimerNow = toc(ttic);
-    time_left_min = (nEventsTest-progress_count)*(((tempTimerNow - timeStartPar)/60)/progress_count);
-    ft_progress(progress_count/nEventsTest, ['Processing test event %d (%d percent, matchchunk %d, mismatchchunk %d) of %d against %d targets, remains: ~%d:%02d min'], progress_count, fix(100*progress_count/nEventsTest), temp_overlap_collector_iterator, temp_nonoverlap_collector_iterator, nEventsTest, nEventsTarget, fix(time_left_min),fix((time_left_min-fix(time_left_min))*60) );  % show string, x=i/N
-    
+    if mod(iEvTest,100) == 1
+        tempTimerNow = toc(ttic);
+        time_left_min = (nEventsTest-progress_count)*(((tempTimerNow - timeStartPar)/60)/progress_count);
+        ft_progress(progress_count/nEventsTest, ['Processing test event %d (%d percent, matchchunk %d, mismatchchunk %d) of %d against %d targets, remains: ~%d:%02d min'], progress_count, fix(100*progress_count/nEventsTest), temp_overlap_collector_iterator, temp_nonoverlap_collector_iterator, nEventsTest, nEventsTarget, fix(time_left_min),fix((time_left_min-fix(time_left_min))*60) );  % show string, x=i/N
+    end
     
     eventTest = EventsTestTable(iEvTest,:);
     matchIndicator = ones(nEventsTarget,1);
@@ -595,6 +600,8 @@ for iEvTest = 1:nEventsTest
     end
 end
 
+ft_progress(progress_count/nEventsTest, ['Processing test event %d (%d percent, matchchunk %d, mismatchchunk %d) of %d against %d targets, remains: ~%d:%02d min'], progress_count, fix(100*progress_count/nEventsTest), temp_overlap_collector_iterator, temp_nonoverlap_collector_iterator, nEventsTest, nEventsTarget, 0,0 );  % show string, x=i/N
+
 
 if nargout > 1
     for iTemp_overlap_collector_iterator = 1:numel(temp_overlap_collector)
@@ -668,6 +675,12 @@ if nargout > 1
     %             {repmat(cfg.EventTargetTimeWindowOffsetTime,size(overlap,1),1)},{repmat(cfg.EventTargetTimeWindowPreOffsetTime,size(overlap,1),1)},{repmat(cfg.EventTargetTimeWindowPostOffsetTime,size(overlap,1),1)},{repmat(cfg.EventTestTimePointOffsetTime,size(overlap,1),1)},'VariableNames',varNames);
     %     end
     
+
+    if isempty(overlap_test_target)
+        tempvarnames = cat(2,columnNamesTestNew,columnNamesTargetNew);
+        overlap_test_target = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+    end
+    
     overlap_test_target = cat(2,overlap_test_target,addRightOverlap);
     overlap_test_target = cat(2,table(repmat({eventsTestIDname},size(overlap_test_target,1),1),repmat({eventsTargetIDname},size(overlap_test_target,1),1),'VariableNames',{[column_prefix_test 'event_ori'],[column_prefix_target 'event_ori']}),overlap_test_target);
 
@@ -695,6 +708,10 @@ if nargout > 2
     %             {repmat(cfg.EventTargetTimeWindowOffsetTime,size(nonoverlap,1),1)},{repmat(cfg.EventTargetTimeWindowPreOffsetTime,size(nonoverlap,1),1)},{repmat(cfg.EventTargetTimeWindowPostOffsetTime,size(nonoverlap,1),1)},{repmat(cfg.EventTestTimePointOffsetTime,size(nonoverlap,1),1)},'VariableNames',varNames);
     %     end
     
+    if isempty(nonoverlap_test)
+        tempvarnames = columnNamesTestNew;
+        nonoverlap_test = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+    end
     nonoverlap_test = cat(2,nonoverlap_test,addRightNonOverlap);
     nonoverlap_test = cat(2,table(repmat({eventsTestIDname},ncols,1),repmat({eventsTargetIDname},ncols,1),'VariableNames',{[column_prefix_test 'event_ori'],[column_prefix_target 'event_ori']}),nonoverlap_test);
 end
@@ -720,6 +737,10 @@ if nargout > 3
     %             {repmat(cfg.EventTargetTimeWindowOffsetTime,size(nonoverlap,1),1)},{repmat(cfg.EventTargetTimeWindowPreOffsetTime,size(nonoverlap,1),1)},{repmat(cfg.EventTargetTimeWindowPostOffsetTime,size(nonoverlap,1),1)},{repmat(cfg.EventTestTimePointOffsetTime,size(nonoverlap,1),1)},'VariableNames',varNames);
     %     end
     
+    if isempty(nonoverlap_target)
+        tempvarnames = columnNamesTargetNew;
+        nonoverlap_target = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+    end
     nonoverlap_target = cat(2,nonoverlap_target,addRightNonOverlapTarget);
     nonoverlap_target = cat(2,table(repmat({eventsTestIDname},size(nonoverlap_target,1),1),repmat({eventsTargetIDname},ncols,1),'VariableNames',{[column_prefix_test 'event_ori'],[column_prefix_target 'event_ori']}),nonoverlap_target);
     
@@ -740,10 +761,27 @@ else
     summary = table(repmat('group',size(groups,2),1),'VariableNames',{'group'});
 end
 
+if isempty(res_test.table)
+    ft_warning('the input variable res_test has no events in its table, some output will be empty as well.')
+end
+
+if isempty(res_target.table)
+    ft_warning('the input variable res_target has no events in its table, some output will be empty as well.')
+end
+
+if isempty(groups)
+    summary = table(repmat('group',size(groups,2),1),'VariableNames',{'group'});
+    ft_warning('the output to res_summay will be empty, likely because there were no events in res_test or res_target')
+end
+
+
+
 for iGroup = 1:numel(cfg.EventsTestGroupSummaryByColumns)
     tempGroupTest = cfg.EventsTestGroupSummaryByColumns{iGroup};
     summary = cat(2,summary,table(repmat(cellstr('group'),size(groups,2),1),'VariableNames',{tempGroupTest}));
 end
+
+
 
 summary = cat(2,summary,table(cell2mat(values(groupByMapOverlap))','VariableNames',{[column_prefix_test 'match_grouped']}));
 summary = cat(2,summary,table(cell2mat(values(groupByMapNonOverlap))','VariableNames',{[column_prefix_test 'mismatch_grouped']}));
@@ -809,7 +847,7 @@ if nargout > 2
     res_mismatch_test.type = 'mismatch_test';
     res_mismatch_test.cfg = cfg;
     if isempty(nonoverlap_test)
-        colnames = cat(2,res_test.Properties.VariableNames,varNames);
+        colnames = cat(2,res_test.table.Properties.VariableNames,varNames);
         nonoverlap_test = cell2table(cell(0,numel(colnames)),'VariableNames',colnames);
     end
     res_mismatch_test.table = nonoverlap_test;
@@ -821,7 +859,7 @@ if nargout > 3
     res_mismatch_target.type = 'mismatch_target';
     res_mismatch_target.cfg = cfg;
     if isempty(nonoverlap_target)
-        colnames = cat(2,res_target.Properties.VariableNames,varNames);
+        colnames = cat(2,res_target.table.Properties.VariableNames,varNames);
         nonoverlap_target = cell2table(cell(0,numel(colnames)),'VariableNames',colnames);
     end
     res_mismatch_target.table = nonoverlap_target;
@@ -852,6 +890,6 @@ if nargout > 5
 end
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end

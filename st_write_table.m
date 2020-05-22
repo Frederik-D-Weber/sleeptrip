@@ -1,9 +1,10 @@
-function [filename] = st_write_table(table, filename)
+function [filename] = st_write_table(table, filename, delimiter)
 
 % ST_WRITE_TABLE write out table fast
 %
 % Use as
 %   [filename] = st_write_table(table, filename)
+%   [filename] = st_write_table(table, filename, delimiter)
 %
 % See also ST_WRITE_RES, ST_APPEND_DATA
 
@@ -31,12 +32,12 @@ function [filename] = st_write_table(table, filename)
 %
 % $Id$
 
-%table = res_slowwaves_events{1}.table;
-%table = cat(1,table,table,table,table,table,table,table,table,table,table,table);
-%table = cat(1,table,table,table,table,table,table,table,table,table,table,table);
-
 %tic
-delimiter = ',';
+if nargin < 3
+    delimiter = ',';
+end
+
+ft_progress('init', 'text', ['Initializing writing wait...']);
 
 colnames = table.Properties.VariableNames;
 rowwritestr = '';
@@ -68,16 +69,29 @@ end
 %rowwritestr
 %filename = 'test.csv';
 
-fid = fopen([filename],'wt');
+fid = fopen([filename],'Wt'); % the capital W means opening in nonflush mode for faster writing!!!
+%fid = fopen([filename],'Wt'); % the capital W means opening in nonflush
+%mode for faster writing!!! t is for text mode.
+%fid = fopen([filename],'wt'); % the capital W means opening in nonflush
+%mode for faster writing!!! t is for textmode
 %write header of ouptufile
 fprintf(fid,[headerwritestr '\n'],colnames{:});
 
 table = table2cell(table);
-for iRow = 1:size(table,1)
-    fprintf(fid,[rowwritestr '\n'],table{iRow,:});
+rowwritestr = [rowwritestr '\n'];
+nRows = size(table,1);
+for iRow = 1:nRows
+    if mod(iRow,100) == 1
+        ft_progress(iRow/nRows, 'writing row %d of %d (%d percent)', iRow, nRows, fix(100*iRow/nRows));
+    end
+    fprintf(fid,rowwritestr,table{iRow,:});
+    %fprintf(fid,rowwritestr,table{1,:});
 end
+ft_progress(nRows/nRows, 'writing row %d of %d (%d percent)', nRows, nRows, fix(100*nRows/nRows));
 
-fclose(fid)
+
+fclose(fid);
+ft_progress('close');
 %toc
 
 %tic

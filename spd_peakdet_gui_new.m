@@ -76,6 +76,12 @@ function spd_peakdet_gui_new_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to spd_peakdet_gui_new (see VARARGIN)
 
+if true
+    fgcol = [1 1 1];
+else
+    fgcol = [0 0 0];
+end
+
 % Choose default command line output for spd_peakdet_gui_new
 handles.output = varargin{3};
 
@@ -101,6 +107,8 @@ handles.nPeaks = length(handles.freqPeaks);
 handles.numberOfPossiblePeaks = 2;
 handles.ouputFilesPrefixString = varargin{8};
 handles.datasetnum = varargin{9};
+handles.prepeak = varargin{10};
+handles.postpeak = varargin{11};
 handles.currpeak = 1;
 
 
@@ -115,19 +123,25 @@ end
 
 handles.tempColors = hsv(length(handles.freqPeaks));
 
-handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',[0 0 0],'LineWidth',1.5,'DisplayName','mean(Chan)');
+handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',fgcol,'LineWidth',1.5,'DisplayName','mean(Chan)');
     hold on
     temp_colors = hsv(length(handles.pPowerChanLabels));
     for iChan = 1:length(handles.pPowerChanLabels) 
         temp_plot = plot(handles.pFreq,handles.pPowerChan(iChan,:),'Color',temp_colors(iChan,:),'LineWidth',0.5,'DisplayName',char(strrep(handles.pPowerChanLabels(iChan),'_','\_')));
         
     end
-    legend(gca,'show');
-    legend('boxoff');
+    hLegend = legend(gca,'show');
+    legend(gca,'boxoff');
+    if true
+        set(hLegend,'String',strcat('\color{white}',get(hLegend,'String')))
+        set(gca,'color',[0 0 0])
+    end
     for iENP = 1:length(handles.freqPeaks)
         plot(handles.freqPeaks(iENP),handles.powerPeaks(iENP),'o','MarkerFaceColor',handles.tempColors(iENP,:))
-        %line([handles.freqPeaks(iENP) handles.freqPeaks(iENP)],[0 handles.powerPeaks(iENP)],'LineStyle','--','Color',[0 0 0])
-        vline(handles.freqPeaks(iENP),'LineStyle','--','Color',[0 0 0])
+        %line([handles.freqPeaks(iENP) handles.freqPeaks(iENP)],[0 handles.powerPeaks(iENP)],'LineStyle','--','Color',fgcol)
+        vline(handles.freqPeaks(iENP),'LineStyle','--','Color',fgcol)
+        vline(handles.freqPeaks(iENP)-handles.prepeak,'LineStyle',':','Color',[0.5 0.5 0.5])
+        vline(handles.freqPeaks(iENP)+handles.postpeak,'LineStyle',':','Color',[0.5 0.5 0.5])
     end
     title([' power spectrum' ' result ' handles.tempiDataString]);
     xlabel('Frequency [Hz]');
@@ -135,6 +149,7 @@ handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',[0 0 0],'Lin
     hold off
     
     handles.gca = gca;
+    
     %set(hObject, 'WindowButtonMotionFcn',   {@mouse_move_cb, 'h_main',hObject});
     set(hObject, 'WindowButtonUpFcn',   {@select_marks_cb, 'handles', handles, 'event','WindowButtonUpFcn'});
   
@@ -222,6 +237,12 @@ function pushbutton_refresh_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+if true
+    fgcol = [1 1 1];
+else
+    fgcol = [0 0 0];
+end
+
 for k = 1:handles.nPeaks
     handles.freqPeaks(k) = str2double(get(handles.(['edit_peak_' num2str(k)]),'String'));
 end
@@ -236,22 +257,29 @@ for k = 1:handles.nPeaks
 end
 
 
-handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',[0 0 0],'LineWidth',1.5,'DisplayName','mean(Chan)');
+handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',fgcol,'LineWidth',1.5,'DisplayName','mean(Chan)');
     hold on
     temp_colors = hsv(length(handles.pPowerChanLabels));
     for iChan = 1:length(handles.pPowerChanLabels) 
         temp_plot = plot(handles.pFreq,handles.pPowerChan(iChan,:),'Color',temp_colors(iChan,:),'LineWidth',0.5,'DisplayName',char(strrep(handles.pPowerChanLabels(iChan),'_','\_')));  
     end
-    legend(gca,'show');
-    legend('boxoff');
+
+   hLegend = legend(gca,'show');
+    legend(gca,'boxoff');
+    if true
+        set(hLegend,'String',strcat('\color{white}',get(hLegend,'String')))
+        set(gca,'color',[0 0 0])
+    end
     for iENP = 1:length(handles.freqPeaks)
         if (handles.freqPeaksDet(iENP)>=min(handles.pFreq)) && (handles.freqPeaksDet(iENP)<=max(handles.pFreq))
             plot(handles.freqPeaksDet(iENP),handles.powerPeaksDet(iENP),'r*')
         end
         if (handles.freqPeaks(iENP)>=min(handles.pFreq)) && (handles.freqPeaks(iENP)<=max(handles.pFreq))
             plot(handles.freqPeaks(iENP),handles.powerPeaks(iENP),'o','MarkerFaceColor',handles.tempColors(iENP,:))
-            %line([handles.freqPeaks(iENP) handles.freqPeaks(iENP)],[0 handles.powerPeaks(iENP)],'LineStyle','--','Color',[0 0 0])
-            vline(handles.freqPeaks(iENP),'LineStyle','--','Color',[0 0 0])
+            %line([handles.freqPeaks(iENP) handles.freqPeaks(iENP)],[0 handles.powerPeaks(iENP)],'LineStyle','--','Color',[1 1 1])
+            vline(handles.freqPeaks(iENP),'LineStyle','--','Color',fgcol)
+            vline(handles.freqPeaks(iENP)-handles.prepeak,'LineStyle',':','Color',[0.5 0.5 0.5])
+            vline(handles.freqPeaks(iENP)+handles.postpeak,'LineStyle',':','Color',[0.5 0.5 0.5])
         end
     end
     title([' power spectrum' ' result ' handles.tempiDataString]);
@@ -269,6 +297,12 @@ function pushbutton_reset_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+if true
+    fgcol = [1 1 1];
+else
+    fgcol = [0 0 0];
+end
+
 handles.pFreq = handles.pFreqDet;
 handles.pPower = handles.pPowerDet;
 handles.pPowerChan = handles.pPowerChanDet;
@@ -278,19 +312,25 @@ for k = 1:handles.nPeaks
     handles.powerPeaks(k) = handles.pPower(find(handles.pFreq >= handles.freqPeaks(k),1,'first'));
 end
 
-handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',[0 0 0],'LineWidth',1.5,'DisplayName','mean(Chan)');
+handles.axes_freq_power = plot(handles.pFreq,handles.pPower,'Color',fgcol,'LineWidth',1.5,'DisplayName','mean(Chan)');
     hold on
     temp_colors = hsv(length(handles.pPowerChanLabels));
     for iChan = 1:length(handles.pPowerChanLabels) 
         temp_plot = plot(handles.pFreq,handles.pPowerChan(iChan,:),'Color',temp_colors(iChan,:),'LineWidth',0.5,'DisplayName',char(strrep(handles.pPowerChanLabels(iChan),'_','\_')));
     end
-    legend(gca,'show');
-    legend('boxoff');
+    hLegend = legend(gca,'show');
+    legend(gca,'boxoff');
+    if true
+        set(hLegend,'String',strcat('\color{white}',get(hLegend,'String')))
+        set(gca,'color',[0 0 0])
+    end
     for iENP = 1:length(handles.freqPeaks)
         plot(handles.freqPeaksDet(iENP),handles.powerPeaksDet(iENP),'r*')
         plot(handles.freqPeaks(iENP),handles.powerPeaks(iENP),'o','MarkerFaceColor',handles.tempColors(iENP,:))
-        %line([handles.freqPeaks(iENP) handles.freqPeaks(iENP)],[0 handles.powerPeaks(iENP)],'LineStyle','--','Color',[0 0 0])
-        vline(handles.freqPeaks(iENP),'LineStyle','--','Color',[0 0 0])
+        %line([handles.freqPeaks(iENP) handles.freqPeaks(iENP)],[0 handles.powerPeaks(iENP)],'LineStyle','--','Color',fgcol)
+        vline(handles.freqPeaks(iENP),'LineStyle','--','Color',fgcol)
+        vline(handles.freqPeaks(iENP)-handles.prepeak,'LineStyle',':','Color',[0.5 0.5 0.5])
+        vline(handles.freqPeaks(iENP)+handles.postpeak,'LineStyle',':','Color',[0.5 0.5 0.5])
     end
     title([' power spectrum' ' result ' handles.tempiDataString]);
     xlabel('Frequency (Hz)');

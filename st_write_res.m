@@ -6,7 +6,7 @@ function [filepaths] = st_write_res(cfg, varargin)
 %
 % Use as
 %   [filepaths] = st_write_res(cfg, res1, ...)
-% 
+%
 % Configuration requires at least on of these parameters
 % if none of these is defined and no time stamp is chosen, files might be
 % overwritten.
@@ -17,9 +17,20 @@ function [filepaths] = st_write_res(cfg, varargin)
 % Optional configuration parameters are
 %   cfg.timestamp        = either 'yes' or 'no' if a time stamp should be
 %                          added to filename (default = 'yes')
-%   cfg.folderstructure = either 'yes' or 'no' if a folder structure should
-%                         be created with the result origin and type 
-%                         all results will be stored in "/res/..." (default = 'yes')
+%   cfg.folderstructure  = either 'yes' or 'no' if a folder structure should
+%                          be created with the result origin and type
+%                          all results will be stored in "/res/..." (default = 'yes')
+%   cfg.writetablemethod = either 'st_write_table' or 'writetable' if the
+%                          awefully slow matlab 'writetable' should be used
+%                          or the quick 'st_write_table' function that is
+%                          an order of magnitude faster. (default = 'st_write_table')
+%   cfg.delimiter        = string as the delimiter to separate row values ,
+%                          save options are: ',' or '\t' (a tab) or '|' (a bar)
+%                          maybe but avoid ';' or ' '
+%                          if cfg.writetablemethod = 'st_write_table' there
+%                          are more options and any string to be used.
+%                          (default = ',')
+%   cfg.fileending       = string of the file ending, e.g. '.csv' or '.tsv'
 %
 % See also ST_APPEND_DATA
 
@@ -60,6 +71,9 @@ cfg.infix                  = ft_getopt(cfg, 'infix',   '');
 cfg.postfix                = ft_getopt(cfg, 'postfix', '');
 cfg.timestamp              = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure        = ft_getopt(cfg, 'folderstructure', 'yes');
+cfg.writetablemethod       = ft_getopt(cfg, 'writetablemethod', 'st_write_table');
+cfg.delimiter              = ft_getopt(cfg, 'delimiter', ',');
+cfg.fileending             = ft_getopt(cfg, 'fileending', '.csv');
 
 
 if all([isempty(cfg.prefix) isempty(cfg.infix) isempty(cfg.postfix)])
@@ -91,15 +105,15 @@ for iRes = 1:nRes
     end
     prefix = '';
     if ~isempty(cfg.prefix)
-        prefix = [cfg.prefix '_']; 
+        prefix = [cfg.prefix '_'];
     end
     infix = '';
     if ~isempty(cfg.infix)
-        infix = ['_' cfg.infix]; 
+        infix = ['_' cfg.infix];
     end
     postfix = '';
     if ~isempty(cfg.postfix)
-        postfix = ['_' cfg.postfix]; 
+        postfix = ['_' cfg.postfix];
     end
     
     subfolderpath = '';
@@ -111,23 +125,35 @@ for iRes = 1:nRes
         if ~isdir([subfolderpath res.ori filesep res.type])
             mkdir([subfolderpath res.ori filesep res.type]);
         end
-
+        
         subfolderpath = [subfolderpath res.ori filesep res.type filesep];
-    
+        
     end
     
-%     postpostfix = '';
-%     if nRes > 1
-%             postpostfix = ['_resnum_' num2str(iRes)];
-%     end
-    filepath = [subfolderpath prefix res.ori '_' res.type infix appfix postfix timestampfix '.csv'];
-    writetable(res.table,filepath,...
-        'FileType','text',...
-        'WriteVariableNames',true,...
-        'WriteRowNames',false,...
-        'Delimiter',',');%,...
-        %'QuoteStrings',false...
-        %);
+    %     postpostfix = '';
+    %     if nRes > 1
+    %             postpostfix = ['_resnum_' num2str(iRes)];
+    %     end
+    filepath = [subfolderpath prefix res.ori '_' res.type infix appfix postfix timestampfix cfg.fileending];
+    fprintf('writing %s ... \n', filepath);
+    switch cfg.writetablemethod
+        case 'st_write_table'
+            st_write_table(res.table,filepath,cfg.delimiter);%,...
+            %'QuoteStrings',false...
+            %);
+        case 'writetable'
+            writetable(res.table,filepath,...
+                'FileType','text',...
+                'WriteVariableNames',true,...
+                'WriteRowNames',false,...
+                'Delimiter',cfg.delimiter);%,...
+            %'QuoteStrings',false...
+            %);
+        otherwise
+            ft_error(['table write method ' cfg.writetablemethod ' unknown, see the help for all the options.']);
+            
+    end
+    fprintf('... finished %s\n', filepath);
     filepaths{iRes} = filepath;
 end
 
