@@ -1,0 +1,30 @@
+@subsubheading Description
+
+Body temperature readings for two beavers.
+
+@subsubheading Format
+
+@table @code
+@item day
+Day of observation (in days since the beginning of 1990), December 12–13 (beaver1) 
+and November 3–4 (beaver2).
+@item time
+Time of observation, in the form 0330 for 3:30am
+@item temp
+Measured body temperature in degrees Celsius.
+@item activ
+Indicator of activity outside the retreat.
+@end table
+
+@subsubheading Source
+
+P. S. Reynolds (1994) Time-series analyses of beaver body temperatures.
+Chapter 11 of Lange, N., Ryan, L., Billard, L., Brillinger, D., Conquest,
+L. and Greenhouse, J. (Eds.) (1994) @cite{Case Studies in Biometry}. New York: John Wiley
+and Sons.
+
+@subsubheading Examples
+
+@example
+# TODO: This example needs to be ported from R.
+@end example

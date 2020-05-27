@@ -1,0 +1,34 @@
+@subsubheading Format
+
+@table @code
+@item weight
+a numeric vector giving the body weight of the chick (gm).
+@item Time
+a numeric vector giving the number of days since birth when the
+measurement was made.
+@item Chick
+an ordered factor with levels 18 < ... < 48 giving a unique
+identifier for the chick. The ordering of the levels groups chicks on the same
+diet together and orders them according to their final weight (lightest to
+heaviest) within diet.
+@item Diet
+a factor with levels 1, ..., 4 indicating which experimental diet
+the chick received.
+@end table
+
+@subsubheading Source
+
+Crowder, M. and Hand, D. (1990). @cite{Analysis of Repeated Measures}. London: Chapman and
+Hall. (example 5.3)
+
+Hand, D. and Crowder, M. (1996), @cite{Practical Longitudinal Data Analysis}. London: Chapman
+and Hall. (table A.2)
+
+Pinheiro, J. C. and Bates, D. M. (2000) @cite{Mixed-effects Models in S and S-PLUS}.
+New York: Springer.
+
+@subsubheading Examples
+
+@example
+@INCLUDE_DATASET_EXAMPLE_SCRIPT{ChickWeight_1.m}
+@end example

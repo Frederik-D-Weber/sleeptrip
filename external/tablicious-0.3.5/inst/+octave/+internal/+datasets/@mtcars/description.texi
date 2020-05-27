@@ -1,0 +1,51 @@
+@subsubheading Description
+
+The data was extracted from the 1974 Motor Trend US magazine, and
+comprises fuel consumption and 10 aspects of automobile design and
+performance for 32 automobiles (1973–74 models).
+
+@subsubheading Format
+
+@table @code
+@item mpg
+Fuel efficiency in miles/gallon
+@item cyl
+Number of cylinders
+@item disp
+Displacement (cu. in.)
+@item hp
+Gross horsepower
+@item drat
+Rear axle ratio
+@item wt
+Weight (1,000 lbs)
+@item qsec
+1/4 mile time
+@item vs
+Engine type (0 = V-shaped, 1 = straight)
+@item am
+Transmission type (0 = automatic, 1 = manual)
+@item gear
+Number of forward gears
+@item carb
+Number of carburetors
+@end table
+
+@subsubheading Note
+
+Henderson and Velleman (1981) comment in a footnote to Table 1: “Hocking
+[original transcriber]’s noncrucial coding of the Mazda’s rotary engine
+as a straight six-cylinder engine and the Porsche’s flat engine as a V
+engine, as well as the inclusion of the diesel Mercedes 240D, have been
+retained to enable direct comparisons to be made with previous analyses.”
+
+@subsubheading Source
+
+Henderson and Velleman (1981). Building multiple regression models
+interactively. @cite{Biometrics}, 37, 391–411.
+
+@subsubheading Examples
+
+@example
+# TODO: Port this example from R
+@end example

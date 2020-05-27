@@ -1,0 +1,31 @@
+@subsubheading Description
+
+Four sets of x/y pairs which have the same statistical properties, but are
+very different.
+
+@subsubheading Format
+
+The data comes in an array of 4 structs, each with fields as follows:
+
+@table @code
+@item x
+The X values for this pair.
+@item y
+The Y values for this pair.
+@end table
+
+@subsubheading Source
+
+Tufte, Edward R. (1989). @cite{The Visual Display of Quantitative Information}.
+13–14. Cheshire, CT: Graphics Press.
+
+@subsubheading References
+
+Anscombe, Francis J. (1973). Graphs in statistical analysis. @cite{The
+American Statistician}, 27, 17–21.
+
+@subsubheading Examples
+
+@example
+@INCLUDE_DATASET_EXAMPLE_SCRIPT{anscombe_1.m}
+@end example

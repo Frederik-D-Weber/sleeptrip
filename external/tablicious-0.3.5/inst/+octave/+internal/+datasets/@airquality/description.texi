@@ -1,0 +1,36 @@
+@subsubheading Description
+
+Daily air quality measurements in New York, May to September 1973.
+
+@subsubheading Format
+
+@table @code
+@item Ozone
+Ozone concentration (ppb)
+@item SolarR
+Solar R (lang)
+@item Wind
+Wind (mph)
+@item Temp
+Temperature (degrees F)
+@item Month
+Month (1-12)
+@item Day
+Day of month (1-31)
+@end table
+
+@subsubheading Source
+
+New York State Department of Conservation (ozone data) and the National
+Weather Service (meteorological data).
+
+@subsubheading References
+
+Chambers, J. M., Cleveland, W. S., Kleiner, B. and Tukey, P. A. (1983).
+@cite{Graphical Methods for Data Analysis}. Belmont, CA: Wadsworth.
+
+@subsubheading Examples
+
+@example
+@INCLUDE_DATASET_EXAMPLE_SCRIPT{airquality_1.m}
+@end example

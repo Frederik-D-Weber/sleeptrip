@@ -1,0 +1,14 @@
+@subsubheading Description
+
+The revenue passenger miles flown by commercial airlines in the
+United States for each year from 1937 to 1960.
+
+@subsubheading Source
+
+@cite{F.A.A. Statistical Handbook of Aviation}.
+
+@subsubheading Examples
+
+@example
+@INCLUDE_DATASET_EXAMPLE_SCRIPT{airmiles_1.m}
+@end example
