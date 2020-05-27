@@ -75,12 +75,20 @@ if strcmpi(hdr.DataFormat, 'binary')
   end
   switch lower(hdr.BinaryFormat)
     case 'int_16';
-      hdr.nSamples = info.bytes./(hdr.NumberOfChannels*2);
+      NBytes = 2;
     case 'int_32';
-      hdr.nSamples = info.bytes./(hdr.NumberOfChannels*4);
+      NBytes = 2;
     case 'ieee_float_32';
-      hdr.nSamples = info.bytes./(hdr.NumberOfChannels*4);
+      NBytes = 2;
+    otherwise 
+     error('unkown Binary format %s of brainvision file', lower(hdr.BinaryFormat));
+
   end
+  %this fix(...) fixes the issue for reading in some brainvision files (typically
+  %int_16 format where there is extra samples written but does not result
+  %in integer number of samples, the ones at the end is discarded if this is
+  %the case (typically just one sample)
+  hdr.nSamples = fix(info.bytes./(hdr.NumberOfChannels*NBytes));
 elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'vectorized')
   % this is a very inefficient fileformat to read data from, it looks like this:
   % Fp1   -2.129 -2.404 -18.646 -15.319 -4.081 -14.702 -23.590 -8.650 -3.957

@@ -20,6 +20,8 @@ function [res_channel, res_event, res_filter] = st_slowwaves(cfg, data)
 % Optional configuration parameters are:
 %
 %  cfg.channel            = Nx1 cell-array with selection of channels (default = 'all'), see FT_CHANNELSELECTION
+%                           Note that the channels are selected 
+%                           AFTER cfg.montage is applied (if applied)
 %  cfg.stages             = either a string or a Nx1 cell-array with strings that indicate sleep stages
 %                             if no data structure is provided as input next to configuration also
 %                             provide this parameter, possible stages are a subset of
@@ -284,7 +286,7 @@ if isfield(cfg, 'reref'),       cfg_int.reref = cfg.reref;             end
 if isfield(cfg, 'refchannel'),  cfg_int.refchannel = cfg.refchannel;   end
 if isfield(cfg, 'refmethod'),   cfg_int.refmethod = cfg.refmethod;     end
 if isfield(cfg, 'implicitref'), cfg_int.implicitref = cfg.implicitref; end
-if isfield(cfg, 'montage'),     cfg_int.reref = cfg.montage;           end
+if isfield(cfg, 'montage'),     cfg_int.montage = cfg.montage;         end
 
 FpassLeft = PreDownSampleHighPassFilter_FpassLeft_or_F3dBcutoff; %left pass frequency in Hz
 FstopLeft = FpassLeft - StopToPassTransitionWidth_hp_predownsample; %left stop frequency in Hz
@@ -372,6 +374,12 @@ else
     end
     
 end
+
+
+cfg_chan = [];
+cfg_chan.channel = ft_channelselection(cfg.channel, data.label);
+data = ft_selectdata(cfg_chan, data);
+
 
 if ~hasROIs
     for iT = 1:numel(data.trial)
@@ -596,7 +604,8 @@ for iChan = 1:nChannels
     trl_contigSegment = [];
     
     for iTr = 1:size(chData.trial,2)
-        fprintf('channel %s, subpart %i, preselect events of appropriate zero-crossings\n',data.label{iChan},iTr);
+        %fprintf('channel %s, subpart %i, preselect events of appropriate zero-crossings\n',data.label{iChan},iTr);
+        fprintf('channel %s, subpart %i, detecting and annotating events\n',data.label{iChan},iTr);
                     
             frqBndPssSignal = chData.trial{iTr};
             %frqBndPssSignal_hilbert = hilbert(frqBndPssSignal);
@@ -652,7 +661,7 @@ for iChan = 1:nChannels
             
             detectedSDofFilteredSignal = zeros(1,nDetected);
             
-            fprintf('channel %s, subpart %i, annotate events\n',data.label{iChan},iTr);
+            %fprintf('channel %s, subpart %i, annotate events\n',data.label{iChan},iTr);
             for iIterCand = 1:nDetected
                 
                 %currentRawDataSampleOffset = rawDataSampleOffset + detectedBeginSample(iIterCand) - 1;

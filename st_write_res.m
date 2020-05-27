@@ -31,6 +31,9 @@ function [filepaths] = st_write_res(cfg, varargin)
 %                          are more options and any string to be used.
 %                          (default = ',')
 %   cfg.fileending       = string of the file ending, e.g. '.csv' or '.tsv'
+%                          default = '.csv' but '.tsv' (if cfg.delimiter =
+%                          '\t')
+%   
 %
 % See also ST_APPEND_DATA
 
@@ -75,6 +78,9 @@ cfg.writetablemethod       = ft_getopt(cfg, 'writetablemethod', 'st_write_table'
 cfg.delimiter              = ft_getopt(cfg, 'delimiter', ',');
 cfg.fileending             = ft_getopt(cfg, 'fileending', '.csv');
 
+if strcmp(cfg.delimiter, '\t')
+    cfg.fileending = '.tsv';
+end
 
 if all([isempty(cfg.prefix) isempty(cfg.infix) isempty(cfg.postfix)])
     if ~istrue(cfg.timestamp)

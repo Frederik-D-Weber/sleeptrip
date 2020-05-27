@@ -274,7 +274,9 @@ offset_event_y = max(yTick);
 max_temp_x_all = 0;
 if isfield(cfg, 'eventvalues')
     for iEvent = 1:numel(cfg.eventtimes)
-        max_temp_x_all = max(max_temp_x_all,max(cfg.eventtimes{iEvent}));
+        if ~isempty(cfg.eventtimes{iEvent})
+            max_temp_x_all = max(max_temp_x_all,max(cfg.eventtimes{iEvent}));
+        end
     end
 end
 max_temp_x_all = max_temp_x_all/60;

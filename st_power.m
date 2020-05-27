@@ -290,7 +290,7 @@ if isfield(cfg, 'reref'),       cfg_int.reref = cfg.reref;             end
 if isfield(cfg, 'refchannel'),  cfg_int.refchannel = cfg.refchannel;   end
 if isfield(cfg, 'refmethod'),   cfg_int.refmethod = cfg.refmethod;     end
 if isfield(cfg, 'implicitref'), cfg_int.implicitref = cfg.implicitref; end
-if isfield(cfg, 'montage'),     cfg_int.reref = cfg.montage;           end
+if isfield(cfg, 'montage'),     cfg_int.montage = cfg.montage;         end
 
 FpassLeft = PreDownSampleHighPassFilter_FpassLeft_or_F3dBcutoff; %left pass frequency in Hz
 FstopLeft = FpassLeft - StopToPassTransitionWidth_hp_predownsample; %left stop frequency in Hz
@@ -374,6 +374,10 @@ else
     end
 
 end
+
+cfg_chan = [];
+cfg_chan.channel = ft_channelselection(cfg.channel, data.label);
+data = ft_selectdata(cfg_chan, data);
 
 if (data.fsample == 128) && downsamplefsNotSet
     ft_warning('leaving 128 Hz sampling rate as default sampling rate')
@@ -481,10 +485,12 @@ if ~hasROIs
     pPower(:) = 0;
 end
 
+newChannelLabels = tfa.label;
+nChannels = numel(newChannelLabels);
+
 tfa = [];%clear
 
 
-nChannels = length(data.label);
 %W = (trlSampleLengths./sampleLengthsAcrossROIs); %Nx1
 
 band_ch_meanPowerSumOverSegments = [];
@@ -502,7 +508,7 @@ for iBand = 1:(numel(cfg.bands))
     
     for iChan = 1:nChannels
         %iChan = 1;
-        fprintf('power: process band %i to %i Hz in channel %s\n',bandMinFreq,bandMaxFreq,data.label{iChan});
+        fprintf('power: process band %i to %i Hz in channel %s\n',bandMinFreq,bandMaxFreq,newChannelLabels{iChan});
         
         trl_meanPower = [];
         for iTr = 1:size(pPower,1)

@@ -124,6 +124,18 @@ resIDs = table(resIDs,'VariableNames',{'resnum'});
 
 restab = cat(1, restabs{:});
 
+% % for debugging:
+% firstrow = restabs{iR}.Properties.VariableNames
+% 
+% for iR = 1:numel(restabs)
+%     comprow = restabs{iR}.Properties.VariableNames;
+%     if ~all(ismember(firstr,comprow))
+%       iR  
+%       break
+%     end
+% end
+%ismember(firstr,restabs{61}.Properties.VariableNames)
+
 restab = cat(2, resIDs ,restab);
 
 res = r;

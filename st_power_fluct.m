@@ -24,6 +24,8 @@ function [res_power_fluct_bin, res_power_fluct_signal] = st_power_fluct(cfg, dat
 % %                        segmentation in the interval [0,1) (default = 0.1)
 %
 %   cfg.channel  = Nx1 cell-array with selection of channels (default = 'all'), see FT_CHANNELSELECTION
+%                           Note that the channels are selected 
+%                           AFTER cfg.montage is applied (if applied)
 % %   cfg.foilim   = [begin end], frequency band of interest, default = [0.5 30]
 %   cfg.bands    = structure of frequency band definitions in the form of
 %                  the default one, e.g.
@@ -243,7 +245,7 @@ if isfield(cfg, 'reref'),       cfg_int.reref = cfg.reref;             end
 if isfield(cfg, 'refchannel'),  cfg_int.refchannel = cfg.refchannel;   end
 if isfield(cfg, 'refmethod'),   cfg_int.refmethod = cfg.refmethod;     end
 if isfield(cfg, 'implicitref'), cfg_int.implicitref = cfg.implicitref; end
-if isfield(cfg, 'montage'),     cfg_int.reref = cfg.montage;           end
+if isfield(cfg, 'montage'),     cfg_int.montage = cfg.montage;         end
 
 FpassLeft = PreDownSampleHighPassFilter_FpassLeft_or_F3dBcutoff; %left pass frequency in Hz
 FstopLeft = FpassLeft - StopToPassTransitionWidth_hp_predownsample; %left stop frequency in Hz
@@ -328,6 +330,9 @@ else
 
 end
 
+cfg_chan = [];
+cfg_chan.channel = ft_channelselection(cfg.channel, data.label);
+data = ft_selectdata(cfg_chan, data);
 
 if (data.fsample == 128) && downsamplefsNotSet
     ft_warning('leaving 128 Hz sampling rate as default sampling rate')

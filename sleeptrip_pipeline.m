@@ -137,10 +137,34 @@ scoring.lightsoff = subject.lightsoff;
 %practice: read in another format, maybe a custom format.
 
 %% check when is sleep onset/offset
+
+first thing to do is to extend the scorings of the zmax to the one of the somno (adding ? to beginning and end of zmax)
+
 cfg = [];
-%cfg.sleeponsetdef  = 'N1_XR'; % also try 'AASM' and many more
-[onsetnumber, preoffsetnumber, onsetepoch] = st_sleeponset(cfg,scoring);
-onsetnumber
+cfg.sleeponsetdef  = 'AASM'; % also try 'AASM' and many more
+[onsetnumber, preoffsetnumber_somno, onsetepoch] = st_sleeponset(cfg,scoring_somno);
+[onsetnumber, preoffsetnumber_zmax, onsetepoch] = st_sleeponset(cfg,scoring_zmax);
+
+
+fist_epoch_somno = zmax_first_epoch;
+last_epoch_somno = max(preoffsetnumber_somno,preoffsetnumber_zmax);
+
+    cfg = [];
+    cfg.start = fist_epoch_somno;
+    cfg.end = last_epoch_somno;
+    scoring_new_somno = st_cutscoring(cfg,scoring_somno);
+
+fist_epoch_zmax = zmax_first_epoch;
+last_epoch_zmax = ...
+    
+    cfg = [];
+    cfg.start = fist_epoch_somno;
+    cfg.end = last_epoch_somno;
+    scoring_new_zmax = st_cutscoring(cfg,scoring_zmax);
+
+
+
+
 preoffsetnumber
 onsetepoch
 
