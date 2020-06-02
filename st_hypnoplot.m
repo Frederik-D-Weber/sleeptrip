@@ -11,6 +11,7 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %   config file can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
+%   cfg.plottype               = string, the type of plot 'classic' plots the line graph as typical or 'colorblocks' plots the colorbocks (default = 'classic')
 %   cfg.plotsleeponset         = string, plot an indicator of sleep onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotsleepoffset        = string, plot an indicator of sleep offset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
@@ -24,6 +25,10 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %   cfg.timeticksdiff          = scalar, time difference in minutes the ticks are places from each other (default = 30);
 %   cfg.timemin                = scalar, minimal time in minutes the ticks 
 %                                have, e.g. 480 min, will plot tick at least to 480 min (default = 0);
+%   cfg.timerange              = vector, [mintime maxtime] of the time axis
+%                                limits in minutes, overwrites all the
+%                                other contraints
+%                                have, e.g. 480 min, will plot tick at least to 480 min (default = display all);
 %   cfg.considerdataoffset     = string, 'yes' or 'no' if dataoffset is represented in time axis (default = 'yes');
 %
 % If you wish to export the figure then define also the following
@@ -102,6 +107,7 @@ fprintf([functionname ' function started\n']);
 
 
 % set the defaults
+cfg.plottype                = ft_getopt(cfg, 'plottype', 'classic');
 cfg.title                   = ft_getopt(cfg, 'title', '');
 cfg.timeticksdiff           = ft_getopt(cfg, 'timeticksdiff', 30);
 cfg.timemin                 = ft_getopt(cfg, 'timemin', 0);
@@ -110,7 +116,6 @@ cfg.plotsleeponset          = ft_getopt(cfg, 'plotsleeponset', 'yes');
 cfg.plotsleepoffset         = ft_getopt(cfg, 'plotsleepoffset', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
-cfg.yaxdisteqi              = ft_getopt(cfg, 'yaxdisteqi', 'no');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 cfg.figureoutputformat      = ft_getopt(cfg, 'figureoutputformat', 'png');
 cfg.figureoutputunit        = ft_getopt(cfg, 'figureoutputunit', 'inches');
@@ -121,8 +126,21 @@ cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
 cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
 cfg.eventrangernddec        = ft_getopt(cfg, 'eventrangernddec', 2);
+cfg.timerange               = ft_getopt(cfg, 'timerange', [], true);
 
 
+if strcmp(cfg.plottype,'colorbar') || strcmp(cfg.plottype,'colorblocks')
+    if isfield(cfg,'yaxdisteqi')
+        if ~istrue(cfg.yaxdisteqi)
+            ft_warning('cfg.yaxdisteqi is set to ''yes'' because of the cfg.plottype = %s',cfg.plottype)
+            cfg.yaxdisteqi = 'yes';
+        end
+    else
+         cfg.yaxdisteqi = 'yes';
+    end
+else
+    cfg.yaxdisteqi = ft_getopt(cfg, 'yaxdisteqi', 'no');
+end
 
 
 if (isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventlabels')) || (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
@@ -191,7 +209,8 @@ hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),istrue(cfg.
 
 hypnStages = [cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0) ...
     cellfun(@sleepStage2str_alt,scoring.epochs','UniformOutput',0) ...
-    cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0)];
+    cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0)...
+    cellfun(@sleepStage2str_alt3,scoring.epochs','UniformOutput',0)];
 
 
 hypnEpochs = 1:numel(scoring.epochs);
@@ -199,10 +218,10 @@ hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
 
 %onsetCandidateIndex = getSleepOnsetEpoch(hypnStages,hypnEpochsBeginsSamples,lightsOffSample,cfg.sleeponsetdef);
 
-[onsetCandidateIndex preOffsetCandidate onsetepoch] = st_sleeponset(cfg,scoring);
+[onsetCandidateIndex lastsleepstagenumber onsetepoch] = st_sleeponset(cfg,scoring);
 
-if isempty(preOffsetCandidate)
-    preOffsetCandidate = nEpochs;
+if isempty(lastsleepstagenumber)
+    lastsleepstagenumber = nEpochs;
 end
 
 
@@ -230,10 +249,17 @@ switch scoring.standard
         yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4 ];
             end
         
-        yTickLabel = {'?' 'A' 'MT' 'Wake' 'REM' 'S1' 'S2' 'S3' 'S4'};
+        yTickLabel = {'?' 'A' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
 
     otherwise
-        ft_error('scring standard ''%s'' not supported for ploting', scoring.standard);
+        ft_error('scoring standard ''%s'' not supported for ploting.\n Maybe use ST_SCORINGCONVERT to convert the scoring first.', scoring.standard);
+end
+
+switch cfg.plottype
+    case 'colorbar'
+        plot_exclude_offset = 1;
+        yTick = [3];
+        yTickLabel = {'Stage'};
 end
 
 if istrue(cfg.plotexcluded)
@@ -241,13 +267,12 @@ if istrue(cfg.plotexcluded)
     yTick(end+1) = plot_exclude_offset;
 end
 
-[hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset,istrue(cfg.yaxdisteqi));
-
 if ~istrue(cfg.plotunknown)
     tempremind = strcmp(yTickLabel,'?');
     yTickLabel(tempremind) = [];
     yTick(tempremind) = [];
 end
+
 
 hhyp = figure;
 axh = gca;
@@ -255,14 +280,88 @@ set(hhyp,'color',[1 1 1]);
 set(axh,'FontUnits',cfg.figureoutputunit)
 set(axh,'Fontsize',cfg.figureoutputfontsize);
 
-x_time = (1:length(hypn_plot_interpol))/(dummySampleRate);
-x_time = x_time + offsetseconds;
-x_time = x_time/60; % minutes
+switch cfg.plottype
+    case 'classic'
+        [hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset,istrue(cfg.yaxdisteqi));
+        x_time = (1:length(hypn_plot_interpol))/(dummySampleRate)  - 1/dummySampleRate;
+        x_time = x_time + offsetseconds;
+        x_time = x_time/60; % minutes
+        x_time_hyp = x_time(1:length(hypn_plot_interpol));
+        plot(axh,x_time_hyp,hypn_plot_interpol,'Color',[0 0 0])
+        hold(axh,'on');
+        
+    case {'colorblocks', 'colorbar'}
+        x_time = (0:numel(scoring.epochs)) * scoring.epochlength;
+        x_time = x_time + offsetseconds;
+        x_time = x_time/60; % minutes
+        x_time_hyp = x_time;
+        
+        hp = [];
+        
+        labels = scoring.label;
+        [lables_colors_topdown labels_ordered] = st_epoch_colors(labels);
+        idxUsedLabels = [];
+        
+        incLabel = 1;
+        
+        [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs);
+        
+        offset_y = -0.5;%(iScoring-0.5);
+        height = 1;
+        
+        for iEpoch = 1:numel(scoring.epochs)
+            x1 = x_time(iEpoch);
+            x2 = x_time(iEpoch+1);
+            epoch = scoring.epochs(iEpoch);
+            
+            switch cfg.plottype
+                case 'colorblocks'
+                    y_hyp_pos = yTick(ismember(yTickLabel,epoch));
+                case 'colorbar'
+                    y_hyp_pos = yTick(1);
+            end
+            
+            %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
+            h = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],epoch_colors(iEpoch,:),'edgecolor','none');
+            
+            if isfield(cfg,'plotexcluded')
+                if istrue(cfg.plotexcluded) && scoring.excluded(iEpoch)
+                    y_hyp_pos = yTick(end);
+                    he = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],[1 0 0],'edgecolor','none');
+                end
+            end
+            
+            member = find(ismember(labels,epoch),1,'first');
+            if ~ismember(member,idxUsedLabels)
+                hp(incLabel) = h;
+                incLabel = incLabel + 1;
+                idxUsedLabels = [idxUsedLabels member];
+            end
+        end
+        
+        
+        collabels = labels;
+        for iLabel = 1:numel(labels)
+            collabels{iLabel} = sprintf(['\\color[rgb]{%.4f,%.4f,%.4f}' labels{iLabel}],lables_colors_topdown(iLabel,1),lables_colors_topdown(iLabel,2),lables_colors_topdown(iLabel,3));
+        end
+        collabels = collabels(idxUsedLabels);
+        [b, idx_ori_labels] = sort(idxUsedLabels);
+        hLegend = legend(hp(idx_ori_labels),collabels(idx_ori_labels),'Location','northoutside','Orientation','horizontal','Box','off');
+        
+        
+    otherwise
+       ft_error('cfg.plottype = %s is unknown, please see the help for available options.', cfg.plottype)
+end
 
-x_time_hyp = x_time(1:length(hypn_plot_interpol));
 
-plot(axh,x_time_hyp,hypn_plot_interpol,'Color',[0 0 0])
-hold(axh,'on');
+
+
+
+
+
+
+
+
 
 eventTimeMaxSeconds = cfg.timemin*60;
 offset_step = 0.5;
@@ -314,13 +413,22 @@ if isfield(cfg, 'eventtimes')
 end
 
 
-temp_max_y = max(yTick);
+ switch cfg.plottype
+                case 'classic'
+                    temp_max_y = max(yTick);
 
-if istrue(cfg.plotexcluded)
-    temp_min_y = plot_exclude_offset;
-else
-    temp_min_y = min(yTick) - 1;
-end
+                    if istrue(cfg.plotexcluded)
+                        temp_min_y = plot_exclude_offset;
+                    else
+                        temp_min_y = min(yTick) - 1;
+                    end
+     case {'colorblocks', 'colorbar'}
+         temp_max_y = max(yTick)+0.5;
+         temp_min_y = min(yTick)-0.5;
+
+ end
+ 
+
 
 
 if isfield(cfg, 'eventtimes')
@@ -330,28 +438,58 @@ end
 if strcmp(cfg.plotsleeponset, 'yes')
     if onsetCandidateIndex ~= -1
         onset_time = (onsetCandidateIndex-0.5)*(scoring.epochlength/60) + (offsetseconds/60);%in minutes
-        onset_y_coord_offset = 0.2;
-        onset_y_coord = hypn_plot_interpol(find(x_time >=onset_time,1,'first'))+onset_y_coord_offset;
+        switch cfg.plottype
+            case 'classic'
+                onset_y_coord_offset = 0.2;
+                onset_y_coord = hypn_plot_interpol(find(x_time >=onset_time,1,'first'))+onset_y_coord_offset;
+                
+            case 'colorblocks'
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{onsetCandidateIndex}))+onset_y_coord_offset;
+                
+            case 'colorbar'
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+        end
         hold(axh,'on');
         scatter(axh,onset_time,onset_y_coord,'filled','v','MarkerFaceColor',[0 1 0])
     end
 end
 
-offset_time = (preOffsetCandidate+0.5)*(scoring.epochlength/60)+(offsetseconds/60);%in minutes
-offset_y_coord_offset = 0.2;
-offset_y_coord = hypn_plot_interpol(find(x_time <=offset_time,1,'last'))+offset_y_coord_offset;
-hold(axh,'on');
+
 if strcmp(cfg.plotsleepoffset, 'yes')
-    scatter(axh,offset_time,offset_y_coord,'filled','^','MarkerFaceColor',[0 0 1])
+    if onsetCandidateIndex ~= -1
+        offset_time = (lastsleepstagenumber+0.5)*(scoring.epochlength/60)+(offsetseconds/60);%in minutes
+        switch cfg.plottype
+            case 'classic'
+                offset_y_coord_offset = 0.2;
+                offset_y_coord = hypn_plot_interpol(find(x_time <=offset_time,1,'last'))+offset_y_coord_offset;
+            case 'colorblocks'
+                onset_y_coord_offset = 0.5;
+                offset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{lastsleepstagenumber}))+onset_y_coord_offset;
+            case 'colorbar'
+                onset_y_coord_offset = 0.5;
+                offset_y_coord =  yTick(1)+onset_y_coord_offset;
+        end
+        hold(axh,'on');
+        scatter(axh,offset_time,offset_y_coord,'filled','^','MarkerFaceColor',[0 0 1])
+    end
 end
 
 if isfield(cfg,'plotexcluded')
     if istrue(cfg.plotexcluded)
-        plot(axh,x_time_hyp,hypn_plot_interpol_exclude,'Color',[1 0 0])
+        if strcmp(cfg.plottype,'classic')
+            plot(axh,x_time_hyp,hypn_plot_interpol_exclude,'Color',[1 0 0])
+        end
     end
 end
 
-xlim(axh,[0 (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))]);
+if ~isempty(cfg.timerange)
+    xlim(axh,[min(cfg.timerange) max(cfg.timerange)]);
+else
+    xlim(axh,[0 (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))]);
+end
+
 ylabel(axh,'Stages');
 ylim(axh,[temp_min_y temp_max_y])
 

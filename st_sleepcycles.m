@@ -54,12 +54,10 @@ end
 
 nEpochs = numel(scoring.epochs);
 
-hypnStages = [cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0) ...
-    cellfun(@sleepStage2str_alt,scoring.epochs','UniformOutput',0) ...
-    cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0)];
-
+hasSleep = true;
 [onsetCandidateIndex, preOffsetCandidate, onsetepoch] = st_sleeponset(cfg,scoring);
-if isempty(onsetepoch)
+if isempty(onsetepoch) % no sleep onset found
+    hasSleep = false;
     onsetCandidateIndex = nEpochs;
 end
 
@@ -67,12 +65,47 @@ if isempty(preOffsetCandidate)
     preOffsetCandidate = nEpochs;
 end
 
-epochs = hypnStages(:,3)';
+% hypnStages = [cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0) ...
+%     cellfun(@sleepStage2str_alt,scoring.epochs','UniformOutput',0) ...
+%     cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0) ...
+%     cellfun(@sleepStage2str_alt3,scoring.epochs','UniformOutput',0)];
+%
+% epochs = hypnStages(:,3)';
+
+epochs = cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0)';
 
 [Rstarts, Rends] = getCycleStartEndsByLabel('R',cfg.smoothepochs,epochs);
 
+hasREM = true;
+if isempty(Rstarts)
+    hasREM = false;
+    ft_warning('There is no REM at all!')
+    
+else
+    
+    idx = Rends > onsetCandidateIndex;
+    Rends = Rends(idx);
+    Rstarts = Rstarts(idx);
+    
+    if isempty(Rstarts)
+        ft_warning('There is no REM after sleep onset!')
+        hasREM = false;
+    end
+
+end
+    
 if isempty(Rends)
+    hasREM = false;
     Rends = preOffsetCandidate;
+end
+
+
+if ~isempty(Rstarts)
+    Rstarts(Rstarts < onsetCandidateIndex) = onsetCandidateIndex;
+
+    if Rstarts(1) == onsetCandidateIndex
+        ft_warning('First sleep cycle starts with REM!')
+    end
 end
 
 cycleStarts = onsetCandidateIndex;
@@ -120,11 +153,21 @@ endepochs = cycleEnds;
 
 
 NRstarts = cycleStarts;
-NRends = Rstarts-1;
+if hasREM
+    NRends = Rstarts-1;
+else
+    NRends = endepochs;
+end
 
 if Rends(end) < preOffsetCandidate
     NRstarts = [NRstarts; Rends(end)+1];
     NRends   = [NRends; preOffsetCandidate];
+end
+
+
+if ~hasREM
+    Rstarts(1:end) = NaN;
+    Rends(1:end) = NaN;
 end
 
 maxCycle = max([numel(startepochs),numel(endepochs),numel(Rstarts),numel(Rends),numel(NRstarts),numel(NRends)]);
@@ -144,7 +187,6 @@ Rends = Rends(:).'';
 NRstarts = NRstarts(:).'';
 NRends = NRends(:).'';
 
-
 res_cycle = [];
 res_cycle.ori = functionname;
 res_cycle.type = 'cycle';
@@ -158,6 +200,15 @@ res_cycle.table = table(...
 res_cycle.table.durationepochs = res_cycle.table.endepoch - res_cycle.table.startepoch + 1;
 res_cycle.table.durationNRepochs = res_cycle.table.NRendepoch - res_cycle.table.NRstartepoch + 1;
 res_cycle.table.durationRepochs = res_cycle.table.Rendepoch - res_cycle.table.Rstartepoch + 1;
+
+res_cycle.table.NRstartepoch(res_cycle.table.durationNRepochs == 0) = NaN;
+res_cycle.table.NRendepoch(res_cycle.table.durationNRepochs == 0) = NaN;
+
+if ~hasSleep
+    ft_warning('There was no sleep for sleep cycles to be detected, result has an empty table now.')
+    res_cycle.table = res_cycle.table(1:0,:);
+end
+
 
 fprintf([functionname ' function finished\n']);
 toc

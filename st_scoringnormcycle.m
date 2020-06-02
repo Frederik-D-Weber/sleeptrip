@@ -245,7 +245,8 @@ if process_scoring
 cfg_scc = [];
 cfg_scc.to = 'number';
 
-scoring.label = unique(scoring.epochs)';
+
+%scoring.label = unique(scoring.epochs)';
 nLabels = numel(scoring.label);
 scoring.prob = zeros(nLabels,numel(scoring.epochs));
 for iLabel = 1:nLabels
@@ -265,27 +266,45 @@ for iCycle = 1:completeCycleCount
     if withinCycleAlign
         iNR = (res_cycle.table.NRstartepoch(iCycle):res_cycle.table.NRendepoch(iCycle));
         iR = (res_cycle.table.Rstartepoch(iCycle):res_cycle.table.Rendepoch(iCycle));
-        hyp_part_NR = scoring.numbers(iNR);
-        hyp_part_R = scoring.numbers(iR);
-        hyp_part_NR_excluded = scoring.excluded(iNR);
-        hyp_part_R_excluded = scoring.excluded(iR);
-
+        if isnan(iNR) % in case there is no NR and sleep started with a REM stage on sleep onset
+            hyp_part_NR_adjusted = interp1_or_repeat(1,-1,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+            hyp_part_NR_excluded_adjusted = interp1_or_repeat(1,single(logical(1)),linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+        else
+            hyp_part_NR = scoring.numbers(iNR);
+            hyp_part_NR_excluded = scoring.excluded(iNR);
+            hyp_part_NR_adjusted = interp1_or_repeat(iNR,hyp_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+            hyp_part_NR_excluded_adjusted = interp1_or_repeat(iNR,single(hyp_part_NR_excluded),linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+        end
         
-        hyp_part_NR_adjusted = interp1_or_repeat(iNR,hyp_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
-        hyp_part_R_adjusted = interp1_or_repeat(iR,hyp_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
-        hyp_part_NR_excluded_adjusted = interp1_or_repeat(iNR,single(hyp_part_NR_excluded),linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
-        hyp_part_R_excluded_adjusted = interp1_or_repeat(iR,single(hyp_part_R_excluded),linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
+        if isnan(iR) % in case there is no NR and sleep started with a REM stage on sleep onset
+            hyp_part_R_adjusted = interp1_or_repeat(1,-1,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
+            hyp_part_R_excluded_adjusted = interp1_or_repeat(1,single(logical(1)),linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
+        else
+            hyp_part_R = scoring.numbers(iR);
+            hyp_part_R_excluded = scoring.excluded(iR);
+            hyp_part_R_adjusted = interp1_or_repeat(iR,hyp_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
+            hyp_part_R_excluded_adjusted = interp1_or_repeat(iR,single(hyp_part_R_excluded),linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),'nearest',NaN);
+        end
         
+     
         
         chunk_scorings_NR_prop_adjusted = [];
         chunk_scorings_R_prop_adjusted = [];
         for iLabel = 1:nLabels
-            hyp_part_NR_prob = scoring.prob(iLabel,iNR);
-            hyp_part_R_prob = scoring.prob(iLabel,iR);
-
-            hyp_part_NR_prob_adjusted = interp1_or_repeat(iNR,hyp_part_NR_prob,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'linear',NaN);
-            hyp_part_R_prob_adjusted  = interp1_or_repeat(iR, hyp_part_R_prob, linspace(min(iR), max(iR), cfg.newcycledurations(iCycle,2)),'linear',NaN);
-
+            if isnan(iNR) % in case there is no NR and sleep started with a REM stage on sleep onset
+                hyp_part_NR_prob_adjusted = interp1_or_repeat(1,NaN,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'linear',NaN);
+            else
+                hyp_part_NR_prob = scoring.prob(iLabel,iNR);
+                hyp_part_NR_prob_adjusted = interp1_or_repeat(iNR,hyp_part_NR_prob,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),'linear',NaN);
+            end
+            
+            if isnan(iR) % in case there is no NR and sleep started with a REM stage on sleep onset
+                hyp_part_R_prob_adjusted  = interp1_or_repeat(1, NaN, linspace(min(iR), max(iR), cfg.newcycledurations(iCycle,2)),'linear',NaN);
+            else
+                hyp_part_R_prob = scoring.prob(iLabel,iR);
+                hyp_part_R_prob_adjusted  = interp1_or_repeat(iR, hyp_part_R_prob, linspace(min(iR), max(iR), cfg.newcycledurations(iCycle,2)),'linear',NaN);
+            end
+    
             chunk_scorings_NR_prop_adjusted(iLabel,:) = hyp_part_NR_prob_adjusted;
             chunk_scorings_R_prop_adjusted(iLabel,:)  = hyp_part_R_prob_adjusted;
 
@@ -403,11 +422,20 @@ if adjust_res
                         iNR = (res_cycle.table.NRstartepoch(iCycle):res_cycle.table.NRendepoch(iCycle));
                         iR = (res_cycle.table.Rstartepoch(iCycle):res_cycle.table.Rendepoch(iCycle));
                         
-                        event_part_NR = event_values_by_epoch(iNR);
-                        event_part_R = event_values_by_epoch(iR);
+                        if isnan(iNR)
+                            event_part_NR_adjusted = interp1_or_repeat(1,default_value,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
+                        else
+                            event_part_NR = event_values_by_epoch(iNR);
+                            event_part_NR_adjusted = interp1_or_repeat(iNR,event_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
+                        end
                         
-                        event_part_NR_adjusted = interp1_or_repeat(iNR,event_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
-                        event_part_R_adjusted = interp1_or_repeat(iR,event_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventinterpolmethd,default_value);
+                        if isnan(iR)
+                            event_part_R_adjusted = interp1_or_repeat(1,default_value,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventinterpolmethd,default_value);
+                        else
+                            event_part_R = event_values_by_epoch(iR);
+                            event_part_R_adjusted = interp1_or_repeat(iR,event_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventinterpolmethd,default_value);
+                        end
+                        
                         event_values_cycle_adjusted = cat(2,event_values_cycle_adjusted,event_part_NR_adjusted,event_part_R_adjusted);
                     else
                         iC = (res_cycle.table.startepoch(iCycle):res_cycle.table.endepoch(iCycle));
@@ -478,7 +506,7 @@ function vq = interp1_or_repeat(x,v,xq,method,defaultvalue)
     vq = interp1(x,v,xq,method);
  else
     if numel(x) == 1
-        vq = repmat(x,size(xq));
+        vq = repmat(v,size(xq));
     else
         vq = repmat(defaultvalue,size(xq));
     end

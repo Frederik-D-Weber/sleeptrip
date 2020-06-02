@@ -27,7 +27,7 @@ function st = sleepStage2str_alt2(st,varargin)
 % $Id$
 includeN1 = false;
 if nargin > 1
-    includeN1 = varargin{1}
+    includeN1 = varargin{1};
 end
 switch st
     case {'S1' 'N1' 'stage 1' 'Stage 1' 'Stage1' 'STAGE 1' 'STAGE1' 'S 1' 'Stadium 1' 'STADIUM 1' 'STADIUM1' '1' }

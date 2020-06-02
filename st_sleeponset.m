@@ -50,10 +50,22 @@ end
 epochs = cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0);
 hypnStages = [cellfun(@sleepStage2str,epochs,'UniformOutput',0) ...
     cellfun(@sleepStage2str_alt,epochs,'UniformOutput',0) ...
-    cellfun(@sleepStage2str_alt2,epochs,'UniformOutput',0)];
+    cellfun(@sleepStage2str_alt2,epochs,'UniformOutput',0)...
+    cellfun(@sleepStage2str_alt3,epochs,'UniformOutput',0)];
 
 onsetnumber = -1;
 
+
+if hasLightsOff
+        for iOnset = 1:numel(scoring.epochs)
+            if strcmp(hypnStages(iOnset,4),'S') 
+                break;
+            end
+        end  
+        if iOnset*scoring.epochlength < lightsOffMoment
+                ft_warning('There were sleep stages scored at epoch %d BEFORE the ligths off moment at %f s!\n The epoch after lights off is thus assumed as sleep onset!',iOnset,lightsOffMoment);
+        end
+end
 switch cfg.sleeponsetdef
      case 'NR'
         for iOnset = 1:numel(scoring.epochs)

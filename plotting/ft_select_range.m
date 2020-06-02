@@ -78,10 +78,18 @@ xrange    = istrue(xrange);
 yrange    = istrue(yrange);
 clear     = istrue(clear);
 
-p = handle;
-while ~isequal(p, 0)
-  handle = p;
-  p = get(handle, 'parent');
+% get the figure handle, dependent on MATLAB version
+if ft_platform_supports('graphics_objects')
+  while ~isa(handle, 'matlab.ui.Figure')
+    handle = p;
+    p = get(handle, 'parent');
+  end
+else
+  p = handle;
+  while ~isequal(p, 0)
+    handle = p;
+    p = get(handle, 'parent');
+  end
 end
 
 if ishandle(handle)

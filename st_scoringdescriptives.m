@@ -126,7 +126,8 @@ epochLengthSamples = scoring.epochlength * dummySampleRate;
 epochs = cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0);
 hypnStages = [cellfun(@sleepStage2str,epochs,'UniformOutput',0) ...
     cellfun(@sleepStage2str_alt,epochs,'UniformOutput',0) ...
-    cellfun(@sleepStage2str_alt2,epochs,'UniformOutput',0)];
+    cellfun(@sleepStage2str_alt2,epochs,'UniformOutput',0) ...
+    cellfun(@sleepStage2str_alt3,epochs,'UniformOutput',0)];
 
 
 hypnEpochs = 1:numel(epochs);

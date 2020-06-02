@@ -339,6 +339,9 @@ scoring.ori.scoringfile   = cfg.scoringfile;
 scoring.ori.scoringformat   = cfg.scoringformat;
 scoring.ori.table = tableScoring;
 
+scoring.label = unique(cfg.scoremap.labelnew)';
+scoring.label = ({scoring.label{:}})';%assure the vertical orientation
+
 scoring.cfg = cfg;
 scoring.epochlength = cfg.epochlength;
 scoring.dataoffset = cfg.dataoffset;

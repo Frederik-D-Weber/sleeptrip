@@ -17,6 +17,9 @@ function [freq] = ft_freqanalysis(cfg, data)
 %                     'mtmconvol', implements multitaper time-frequency
 %                       transformation based on multiplication in the
 %                       frequency domain.
+%                     'mtmconvol_memeff', same as mtmconvol bus saves your
+%                       memory/RAM during computation. good for long data
+%                       segments
 %                     'wavelet', implements wavelet time frequency
 %                       transformation (using Morlet wavelets) based on
 %                       multiplication in the frequency domain.
@@ -78,7 +81,7 @@ function [freq] = ft_freqanalysis(cfg, data)
 %                    multi-tapering. Note that 4 Hz smoothing means
 %                    plus-minus 4 Hz, i.e. a 8 Hz smoothing box.
 %
-% MTMCONVOL performs time-frequency analysis on any time series trial data using
+% MTMCONVOL or MTMCONVOL_MEMEFF performs time-frequency analysis on any time series trial data using
 % the 'multitaper method' (MTM) based on Slepian sequences as tapers.
 % Alternatively, you can use conventional tapers (e.g. Hanning).
 %   cfg.tapsmofrq  = vector 1 x numfoi, the amount of spectral smoothing
@@ -240,7 +243,7 @@ end
 % switch over method and do some of the method specfic checks and defaulting
 switch cfg.method
   
-  case 'mtmconvol'
+  case {'mtmconvol', 'mtmconvol_memeff'}
     cfg.taper = ft_getopt(cfg, 'taper', 'dpss');
     if isequal(cfg.taper, 'dpss') && ~isfield(cfg, 'tapsmofrq')
       ft_error('you must specify a smoothing parameter with taper = dpss');
@@ -467,7 +470,7 @@ end
 
 % tapsmofrq compatibility between functions (make it into a vector if it's not)
 if isfield(cfg, 'tapsmofrq')
-  if strcmp(cfg.method, 'mtmconvol') && length(cfg.tapsmofrq) == 1 && length(cfg.foi) ~= 1
+  if (strcmp(cfg.method, 'mtmconvol') || strcmp(cfg.method, 'mtmconvol_memeff'))  && length(cfg.tapsmofrq) == 1 && length(cfg.foi) ~= 1
     cfg.tapsmofrq = ones(length(cfg.foi),1) * cfg.tapsmofrq;
   elseif strcmp(cfg.method, 'mtmfft') && length(cfg.tapsmofrq) ~= 1
     ft_warning('cfg.tapsmofrq should be a single number when cfg.method = mtmfft, now using only the first element')
@@ -501,10 +504,15 @@ for itrial = 1:ntrials
   clear spectrum % in case of very large trials, this lowers peak mem usage a bit
   switch cfg.method
     
-    case 'mtmconvol'
-      [spectrum_mtmconvol,ntaper,foi,toi] = ft_specest_mtmconvol(dat, time, 'timeoi', cfg.toi, 'timwin', cfg.t_ftimwin, 'taper', ...
-        cfg.taper, options{:}, 'dimord', 'chan_time_freqtap', 'feedback', fbopt);
-      
+    case {'mtmconvol', 'mtmconvol_memeff'}
+      switch cfg.method
+          case 'mtmconvol'
+              [spectrum_mtmconvol,ntaper,foi,toi] = ft_specest_mtmconvol(dat, time, 'timeoi', cfg.toi, 'timwin', cfg.t_ftimwin, 'taper', ...
+                  cfg.taper, options{:}, 'dimord', 'chan_time_freqtap', 'feedback', fbopt);
+          case 'mtmconvol_memeff'
+              [spectrum_mtmconvol,ntaper,foi,toi] = ft_specest_mtmconvol_memeff(dat, time, 'timeoi', cfg.toi, 'timwin', cfg.t_ftimwin, 'taper', ...
+                  cfg.taper, options{:}, 'dimord', 'chan_time_freqtap', 'feedback', fbopt);
+      end
       % the following variable is created to keep track of the number of
       % trials per time bin and is needed for proper normalization if
       % keeprpt==1 and the triallength is variable
@@ -642,7 +650,7 @@ for itrial = 1:ntrials
     
     % prepare cumtapcnt
     switch cfg.method %% IMPORTANT, SHOULD WE KEEP THIS SPLIT UP PER METHOD OR GO FOR A GENERAL SOLUTION NOW THAT WE HAVE SPECEST
-      case 'mtmconvol'
+      case {'mtmconvol', 'mtmconvol_memeff'}
         cumtapcnt = zeros(ntrials,nfoi);
       case 'mtmfft'
         cumtapcnt = zeros(ntrials,1);
@@ -655,7 +663,7 @@ for itrial = 1:ntrials
   if keeprpt~=4
     
     % mtmconvol is a special case and needs special processing
-    if strcmp(cfg.method, 'mtmconvol')
+    if strcmp(cfg.method, 'mtmconvol') || strcmp(cfg.method, 'mtmconvol_memeff') 
       foiind = ones(1,nfoi);
     else
       % by using this vector below for indexing, the below code does not need to be duplicated for mtmconvol
@@ -663,7 +671,7 @@ for itrial = 1:ntrials
     end
     
     for ifoi = 1:nfoi
-      if strcmp(cfg.method, 'mtmconvol')
+      if strcmp(cfg.method, 'mtmconvol') || strcmp(cfg.method, 'mtmconvol_memeff') 
         spectrum = reshape(permute(spectrum_mtmconvol(:,:,freqtapind{ifoi}),[3 1 2]),[ntaper(ifoi) nchan 1 ntoi]);
       end
       
@@ -760,7 +768,7 @@ for itrial = 1:ntrials
       tapcounter = 0;
     end
     
-    if strcmp(cfg.method, 'mtmconvol')
+    if strcmp(cfg.method, 'mtmconvol') || strcmp(cfg.method, 'mtmconvol_memeff') 
       spectrum = permute(reshape(spectrum_mtmconvol,[nchan ntoi ntaper(1) nfoi]),[3 1 4 2]);
     end
     
@@ -788,7 +796,7 @@ for itrial = 1:ntrials
   
   % set cumptapcnt
   switch cfg.method %% IMPORTANT, SHOULD WE KEEP THIS SPLIT UP PER METHOD OR GO FOR A GENERAL SOLUTION NOW THAT WE HAVE SPECEST
-    case {'mtmconvol' 'wavelet'}
+    case {'mtmconvol' 'wavelet' 'mtmconvol_memeff'}
       cumtapcnt(itrial,:) = ntaper;
     case 'mtmfft'
       cumtapcnt(itrial,1) = ntaper(1); % fixed number of tapers? for the moment, yes, as specest_mtmfft computes only one set of tapers
@@ -802,7 +810,7 @@ ft_progress('close');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % re-normalise the TFRs if keeprpt==1
-if (strcmp(cfg.method, 'mtmconvol') || strcmp(cfg.method, 'wavelet')) && keeprpt==1
+if (strcmp(cfg.method, 'mtmconvol') || strcmp(cfg.method, 'wavelet') || strcmp(cfg.method, 'mtmconvol_memeff')) && keeprpt==1
   nanmask = trlcnt==0;
   if powflg
     powspctrm = powspctrm.*ntrials;

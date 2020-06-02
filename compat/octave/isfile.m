@@ -4,8 +4,9 @@ function [varargout] = isfile(varargin)
 %   TF = ISFILE(INPUT) returns true if INPUT points to a file and false otherwise.
 %
 % This is a compatibility function that should only be added to the path on
-% MATLAB versions prior to 2017b. Note that currently this function only allows
-% for a single string in the input, as opposed to the isfile function from MATLAB, which allows for multiple inputs
+% MATLAB versions prior to R2017b. Note that currently this function only allows
+% for a single string in the input, as opposed to the isfile function from MATLAB,
+% which allows for multiple inputs
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % see https://github.com/fieldtrip/fieldtrip/issues/899
@@ -15,6 +16,13 @@ if ~iscell(alternatives)
   % this is needed for octave, see https://github.com/fieldtrip/fieldtrip/pull/1171
   alternatives = {alternatives};
 end
+
+keep = true(size(alternatives));
+for i=1:numel(alternatives)
+  keep(i) = keep(i) && ~any(alternatives{i}=='@');  % exclude methods from classes
+  keep(i) = keep(i) && alternatives{i}(end)~='p';   % exclude precompiled files
+end
+alternatives = alternatives(keep);
 
 if exist(mfilename, 'builtin') || any(strncmp(alternatives, matlabroot, length(matlabroot)) & cellfun(@isempty, strfind(alternatives, fullfile('private', mfilename))))
   % remove this directory from the path

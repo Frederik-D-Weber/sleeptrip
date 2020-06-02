@@ -102,13 +102,28 @@ end
 
 
 epochs = repmat({scoremap.unknown},size(scoring.epochs));
+label = scoring.label;
 for iLabel = 1:numel(scoremap.labelold)
     old = scoremap.labelold{iLabel};
     new = scoremap.labelnew{iLabel};
     match = cellfun(@(x) strcmp(x, old), scoring.epochs, 'UniformOutput', 1);
     epochs(match) = {new};
+    match = cellfun(@(x) strcmp(x, old), scoring.label, 'UniformOutput', 1);
+    label(match) = {new};
 end
 scoring.epochs = epochs;
+[scoring.label,ia,ic] = unique(label);
+
+if isfield(scoring,'prob')
+    prob = nan(numel(scoring.label),size(scoring.prob,2));
+    for iLabel = 1:numel(scoring.label)
+        lab = scoring.label{iLabel};
+        prob(iLabel,:) = nansum(scoring.prob(ismember(label,lab),:),1);
+    end
+    scoring.prob = prob;
+end
+
+
 
 
 fprintf([functionname ' function finished\n']);
