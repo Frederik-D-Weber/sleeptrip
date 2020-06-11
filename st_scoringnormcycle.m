@@ -123,19 +123,26 @@ end
 % set defaults
 cfg.newcycledurations  = ft_getopt(cfg, 'newcycledurations', repmat(round(90*60/scoring.epochlength),100,1));
 
-eventdatatimecolumn_candidates = {'seconds_trough_max','te_seconds_trough_max', 'ta_seconds_trough_max', 'time', 'timepoint'};
+eventdatatimecolumn_candidates = {'seconds_trough_max', 'time', 'timepoint' ,'te_seconds_trough_max','test_seconds_trough_max','te_time','te_timepoint', 'ta_seconds_trough_max', 'target_seconds_trough_max', 'ta_time','ta_timepoint'};
 if Nres>0
     if isfield(cfg,'eventdatatimecolumn')
         if (Nres ~= numel(cfg.eventdatatimecolumn))
             ft_error(['Number of column names in cfg.eventdatatimecolumn does not match the number of res_event structures = ' num2str(Nres) '\nCheck that there is a event column for each res_event sturcture given as an argument.'])
         end
     else
+        ft_warning('attempting to automatically find cfg.eventdatatimecolumn:\n');
         cfg.eventdatatimecolumn = {};
+        found = 0;
         for iResEvent = 1:Nres
-            idxTimeColumns = ismember(eventdatatimecolumn_candidates,varargin{iResEvent}.table.Properties.VariableNames);
+            idxTimeColumns = ismember(eventdatatimecolumn_candidates,lower(varargin{iResEvent}.table.Properties.VariableNames));
             if any(idxTimeColumns)
                 cfg.eventdatatimecolumn{iResEvent} = eventdatatimecolumn_candidates{find(idxTimeColumns,1)};
+                ft_warning('found in res{%d} column ''%s''\n',iResEvent,cfg.eventdatatimecolumn{iResEvent});
+                found = found + 1;
             end
+        end
+        if found ~= Nres
+            ft_error('Could not find any matching columns that can be used for cfg.eventdatatimecolumn')
         end
     end
 end

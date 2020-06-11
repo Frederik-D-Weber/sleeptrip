@@ -31,26 +31,6 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %                                have, e.g. 480 min, will plot tick at least to 480 min (default = display all);
 %   cfg.considerdataoffset     = string, 'yes' or 'no' if dataoffset is represented in time axis (default = 'yes');
 %
-% If you wish to export the figure then define also the following
-%   cfg.figureoutputfile       = string, file to export the figure
-%   cfg.figureoutputformat     = string, either 'png' or 'epsc' or 'svg' or 'tiff' or
-%                                'pdf' or 'bmp' or 'fig' (default = 'png')
-%   cfg.figureoutputunit       = string, dimension unit (1 in = 2.54 cm) of hypnograms.
-%                                either 'points' or 'normalized' or 'inches'
-%                                or 'centimeters' or 'pixels' (default =
-%                                'inches')
-%   cfg.figureoutputwidth      = scalar, choose format dimensions in inches
-%                                (1 in = 2.54 cm) of hypnograms. (default = 9)
-%   cfg.figureoutputheight     = scalar, format dimensions in inches (1 in = 2.54 cm) of hypnograms. (default = 3)
-%   cfg.figureoutputresolution = scalar, choose resolution in pixesl per inches (1 in = 2.54 cm) of hypnograms. (default = 300)
-%   cfg.figureoutputfontsize   = scalar, Font size in units stated in
-%                                parameter cfg.figureoutputunit (default = 0.1)
-%   cfg.timestamp              = either 'yes' or 'no' if a time stamp should be
-%                                added to filename (default = 'yes')
-%   cfg.folderstructure        = either 'yes' or 'no' if a folder structure should
-%                                be created with the result origin and type 
-%                                all results will be stored in "/res/..." (default = 'yes')
-%
 %  Events can be plotted using the following options
 %
 %   cfg.eventtimes             = a Nx1 cell containing 1x? vectors of event time points (in seconds)
@@ -70,6 +50,26 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %                                  [39, 80.0]}
 %   cfg.eventrangernddec       = round event ranges to that amount of decimal (default = 2)
 %
+%
+% If you wish to export the figure then define also the following
+%   cfg.figureoutputfile       = string, file to export the figure
+%   cfg.figureoutputformat     = string, either 'png' or 'epsc' or 'svg' or 'tiff' or
+%                                'pdf' or 'bmp' or 'fig' (default = 'png')
+%   cfg.figureoutputunit       = string, dimension unit (1 in = 2.54 cm) of hypnograms.
+%                                either 'points' or 'normalized' or 'inches'
+%                                or 'centimeters' or 'pixels' (default =
+%                                'inches')
+%   cfg.figureoutputwidth      = scalar, choose format dimensions in inches
+%                                (1 in = 2.54 cm) of hypnograms. (default = 9)
+%   cfg.figureoutputheight     = scalar, format dimensions in inches (1 in = 2.54 cm) of hypnograms. (default = 3)
+%   cfg.figureoutputresolution = scalar, choose resolution in pixesl per inches (1 in = 2.54 cm) of hypnograms. (default = 300)
+%   cfg.figureoutputfontsize   = scalar, Font size in units stated in
+%                                parameter cfg.figureoutputunit (default = 0.1)
+%   cfg.timestamp              = either 'yes' or 'no' if a time stamp should be
+%                                added to filename (default = 'yes')
+%   cfg.folderstructure        = either 'yes' or 'no' if a folder structure should
+%                                be created with the result origin and type 
+%                                all results will be stored in "/res/..." (default = 'yes')
 %
 %
 % See also ST_READ_SCORING
@@ -117,6 +117,10 @@ cfg.plotsleepoffset         = ft_getopt(cfg, 'plotsleepoffset', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+
+cfg.eventrangernddec        = ft_getopt(cfg, 'eventrangernddec', 2);
+cfg.timerange               = ft_getopt(cfg, 'timerange', [], true);
+
 cfg.figureoutputformat      = ft_getopt(cfg, 'figureoutputformat', 'png');
 cfg.figureoutputunit        = ft_getopt(cfg, 'figureoutputunit', 'inches');
 cfg.figureoutputwidth       = ft_getopt(cfg, 'figureoutputwidth', 9);
@@ -125,8 +129,8 @@ cfg.figureoutputresolution  = ft_getopt(cfg, 'figureoutputresolution', 300);
 cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
 cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
-cfg.eventrangernddec        = ft_getopt(cfg, 'eventrangernddec', 2);
-cfg.timerange               = ft_getopt(cfg, 'timerange', [], true);
+
+
 
 
 if strcmp(cfg.plottype,'colorbar') || strcmp(cfg.plottype,'colorblocks')
@@ -173,8 +177,6 @@ if isfield(cfg, 'eventranges')
     end
 end
 
-hasLightsOff = false;
-saveFigure   = false;
 
 if strcmp(cfg.considerdataoffset, 'yes')
     offsetseconds = scoring.dataoffset;
@@ -182,10 +184,12 @@ else
     offsetseconds = 0;
 end
 
+saveFigure   = false;
 if isfield(cfg, 'figureoutputfile')
     saveFigure = true;
 end
 
+hasLightsOff = false;
 if isfield(scoring, 'lightsoff')
     hasLightsOff = true;
 end
@@ -513,71 +517,16 @@ set(axh, 'box', 'off')
 %     line([x_pos_begin x_pos_begin],[plot_exclude_offset temp_max_y],'color',[0.25 0.125 1],'parent',axh);
 
 %titleName = sprintf('Hypnogram_datasetnum_%d_file_%d',iData,iHyp);
-set(hhyp, 'Name', cfg.title);
-
-hold(axh,'off')
-
-title(cfg.title,'Interpreter','none');
 xlabel('Time [min]');
 ylabel('Sleep stage');
 
 
-figure_width = cfg.figureoutputwidth;     % Width in inches
-figure_height = cfg.figureoutputheight;    % Height in inches
-pos = get(hhyp, 'Position');
+cfg = st_adjustfigure(cfg,hhyp);
 
-%set(hhyp, 'Position', [pos(1) pos(2) figure_width*str2num(cfg.figureoutputresolution), figure_height*str2num(cfg.figureoutputresolution)]); %<- Set size
-set(hhyp, 'Position', [pos(1) pos(2) figure_width*100, figure_height*100]); %<- Set size
-% Here we preserve the size of the image when we save it.
-set(hhyp,'InvertHardcopy','on');
-set(hhyp,'PaperUnits', cfg.figureoutputunit);
-
-%set(hhyp,'PaperPositionMode','Auto')
-set(hhyp,'PaperSize',[figure_width, figure_height])
-
-papersize = get(hhyp, 'PaperSize');
-left = (papersize(1)- figure_width)/2;
-bottom = (papersize(2)- figure_height)/2;
-myfiguresize = [left, bottom, figure_width, figure_height];
-set(hhyp,'PaperPosition', myfiguresize);
-set(hhyp,'PaperOrientation', 'portrait');
-
+hold(axh,'off')
 
 if saveFigure
-    timestampfix = '';
-    if istrue(cfg.timestamp)
-        timestampfix = ['_' datestr(dt,'yyyy-mm-dd-HH-MM-SS-FFF')];
-    end
-    
-    subfolderpath = '';
-    if istrue(cfg.folderstructure)
-        subfolderpath = ['res' filesep];
-        if ~isdir([subfolderpath functionname])
-            mkdir([subfolderpath functionname]);
-        end
-        if ~isdir([subfolderpath functionname filesep 'hypnograms'])
-            mkdir([subfolderpath functionname filesep 'hypnograms']);
-        end
-        subfolderpath = [subfolderpath functionname filesep 'hypnograms'];
-        [path filename ext] = fileparts(cfg.figureoutputfile);
-        cfg.figureoutputfile = [subfolderpath filesep filename timestampfix ext];
-    else
-        [path filename ext] = fileparts(cfg.figureoutputfile);
-        cfg.figureoutputfile = [path filesep filename timestampfix ext];
-    end
-            
-    switch cfg.figureoutputformat
-        case 'fig'
-            [path filename ext] = fileparts(cfg.figureoutputfile);
-            if ~strcomp(ext,['.' cfg.figureoutputformat])
-                cfg.figureoutputfile = [cfg.figureoutputfile  '.fig'];
-            end
-            saveas(hhyp, [cfg.figureoutputfile  '.fig']);
-        case 'eps'
-            print(hhyp,['-d' 'epsc'],['-r' num2str(cfg.figureoutputresolution)],[cfg.figureoutputfile]);
-        otherwise
-            print(hhyp,['-d' cfg.figureoutputformat],['-r' num2str(cfg.figureoutputresolution)],[cfg.figureoutputfile]);
-    end
+    cfg = st_savefigure(cfg,hhyp);
 end
 fh = hhyp;
 

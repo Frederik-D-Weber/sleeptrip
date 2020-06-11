@@ -1,14 +1,14 @@
-function [scorings_sorted sums idx_ori] = st_scoringssort(cfg, scorings, varargin)
+function [scorings_sorted sums_sorted sums_ori idx_ori] = st_scoringssort(cfg, scorings, varargin)
 
 % ST_SCORINGSSORT sorts a cell structure with muliple 
 %
 % Use as
 %   scorings_sorted                = st_scoringssort(cfg, scorings, res_cycles)
 %   [scorings_sorted idx_ori]      = st_scoringssort(cfg, scorings, res_cycles)
-%   [scorings_sorted sums idx_ori] = st_scoringssort(cfg, scorings, res_cycles)
+%   [scorings_sorted sums sums_ori idx_ori] = st_scoringssort(cfg, scorings, res_cycles)
 %   scorings_sorted                = st_scoringssort(cfg, scorings)
 %   [scorings_sorted idx_ori]      = st_scoringssort(cfg, scorings)
-%   [scorings_sorted sums idx_ori] = st_scoringssort(cfg, scorings)
+%   [scorings_sorted sums sums_ori idx_ori] = st_scoringssort(cfg, scorings)
 %
 %
 % Optional configuration parameters are:
@@ -133,17 +133,17 @@ elseif nargin <= 2
     cfg.sortby = 'epochcount';
 end
 
-sortsums = nan(1,numel(scorings));
+sums_ori = nan(1,numel(scorings));
 for iScoring = 1:numel(scorings)
     scoring = scorings{iScoring};
     switch cfg.sortby
         case 'cycles'
             res_cycle = res_cycles{iScoring};
-            sortsums(iScoring) = nansum(res_cycle.table(ismember(cfg.cycles,res_cycle.table.cycle),:).(cfg.cycleproperty));
+            sums_ori(iScoring) = nansum(res_cycle.table(ismember(cfg.cycles,res_cycle.table.cycle),:).(cfg.cycleproperty));
         case 'excludedcount'
-            sortsums(iScoring) = sum(scoring.excluded);
+            sums_ori(iScoring) = sum(scoring.excluded);
         case 'epochcount'
-            sortsums(iScoring) = numel(scoring.epochs);
+            sums_ori(iScoring) = numel(scoring.epochs);
         case 'epochcountunscored'
             unknown = '?';
             if strcmp(scoring.standard, 'number')
@@ -154,7 +154,7 @@ for iScoring = 1:numel(scorings)
                     unknown = scoring.cfg.scoremap.unknown;
                 end
             end
-            sortsums(iScoring) = sum(~strcmp(scoring.epochs,unknown));
+            sums_ori(iScoring) = sum(~strcmp(scoring.epochs,unknown));
         case 'sleepunscored'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
             unknown = '?';
@@ -166,13 +166,13 @@ for iScoring = 1:numel(scorings)
                     unknown = scoring.cfg.scoremap.unknown;
                 end
             end
-            sortsums(iScoring) = sum(~strcmp(scoring.epochs(onsetnumber:lastsleepstagenumber),unknown));
+            sums_ori(iScoring) = sum(~strcmp(scoring.epochs(onsetnumber:lastsleepstagenumber),unknown));
         case 'sleepduration'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
-            sortsums(iScoring) = (lastsleepstagenumber-onsetnumber+1);
+            sums_ori(iScoring) = (lastsleepstagenumber-onsetnumber+1);
         case 'sleeponset'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
-            sortsums(iScoring) = onsetnumber;
+            sums_ori(iScoring) = onsetnumber;
         case 'sleeponsetduration'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
             lightsoff = 0;
@@ -183,19 +183,19 @@ for iScoring = 1:numel(scorings)
                 scoring.lightsoff = lightsoff;
                 scorings{iScoring} = scoring;
             end
-            sortsums(iScoring) = scoring.epochlength*(onsetnumber-1) - lightsoff;
+            sums_ori(iScoring) = scoring.epochlength*(onsetnumber-1) - lightsoff;
         case 'sleepoffset'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
-            sortsums(iScoring) = lastsleepstagenumber;
+            sums_ori(iScoring) = lastsleepstagenumber;
         case 'sleeponsettomidsleep'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
-            sortsums(iScoring) = (lastsleepstagenumber-onsetnumber+1)/2;
+            sums_ori(iScoring) = (lastsleepstagenumber-onsetnumber+1)/2;
         case 'timetomidsleep'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
-            sortsums(iScoring) = onsetnumber-1+(lastsleepstagenumber-onsetnumber+1)/2;
+            sums_ori(iScoring) = onsetnumber-1+(lastsleepstagenumber-onsetnumber+1)/2;
         case 'midsleeptooffset'
             [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring);
-            sortsums(iScoring) = lastsleepstagenumber + 1 - (onsetnumber-1+(lastsleepstagenumber-onsetnumber+1)/2);
+            sums_ori(iScoring) = lastsleepstagenumber + 1 - (onsetnumber-1+(lastsleepstagenumber-onsetnumber+1)/2);
         case 'lightsoff'
             lightsoff = 0;
             if isfield(scoring, 'lightsoff')
@@ -205,16 +205,16 @@ for iScoring = 1:numel(scorings)
                 scoring.lightsoff = lightsoff;
                 scorings{iScoring} = scoring;
             end
-            sortsums(iScoring) = lightsoff;
+            sums_ori(iScoring) = lightsoff;
         case 'descriptives'
             res_desc = st_scoringdescriptives(cfg,scoring);
             value = res_desc.table(:,cfg.descriptive);
-            sortsums(iScoring) = sum(value);
+            sums_ori(iScoring) = sum(value);
         otherwise
             ft_error('cfg.sortby = %s is unknown, see the help for valid options.', cfg.sortby)
     end
 end
-[sums, idx_ori] = sort(sortsums,cfg.sortdir);
+[sums_sorted, idx_ori] = sort(sums_ori,cfg.sortdir);
 scorings_sorted = scorings(idx_ori);
 
 

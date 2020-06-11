@@ -957,9 +957,9 @@ if nargout > 3
 end
 
 
-tempEventsTestGroupSummaryByColumns = cfg.EventsTestGroupSummaryByColumns;
+tempEventsTestGroupSummaryByColumns = '';
 
-if size(tempEventsTestGroupSummaryByColumns,2) > 1
+if size(cfg.EventsTestGroupSummaryByColumns,2) > 1
     tempEventsTestGroupSummaryByColumns = {strjoin(cfg.EventsTestGroupSummaryByColumns,' ')};
 end
 

@@ -77,6 +77,7 @@ fid = fopen([filename],'Wt'); % the capital W means opening in nonflush mode for
 %write header of ouptufile
 fprintf(fid,[headerwritestr '\n'],colnames{:});
 
+%checkCell = true;
 table = table2cell(table);
 rowwritestr = [rowwritestr '\n'];
 nRows = size(table,1);
@@ -84,6 +85,9 @@ for iRow = 1:nRows
     if mod(iRow,100) == 1
         ft_progress(iRow/nRows, 'writing row %d of %d (%d percent)', iRow, nRows, fix(100*iRow/nRows));
     end
+   % if checkCell
+   %     thecells  = cellfun(@iscell,table(iRow,:))
+   % end
     fprintf(fid,rowwritestr,table{iRow,:});
     %fprintf(fid,rowwritestr,table{1,:});
 end
