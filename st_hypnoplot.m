@@ -97,9 +97,9 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %    along with SleepTrip. If not, see <http://www.gnu.org/licenses/>.
 %
 % $Id$
-dt = now;
+%dt = now;
 
-tic
+timerVal = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -533,7 +533,7 @@ fh = hhyp;
 %%% plot hypnogram figure end
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(timerVal)
 memtoc
 end
 

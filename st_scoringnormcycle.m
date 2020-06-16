@@ -328,7 +328,7 @@ for iCycle = 1:completeCycleCount
 
         
         hyp_part_cycle_adjusted = interp1_or_repeat(iC,hyp_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
-        hyp_part_cycle_excluded_adjusted = interp1_or_repeat(iC,hyp_part_cycle_excluded,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
+        hyp_part_cycle_excluded_adjusted = interp1_or_repeat(iC,single(hyp_part_cycle_excluded),linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),'nearest',NaN);
 
         
         chunk_scorings_cycle_prop_adjusted = [];

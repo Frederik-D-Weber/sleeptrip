@@ -26,7 +26,7 @@ function [res_cycle] = st_sleepcycles(cfg,scoring)
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET
 
-tic
+timerVal = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -211,7 +211,7 @@ end
 
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(timerVal)
 memtoc
 end
 
