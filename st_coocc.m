@@ -198,7 +198,7 @@ cfg.EventsTestFilterValues  = ft_getopt(cfg, 'EventsTestFilterValues', {}, true)
 cfg.EventsTargetFilterForColumns  = ft_getopt(cfg, 'EventsTargetFilterForColumns', {}, true);
 cfg.EventsTargetFilterValues  = ft_getopt(cfg, 'EventsTargetFilterValues', {});
 
-cfg.overlapdef = ft_getopt(cfg, 'EventsTargetFilterValues', 'overlap');
+cfg.overlapdef = ft_getopt(cfg, 'overlapdef', 'overlap');
 
 cfg.UseSecondColumnAndOnlyOffsetsForTimeWindowTarget  = ft_getopt(cfg, 'UseSecondColumnAndOnlyOffsetsForTimeWindowTarget', 'no');
 cfg.EventsTargetTimePointColumn2  = ft_getopt(cfg, 'EventsTargetTimePointColumn2', 'seconds_end');
