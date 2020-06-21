@@ -838,10 +838,18 @@ varNames = {...
 %tempEventsTestCompareColumns = cfg.EventsTestCompareColumns;
 %tempEventsTargetCompareColumns = cfg.EventsTargetCompareColumns;
 
-%if size(tempEventsTestCompareColumns,2) > 1
+tempEventsTestCompareColumns = {''};
+if numel(cfg.EventsTestCompareColumns) >= 1
     tempEventsTestCompareColumns = {strjoin(cfg.EventsTestCompareColumns,' ')};
+end
+tempEventsTargetCompareColumns = {''};
+if numel(cfg.EventsTargetCompareColumns) >= 1
     tempEventsTargetCompareColumns = {strjoin(cfg.EventsTargetCompareColumns,' ')};
-%end
+end
+% %if size(tempEventsTestCompareColumns,2) > 1
+%     tempEventsTestCompareColumns = {strjoin(cfg.EventsTestCompareColumns,' ')};
+%     tempEventsTargetCompareColumns = {strjoin(cfg.EventsTargetCompareColumns,' ')};
+% %end
 
 
 if nargout > 1
@@ -957,11 +965,7 @@ if nargout > 3
 end
 
 
-tempEventsTestGroupSummaryByColumns = '';
 
-if size(cfg.EventsTestGroupSummaryByColumns,2) > 1
-    tempEventsTestGroupSummaryByColumns = {strjoin(cfg.EventsTestGroupSummaryByColumns,' ')};
-end
 
 groups = keys(groupByMapOverlap);
 if size(groups,2) < 2
@@ -1001,6 +1005,10 @@ summary = cat(2,summary,table(cell2mat(values(groupByMapAllTarget))','VariableNa
 summary = cat(2,summary,table(((summary.([column_prefix_test 'match_grouped']) + summary.([column_prefix_test 'mismatch_grouped'])) - summary.([column_prefix_test 'grouped'])),'VariableNames',{[column_prefix_test 'matches_' column_prefix_target 'more_than_once']}));
 summary = cat(2,summary,table(repmat(tempEventsTestCompareColumns,size(summary,1),1),'VariableNames',{[column_prefix_test 'compare_columns']}));
 summary = cat(2,summary,table(repmat(tempEventsTargetCompareColumns,size(summary,1),1),'VariableNames',{[column_prefix_target 'compare_columns']}));
+tempEventsTestGroupSummaryByColumns = {''};
+if numel(cfg.EventsTestGroupSummaryByColumns) >= 1
+    tempEventsTestGroupSummaryByColumns = {strjoin(cfg.EventsTestGroupSummaryByColumns,' ')};
+end
 summary = cat(2,summary,table(repmat(tempEventsTestGroupSummaryByColumns,size(summary,1),1),'VariableNames',{[column_prefix_test 'group_by_columns']}));
 EventsTestFilterForColumns_temp = cfg.EventsTestFilterForColumns;
 if isempty(cfg.EventsTestFilterForColumns)
