@@ -400,11 +400,17 @@ if ~isempty(cfg.EventsTestFilterForColumns)
             tempCompTest = cfg.EventsTestFilterValues{iComb};
             %tempCompTarget = cfg.EventsTargetFilterValues{iComb};
             
-            if iscell(EventsTestTable.(tempEventsTestFilterForColumn))
-                matchIndicator = matchIndicator | ( strcmp(EventsTestTable.(tempEventsTestFilterForColumn), tempCompTest) );
-            else
-                matchIndicator = matchIndicator | ( EventsTestTable.(tempEventsTestFilterForColumn) ==  tempCompTest);
-            end
+%             if iscell(EventsTestTable.(tempEventsTestFilterForColumn))
+%                 matchIndicator = matchIndicator | ( strcmp(EventsTestTable.(tempEventsTestFilterForColumn), tempCompTest) );
+%             else
+%                 matchIndicator = matchIndicator | ( EventsTestTable.(tempEventsTestFilterForColumn) ==  tempCompTest);
+%             end
+           %if iscell(EventsTestTable.(tempEventsTestFilterForColumn))
+                matchIndicator = matchIndicator | ( ismember(EventsTestTable.(tempEventsTestFilterForColumn), tempCompTest) );
+           % else
+           %     matchIndicator = matchIndicator | ( EventsTestTable.(tempEventsTestFilterForColumn) ==  tempCompTest);
+           % end
+            
         end
     end
     
@@ -425,11 +431,16 @@ if ~isempty(cfg.EventsTargetFilterForColumns)
             %tempCompTest = cfg.EventsTestFilterValues{iComb};
             tempCompTarget = cfg.EventsTargetFilterValues{iComb};
             
-            if iscell(EventsTargetTable.(tempEventsTargetFilterForColumn))
-                matchIndicator = matchIndicator | ( strcmp(EventsTargetTable.(tempEventsTargetFilterForColumn), tempCompTarget) );
-            else
-                matchIndicator = matchIndicator | ( EventsTargetTable.(tempEventsTargetFilterForColumn) ==  tempCompTarget);
-            end
+%             if iscell(EventsTargetTable.(tempEventsTargetFilterForColumn))
+%                 matchIndicator = matchIndicator | ( strcmp(EventsTargetTable.(tempEventsTargetFilterForColumn), tempCompTarget) );
+%             else
+%                 matchIndicator = matchIndicator | ( EventsTargetTable.(tempEventsTargetFilterForColumn) ==  tempCompTarget);
+%             end
+            %if iscell(EventsTargetTable.(tempEventsTargetFilterForColumn))
+                matchIndicator = matchIndicator | ( ismember(EventsTargetTable.(tempEventsTargetFilterForColumn), tempCompTarget) );
+            %else
+            %    matchIndicator = matchIndicator | ( EventsTargetTable.(tempEventsTargetFilterForColumn) ==  tempCompTarget);
+            %end
         end
     end
     
