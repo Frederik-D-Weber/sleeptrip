@@ -414,11 +414,15 @@ if ~isempty(cfg.EventsTestFilterForColumns)
         end
     end
     
+    if nargout > 4
+        EventsTestTableExcluded = EventsTestTable(~matchIndicator,:);
+    end
     EventsTestTable = EventsTestTable(matchIndicator,:);
     
-end
-if nargout > 4
-    EventsTestTableExcluded = EventsTestTable(~matchIndicator,:);
+else
+    if nargout > 4
+        EventsTestTableExcluded = EventsTestTable(~matchIndicator,:);
+    end
 end
 
 matchIndicator = ones(size(EventsTargetTable,1),1);
@@ -444,11 +448,15 @@ if ~isempty(cfg.EventsTargetFilterForColumns)
         end
     end
     
+    if nargout > 5
+        EventsTargetTableExcluded = EventsTargetTable(~matchIndicator,:);
+    end
+    
     EventsTargetTable = EventsTargetTable(matchIndicator,:);
-end
-
-if nargout > 5
-    EventsTargetTableExcluded = EventsTargetTable(~matchIndicator,:);
+else
+    if nargout > 5
+        EventsTargetTableExcluded = EventsTargetTable(~matchIndicator,:);
+    end
 end
 
 nEventsTest = size(EventsTestTable,1);
