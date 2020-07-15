@@ -325,8 +325,18 @@ switch cfg.plottype
                     y_hyp_pos = yTick(1);
             end
             
-            %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
-            h = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],epoch_colors(iEpoch,:),'edgecolor','none');
+            if isfield(cfg,'plotunknown')
+                if ~(~istrue(cfg.plotunknown) && strcmp(epoch,'?'))
+                    %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
+                    h = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],epoch_colors(iEpoch,:),'edgecolor','none');
+                    member = find(ismember(labels,epoch),1,'first');
+                    if ~ismember(member,idxUsedLabels)
+                        hp(incLabel) = h;
+                        incLabel = incLabel + 1;
+                        idxUsedLabels = [idxUsedLabels member];
+                    end
+                end
+            end
             
             if isfield(cfg,'plotexcluded')
                 if istrue(cfg.plotexcluded) && scoring.excluded(iEpoch)
@@ -335,12 +345,7 @@ switch cfg.plottype
                 end
             end
             
-            member = find(ismember(labels,epoch),1,'first');
-            if ~ismember(member,idxUsedLabels)
-                hp(incLabel) = h;
-                incLabel = incLabel + 1;
-                idxUsedLabels = [idxUsedLabels member];
-            end
+
         end
         
         

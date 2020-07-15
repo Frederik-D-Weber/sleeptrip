@@ -52,11 +52,56 @@ function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cyc
 %  cfg.defaultvalues      = either a vector or a cell of vectors with the default values of the
 %                           repective cfg.meanColumns, default =
 %                           {nan(1,numel(cfg.meanColumns)), ...}
+%  cfg.eventexcludeRNR    = cell of strings defining the exclusion of events that fall in the cycle parts of
+%                           either R or NR for each event structure
+%                           this happens BEFORE interpolation and smoothing
+%                           example for 3 res_event sturctures
+%                           cfg.excludeRNR = {'no', 'NR', 'R'}
+%                           this will exclude the no events in the first
+%                           res_event structure, all events in the NR cycle
+%                           part of the second res_event structure, 
+%                           and all events in the R cycle
+%                           part of the third res_event structure
+%                           default = {'no', ...}
 %
-%  cfg.eventinterpolmethd = interpolation method for res_event sturcture value-time normalization
+%  cfg.eventmaskRNR       = cell of strings defining the masking of events that fall in the cycle parts of
+%                           either R or NR for each event structure
+%                           this happens AFTER interpolation and smoothing
+%                           example for 3 res_event sturctures
+%                           cfg.maskRNR = {'no', 'NR', 'R'}
+%                           this will mask the no events in the first
+%                           res_event structure, all events in the NR cycle
+%                           part of the second res_event structure, 
+%                           and all events in the R cycle
+%                           part of the third res_event structure
+%                           default = {'no', ...}
+%
+%  cfg.eventcycleinterpolmethd = interpolation method for res_event
+%                           sturcture value-time normalization in cycle adjustments
 %                           e.g. 'nearest' or 'linear' or 'pchip' see
 %                           interp1 help for details on further methods
 %                           default = 'nearest' 
+%
+%  cfg.eventepochinterpol = 'yes or 'no' if interpolation for res_event
+%                           sturcture should be applied prior ot cycle
+%                           interpolation to query a value for each epoch
+%                           in the covered epoch range 
+%                           default = 'no'
+%  cfg.eventepochinterpolmethd = the method used for interpolation for res_event
+%                           sturcture should be applied prior ot cycle
+%                           interpolation to query a value for each epoch
+%                           in the covered epoch range 
+%                           e.g. 'nearest' or 'linear' or 'pchip' see
+%                           interp1 help for details on further methods
+%                           default = 'linear'
+%
+%  cfg.epochsmoother      = number of epochs being used to smooth values 
+%                           from res_event prior to cycle interpolation;
+%                           default = 1 (i.e. no smoothing)
+%  cfg.epochsmoothermethd = method of epoch smoother
+%                           e.g. 'moving' or 'lowess' or 'loess' 'rlowess' 'sgolay' see
+%                           smooth function help for details on further methods
+%                           default = 'moving';
 %
 %  cfg.resorientation =     string, orientation of res_events_normed epochs 
 %                           either 'long' or 'wide' format default = 'wide'
@@ -183,12 +228,38 @@ end
 if Nres>0 
     if isfield(cfg,'defaultvalues')
         if Nres > 1 && (Nres ~= numel(cfg.defaultvalues))
-            ft_error(['Number of cells in cfg.meanColumns does not match the number of res_event structures = ' num2str(Nres) '\nCheck that there is a cell of values for each res_event sturcture given as an argument.'])
+            ft_error(['Number of cells in cfg.defaultvalues does not match the number of res_event structures = ' num2str(Nres) '\nCheck that there is a cell of values for each res_event sturcture given as an argument.'])
         end
     else
     cfg.defaultvalues = {};
      for iResEvent = 1:Nres
          cfg.defaultvalues{iResEvent} = nan(1,numel(cfg.meanColumns{iResEvent}));
+     end
+    end
+end
+
+if Nres>0 
+    if isfield(cfg,'eventmaskRNR')
+        if Nres > 1 && (Nres ~= numel(cfg.eventmaskRNR))
+            ft_error(['Number of cells in cfg.eventmaskRNR does not match the number of res_event structures = ' num2str(Nres) '\nCheck that there is a cell of values for each res_event sturcture given as an argument.'])
+        end
+    else
+    cfg.eventmaskRNR = {};
+     for iResEvent = 1:Nres
+         cfg.eventmaskRNR{iResEvent} = 'no';
+     end
+    end
+end
+
+if Nres>0 
+    if isfield(cfg,'eventexcludeRNR')
+        if Nres > 1 && (Nres ~= numel(cfg.eventexcludeRNR))
+            ft_error(['Number of cells in cfg.eventexcludeRNR does not match the number of res_event structures = ' num2str(Nres) '\nCheck that there is a cell of values for each res_event sturcture given as an argument.'])
+        end
+    else
+    cfg.eventexcludeRNR = {};
+     for iResEvent = 1:Nres
+         cfg.eventexcludeRNR{iResEvent} = 'no';
      end
     end
 end
@@ -227,7 +298,14 @@ if size(cfg.newcycledurations,2) == 2
 end
 
 
-cfg.eventinterpolmethd = ft_getopt(cfg, 'eventinterpolmethd', 'nearest');
+cfg.eventcycleinterpolmethd = ft_getopt(cfg, 'eventcycleinterpolmethd', 'nearest');
+
+cfg.eventepochinterpol = ft_getopt(cfg, 'eventepochinterpol', 'no');
+cfg.eventepochinterpolmethd = ft_getopt(cfg, 'eventepochinterpolmethd', 'linear');
+cfg.epochsmoother = ft_getopt(cfg, 'epochsmoother', 1);
+cfg.epochsmoothermethd = ft_getopt(cfg, 'epochsmoothermethd', 'moving');
+
+
 cfg.resorientation     = ft_getopt(cfg, 'resorientation', 'wide');
 
 cfg.considerexclusion     = ft_getopt(cfg, 'considerexclusion', 'yes');
@@ -365,6 +443,8 @@ if adjust_res
 
     %event_values_cycle_adjusted_by_Result_and_Group_and_Column = {};
     for iResEvent = 1:Nres
+        maskRNR = cfg.eventmaskRNR{iResEvent};
+        excludeRNR = cfg.eventexcludeRNR{iResEvent};
         
         res_event = varargin{iResEvent};
         
@@ -385,6 +465,27 @@ if adjust_res
         if istrue(cfg.considerexclusion)
             event_count(ismember(event_count.epochnumber,find(scoring.excluded)'),:) = [];
         end
+        
+             switch excludeRNR
+                    case 'R'
+                        idxRs = [];
+                        for iCycle = 1:completeCycleCount
+                            iR = (res_cycle.table.Rstartepoch(iCycle):res_cycle.table.Rendepoch(iCycle));
+                            idxRs = [idxRs iR];
+                        end
+                        if ~isnan(idxRs)
+                            event_count(ismember(event_count.epochnumber,idxRs'),:) = [];
+                        end
+                    case 'NR'
+                        idxNRs = [];
+                        for iCycle = 1:completeCycleCount
+                            iNR = (res_cycle.table.NRstartepoch(iCycle):res_cycle.table.NRendepoch(iCycle));
+                            idxNRs = [idxNRs iNR];
+                        end
+                        if ~isnan(idxNRs)
+                            event_count(ismember(event_count.epochnumber,idxNRs'),:) = [];
+                        end
+                end
                 
         completeCycleCount = sum(~isnan(res_cycle.table.endepoch));
         
@@ -419,9 +520,42 @@ if adjust_res
                 default_value = default_values(iColumn);
                 
                 event_values_by_epoch = repmat(default_value,1,numel(scoring.epochs));
-                temp_epochnumbers = event_count_group_column.epochnumber;
-                temp_values = event_count_group_column.(adjust_column);
-                event_values_by_epoch(temp_epochnumbers) = temp_values;
+                if istrue(cfg.eventepochinterpol)
+                	temp_epochnumbers = event_count_group_column.epochnumber;
+                    temp_values = event_count_group_column.(adjust_column);
+                    temp_epochnumbersquery = min(event_count_group_column.epochnumber):max(event_count_group_column.epochnumber);
+                    temp_values_epochinterpol = interp1_or_repeat(temp_epochnumbers,temp_values,temp_epochnumbersquery,cfg.eventepochinterpolmethd,default_value);
+                    event_values_by_epoch(temp_epochnumbersquery) = temp_values_epochinterpol;
+                else
+                    temp_epochnumbers = event_count_group_column.epochnumber;
+                    temp_values = event_count_group_column.(adjust_column);
+                    event_values_by_epoch(temp_epochnumbers) = temp_values;
+                end
+                
+                if (cfg.epochsmoother > 1)
+                    event_values_by_epoch = smooth(event_values_by_epoch,cfg.epochsmoother,cfg.epochsmoothermethd);
+                end
+                
+                switch maskRNR
+                    case 'R'
+                        idxRs = [];
+                        for iCycle = 1:completeCycleCount
+                            iR = (res_cycle.table.Rstartepoch(iCycle):res_cycle.table.Rendepoch(iCycle));
+                            idxRs = [idxRs iR];
+                        end
+                        if ~isnan(idxRs)
+                            event_values_by_epoch(idxRs) = NaN;
+                        end
+                    case 'NR'
+                        idxNRs = [];
+                        for iCycle = 1:completeCycleCount
+                            iNR = (res_cycle.table.NRstartepoch(iCycle):res_cycle.table.NRendepoch(iCycle));
+                            idxNRs = [idxNRs iNR];
+                        end
+                        if ~isnan(idxNRs)
+                            event_values_by_epoch(idxNRs) = NaN;
+                        end
+                end
                 
                 event_values_cycle_adjusted = [];
                 for iCycle = 1:completeCycleCount
@@ -430,17 +564,17 @@ if adjust_res
                         iR = (res_cycle.table.Rstartepoch(iCycle):res_cycle.table.Rendepoch(iCycle));
                         
                         if isnan(iNR)
-                            event_part_NR_adjusted = interp1_or_repeat(1,default_value,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
+                            event_part_NR_adjusted = interp1_or_repeat(1,default_value,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventcycleinterpolmethd,default_value);
                         else
                             event_part_NR = event_values_by_epoch(iNR);
-                            event_part_NR_adjusted = interp1_or_repeat(iNR,event_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
+                            event_part_NR_adjusted = interp1_or_repeat(iNR,event_part_NR,linspace(min(iNR),max(iNR),cfg.newcycledurations(iCycle,1)),cfg.eventcycleinterpolmethd,default_value);
                         end
                         
                         if isnan(iR)
-                            event_part_R_adjusted = interp1_or_repeat(1,default_value,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventinterpolmethd,default_value);
+                            event_part_R_adjusted = interp1_or_repeat(1,default_value,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventcycleinterpolmethd,default_value);
                         else
                             event_part_R = event_values_by_epoch(iR);
-                            event_part_R_adjusted = interp1_or_repeat(iR,event_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventinterpolmethd,default_value);
+                            event_part_R_adjusted = interp1_or_repeat(iR,event_part_R,linspace(min(iR),max(iR),cfg.newcycledurations(iCycle,2)),cfg.eventcycleinterpolmethd,default_value);
                         end
                         
                         event_values_cycle_adjusted = cat(2,event_values_cycle_adjusted,event_part_NR_adjusted,event_part_R_adjusted);
@@ -448,13 +582,13 @@ if adjust_res
                         iC = (res_cycle.table.startepoch(iCycle):res_cycle.table.endepoch(iCycle));
                         event_part_cycle = event_values_by_epoch(iC);
                         
-                        event_part_cycle_adjusted = interp1_or_repeat(iC,event_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),cfg.eventinterpolmethd,default_value);
+                        event_part_cycle_adjusted = interp1_or_repeat(iC,event_part_cycle,linspace(min(iC),max(iC),cfg.newcycledurations(iCycle,1)),cfg.eventcycleinterpolmethd,default_value);
                         event_values_cycle_adjusted = cat(2,event_values_cycle_adjusted,event_part_cycle_adjusted);
                     end
                 end
                 
                 
-                
+        
                 
   
         groupNameJoined = strjoin(cellfun(@num2str,table2cell(groupValues),'UniformOutput',false),' + ');

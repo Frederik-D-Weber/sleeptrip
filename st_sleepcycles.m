@@ -21,6 +21,9 @@ function [res_cycle] = st_sleepcycles(cfg,scoring)
 %                        'N2' or 'N3' or 'SWS' or 'S4' or 'R, see ST_SLEEPONSET for details (default = 'AASM')
 %   cfg.maxduration    = duration in minutes a sleep cycle can maximally
 %                        have cannot be lower than 2. (default = Inf) 
+%   cfg.completesleepbuffer  = duration of sleep in minutes a 
+%                              sleep cycle has to be followed to be
+%                              considered complete (default = 5)
 %
 % result table has columns with: cycle startepochs endepochs Rstarts Rends NRstarts NRends
 %
@@ -43,9 +46,13 @@ else
 end
 
 cfg.maxduration        = ft_getopt(cfg, 'maxduration', Inf);
+cfg.completesleepbuffer        = ft_getopt(cfg, 'completesleepbuffer', 5);
+
 cfg.sleeponsetdef      = upper(ft_getopt(cfg, 'sleeponsetdef', 'AASM'));
 
 maxDurationEpochs = max(2,floor(cfg.maxduration*60/scoring.epochlength));
+completesleepbufferDurationEpochs = max(2,floor(cfg.completesleepbuffer*60/scoring.epochlength));
+
 
 hasLightsOff = false;
 if isfield(scoring, 'lightsoff')
@@ -209,6 +216,17 @@ if ~hasSleep
     res_cycle.table = res_cycle.table(1:0,:);
 end
 
+nCycles = size(res_cycle.table,1);
+res_cycle.table.complete = logical(zeros(nCycles,1));
+for iCycle = 1:(nCycles-1)
+    if res_cycle.table.durationepochs(iCycle+1) >= completesleepbufferDurationEpochs;
+        res_cycle.table.complete(iCycle) = logical(1);
+    end
+end
+
+for iCycle = 1:(1)
+iCycle
+end
 
 fprintf([functionname ' function finished\n']);
 toc(timerVal)

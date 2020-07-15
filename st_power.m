@@ -101,6 +101,12 @@ if ~isfield(cfg, 'downsamplefs')
     downsamplefsNotSet = true;
 end
 
+if isfield(cfg, 'montage') && isfield(cfg, 'channel')
+    if ~any(ismember(cfg.channel,cfg.montage.labelnew))
+        ft_error('The selected channels with cfg.channel does not match any of the ones defined in cfg.montage.\nPlease make them match or select all channels in the cfg.montage and NOT setting the cfg.channel')
+    end
+end
+
 % set defaults
 cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
 cfg.foilim   = ft_getopt(cfg, 'foilim', [0.5 30]);
