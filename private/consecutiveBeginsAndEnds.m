@@ -27,8 +27,11 @@
 function [begins, ends] =  consecutiveBeginsAndEnds(x,maxConsecutiveDiff)
     nx = length(x);
     iter = 1;
-    begins(iter) = x(1);
+    begins = [];
     ends = [];
+    if nx > 0
+        begins(iter) = x(1);
+    end
     if nx > 1
         for i = 2:nx
             if x(i) > (x(i-1) + maxConsecutiveDiff)

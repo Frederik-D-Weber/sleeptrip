@@ -206,7 +206,7 @@ elseif (strcmp(baselinetype, 'normchange')) || (strcmp(baselinetype, 'vssum'))
 elseif (strcmp(baselinetype, 'db'))
   data = 10*log10(data ./ meanVals);
 elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
-  data = log10(data+1);
+  data = 10*log10(data+1);
 elseif (strcmp(baselinetype, 'db_absolute'))
   data = 10*log10(data);
 elseif (strcmp(baselinetype, 'log10_absolute'))
