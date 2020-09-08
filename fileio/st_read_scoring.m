@@ -7,7 +7,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 % Use as
 %   [scoring] = st_read_scoring(cfg)
 %   [scoring] = st_read_scoring(cfg, tableScoring)
-
+%
 % 
 % The configuration structure needs to specify
 %   cfg.scoringfile      = string, the scoring file (and path)

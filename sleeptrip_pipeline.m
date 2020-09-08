@@ -150,7 +150,10 @@ scoring.lightsoff = subject.lightsoff;
 cfg = [];
 cfg.sleeponsetdef  = 'AASM'; % also try 'AASM' and many more
 [onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage] = st_sleeponset(cfg,scoring);
-[onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage]
+onsetnumber
+lastsleepstagenumber
+onsetepoch
+lastsleepstage
 
 % practice: how does the sleep onset change according to the different
 % definitions?
@@ -159,10 +162,10 @@ cfg.sleeponsetdef  = 'AASM'; % also try 'AASM' and many more
 
 cfg = [];
 cfg.title           = subject.name;
-% cfg.plottype        = 'colorblocks'; %'classic' 'colorblocks' 'colorbar'
+cfg.plottype        = 'colorbar'; %'classic' 'colorblocks' 'colorbar'
 % cfg.yaxdisteqi      = 'yes';
 % cfg.timeticksdiff   = 60;
-% cfg.plotunknown     = 'no'; % 'yes' or 'no' 
+cfg.plotunknown     = 'no'; % 'yes' or 'no' 
 % cfg.plotsleeponset  = 'no'; % 'yes' or 'no' 
 % cfg.plotsleepoffset = 'no'; % 'yes' or 'no' 
 % cfg.timemin         = 600 % in minutes, e.g. plot on a 10-hour time axis.   
@@ -171,8 +174,8 @@ cfg.title           = subject.name;
 % cfg.plotexcluded       = 'no';     
 
 %%% if you want to export the figure immediately add these parameters
-% cfg.figureoutputfile   = [subject.name '.pdf'];
-% cfg.figureoutputformat = 'pdf';
+cfg.figureoutputfile   = [subject.name '.pdf'];
+cfg.figureoutputformat = 'pdf';
 
 figure_handle = st_hypnoplot(cfg, scoring);
 % close(figure_handle) close the figure automatically e.g. after exporting
@@ -255,7 +258,7 @@ cfg               = [];
 cfg.continuous    = 'yes';
 cfg.artfctdef     = artfctdef;
 cfg.blocksize     = scoring.epochlength;
-cfg.viewmode      = 'butterfly'; % 'vertical' or 'butterfly'
+cfg.viewmode      = 'vertical'; % 'vertical' or 'butterfly'
 cfg.artifactalpha = 0.7;
 cfg.renderer      = 'opengl'; % 'painters' or 'opengl' or 'zbuffer'
 ft_databrowser(cfg, data);
@@ -317,7 +320,7 @@ power_y    = res_power_bin.table.mean_powerDensity_over_segments(indChannel);
 power_y_logscale = 10*log10(power_y+1);
 %plot(freq_x,power_y)
 plot(freq_x,power_y_logscale)
-%plot(freq_x,power_y_logscale.*freq_x)
+plot(freq_x,power_y_logscale.*freq_x)
 
 
 % practice: Try different scaling and normalization, how would this change
@@ -329,6 +332,8 @@ plot(freq_x,power_y_logscale)
 cfg = [];
 cfg.peaknum = 1; % either 1 or 2 (default)
 [res_freqpeaks] = st_freqpeak(cfg,res_power_bin);
+
+res_freqpeaks
 
 %practice: find two peaks by default by changing the configuration of the function,
 %would limiting the frequency band help, are there any artifacts (e.g. sharp peaks in the power spectra?)
@@ -350,8 +355,8 @@ cfg.centerfrequency  = freqpeak; % e.g. 12 for a frontal channel 13.3 for centra
 
 % this saves RAM, but is slower, especially with zmax data that is
 % compressed (e.g. in a .zip file)
-cfg.dataset     = subject.dataset;
-[res_spindles_channel res_spindles_event res_spindles_filter] = st_spindles(cfg); 
+% cfg.dataset     = subject.dataset;
+% [res_spindles_channel res_spindles_event res_spindles_filter] = st_spindles(cfg); 
 
 [res_spindles_channel, res_spindles_event, res_spindles_filter] = st_spindles(cfg, data);
 res_spindles_channel.table
