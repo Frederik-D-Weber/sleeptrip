@@ -77,9 +77,9 @@ if strcmpi(hdr.DataFormat, 'binary')
     case 'int_16';
       NBytes = 2;
     case 'int_32';
-      NBytes = 2;
+      NBytes = 4;
     case 'ieee_float_32';
-      NBytes = 2;
+      NBytes = 4;
     otherwise 
      error('unkown Binary format %s of brainvision file', lower(hdr.BinaryFormat));
 

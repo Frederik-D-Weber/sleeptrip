@@ -11,7 +11,7 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %   config file can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
-%   cfg.plottype               = string, the type of plot 'classic' plots the line graph as typical or 'colorblocks' plots the colorbocks (default = 'classic')
+%   cfg.plottype               = string, the type of plot 'classic' plots the line graph as typical or 'colorblocks' plots the colorbocks  or 'colorbar' for only one bar of colors (default = 'classic')
 %   cfg.plotsleeponset         = string, plot an indicator of sleep onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotsleepoffset        = string, plot an indicator of sleep offset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
@@ -466,6 +466,7 @@ if strcmp(cfg.plotsleeponset, 'yes')
 end
 
 
+offset_time = max(x_time);
 if strcmp(cfg.plotsleepoffset, 'yes')
     if onsetCandidateIndex ~= -1
         offset_time = (lastsleepstagenumber+0.5)*(scoring.epochlength/60)+(offsetseconds/60);%in minutes

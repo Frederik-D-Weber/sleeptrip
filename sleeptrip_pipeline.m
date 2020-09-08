@@ -60,6 +60,7 @@ st_defaults
 
 
 %% prepare the subject data, e.g. zmax data in a compressed format
+
 % here you can prepare everyting you would need later on again
 subject = [];
 subject.name               = 'example_zmax';
@@ -82,6 +83,7 @@ subject.eegchannels        = {'EEG L', 'EEG R'};
 save('subject-1','subject');
 
 %% alternative subject brainvision
+
 % subject = [];
 % subject.name               = 'example_brainvision';
 % subject.dataset            = 'test_lindev_sleep_score_preprocout_datanum_1.eeg';
@@ -102,6 +104,7 @@ save('subject-1','subject');
 % save('subject-2','subject');
 %
 %% alternative subject somnomedics edf
+
 % subject = [];
 % subject.name               = 'example_somnomedics_edf';
 % subject.dataset            = 'example_somnomedics.edf';
@@ -122,6 +125,7 @@ save('subject-1','subject');
 % % save('subject-3','subject');
 
 %% read in the scoring, files 
+
 cfg = [];
 cfg.scoringfile   = subject.scoringfile;
 cfg.scoringformat = subject.scoringformat;
@@ -134,39 +138,19 @@ cfg.standard      = subject.standard; % 'aasm' or 'rk'
 % function
 scoring.lightsoff = subject.lightsoff;
 
+% do we know the lights-on moment, in this case not, but if this would be
+% good to determine more acurately where things at the end of the recoring
+% are
+%scoring.lightson = subject.lightson;
+
 %practice: read in another format, maybe a custom format.
 
 %% check when is sleep onset/offset
 
-first thing to do is to extend the scorings of the zmax to the one of the somno (adding ? to beginning and end of zmax)
-
 cfg = [];
 cfg.sleeponsetdef  = 'AASM'; % also try 'AASM' and many more
-[onsetnumber, preoffsetnumber_somno, onsetepoch] = st_sleeponset(cfg,scoring_somno);
-[onsetnumber, preoffsetnumber_zmax, onsetepoch] = st_sleeponset(cfg,scoring_zmax);
-
-
-fist_epoch_somno = zmax_first_epoch;
-last_epoch_somno = max(preoffsetnumber_somno,preoffsetnumber_zmax);
-
-    cfg = [];
-    cfg.start = fist_epoch_somno;
-    cfg.end = last_epoch_somno;
-    scoring_new_somno = st_cutscoring(cfg,scoring_somno);
-
-fist_epoch_zmax = zmax_first_epoch;
-last_epoch_zmax = ...
-    
-    cfg = [];
-    cfg.start = fist_epoch_somno;
-    cfg.end = last_epoch_somno;
-    scoring_new_zmax = st_cutscoring(cfg,scoring_zmax);
-
-
-
-
-preoffsetnumber
-onsetepoch
+[onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage] = st_sleeponset(cfg,scoring);
+[onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage]
 
 % practice: how does the sleep onset change according to the different
 % definitions?
@@ -175,11 +159,16 @@ onsetepoch
 
 cfg = [];
 cfg.title           = subject.name;
+% cfg.plottype        = 'colorblocks'; %'classic' 'colorblocks' 'colorbar'
+% cfg.yaxdisteqi      = 'yes';
 % cfg.timeticksdiff   = 60;
 % cfg.plotunknown     = 'no'; % 'yes' or 'no' 
 % cfg.plotsleeponset  = 'no'; % 'yes' or 'no' 
 % cfg.plotsleepoffset = 'no'; % 'yes' or 'no' 
-% cfg.timemin         = 600 % in minutes, e.g. plot on a 10-hour time axis.      
+% cfg.timemin         = 600 % in minutes, e.g. plot on a 10-hour time axis.   
+% cfg.timerange          = [50 100];
+% cfg.considerdataoffset = 'no';
+% cfg.plotexcluded       = 'no';     
 
 %%% if you want to export the figure immediately add these parameters
 % cfg.figureoutputfile   = [subject.name '.pdf'];
@@ -188,7 +177,7 @@ cfg.title           = subject.name;
 figure_handle = st_hypnoplot(cfg, scoring);
 % close(figure_handle) close the figure automatically e.g. after exporting
 
-%practice: play around with the plotting paramters. export the file as a
+%practice: play around with the plotting paramters. Export the file as a
 %pdf or a png, change the figure dimensions and resolution, manipulate the
 %figure by using the figure_handle, what happens when you use an RK or AASM
 %based scoring?
