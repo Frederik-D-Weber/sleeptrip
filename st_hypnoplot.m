@@ -532,6 +532,8 @@ cfg = st_adjustfigure(cfg,hhyp);
 hold(axh,'off')
 
 if saveFigure
+    cfg.functionname = functionname;
+    cfg.subfolder = 'hypnograms';
     cfg = st_savefigure(cfg,hhyp);
 end
 fh = hhyp;

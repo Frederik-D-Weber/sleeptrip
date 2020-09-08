@@ -177,8 +177,9 @@ end
 
 % make artvec
 artvec = zeros(length(artifact), endsample);
-breakflag = 0;
+
 for i=1:length(artifact)
+  breakflag = 0;
   for j=1:size(artifact{i},1)
     artbegsample = artifact{i}(j,1);
     artendsample = artifact{i}(j,2);

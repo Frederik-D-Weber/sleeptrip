@@ -183,6 +183,7 @@ figure_handle = st_hypnoplot(cfg, scoring);
 %based scoring?
 
 %% create a sleep table with the scoring parameters
+
 cfg = [];
 res_sleepdescriptive = st_scoringdescriptives(cfg, scoring);
 
@@ -208,11 +209,12 @@ filelist_res_sleepdescriptives = st_write_res(cfg, res_sleepdescriptive);
 
 
 %% read in the data
+
 cfg = [];
 cfg.dataset    = subject.dataset;
 cfg.continuous = 'yes';
 cfg.channel    = subject.eegchannels;
-%  possible channels are: 
+%  possible channels for zmax are: 
 % {'BATT' 'BODY TEMP' ...
 %  'dX' 'dY' 'dZ' ...
 %  'EEG L' 'EEG R' 
@@ -226,6 +228,8 @@ data = st_preprocessing(cfg);
 
 %practice, do some more preprocessing, how would you read in your own data
 % search on the web how fieldtrip can help to read in data http://www.fieldtriptoolbox.org/faq/dataformat/
+% Note you can read in .zip data directly, this saves typically one third
+% of space your hard drive at least but needs longer to open
 
 %% take a look at the data, MIGHT NOT WORK ON ALL MATLAB VERSIONS!
 
@@ -313,22 +317,25 @@ power_y    = res_power_bin.table.mean_powerDensity_over_segments(indChannel);
 power_y_logscale = 10*log10(power_y+1);
 %plot(freq_x,power_y)
 plot(freq_x,power_y_logscale)
-
-% practice: try different scaling and normalization, how would this change
-% the results? can you plot muliple channels at the same time.
+%plot(freq_x,power_y_logscale.*freq_x)
 
 
-%% detect the spindles frequency peak from the power spectrum
+% practice: Try different scaling and normalization, how would this change
+% the results? Can you plot muliple channels at the same time.
+
+
+%% determine the spindle(s) frequency peak(s) from the power spectrum
+
 cfg = [];
 cfg.peaknum = 1; % either 1 or 2 (default)
 [res_freqpeaks] = st_freqpeak(cfg,res_power_bin);
 
 %practice: find two peaks by default by changing the configuration of the function,
-%would limiting the frequency band help, are there any artifacts (e.g. sharp peaks in the power spectra?
+%would limiting the frequency band help, are there any artifacts (e.g. sharp peaks in the power spectra?)
 
 %% detect sleep spindles
 
-% define the frequency peak to use from the previous detection
+% define the frequency peak to use from the previous peak determination
 % we will take the first peak we defined and the first value of that
 freqpeak = res_freqpeaks.table.freqpeak1(1);
 
@@ -340,10 +347,11 @@ cfg.channel          = subject.eegchannels;
 % freqpeak1 for slow spindles
 % freqpeak2 for fast spindles
 cfg.centerfrequency  = freqpeak; % e.g. 12 for a frontal channel 13.3 for central channel
+
 % this saves RAM, but is slower, especially with zmax data that is
 % compressed (e.g. in a .zip file)
-% cfg.dataset     = subject.dataset;
-% [res_spindles_channel res_spindles_event res_spindles_filter] = st_spindles(cfg); 
+cfg.dataset     = subject.dataset;
+[res_spindles_channel res_spindles_event res_spindles_filter] = st_spindles(cfg); 
 
 [res_spindles_channel, res_spindles_event, res_spindles_filter] = st_spindles(cfg, data);
 res_spindles_channel.table
@@ -356,7 +364,7 @@ cfg.posfix = '';
 filelist_res_spindles = st_write_res(cfg, res_spindles_channel, res_spindles_event, res_spindles_filter); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %practice: what if you change the threshold parameters, do you think
-%filtering of the data matters? search in different sleep stages, does the
+%filtering of the data matters? Search in different sleep stages, does the
 %threshold change depending on the sleep stages used? if so, what to do
 %then?
 
@@ -368,7 +376,7 @@ spindle_ends_subject.eegchannels{1}    = res_spindles_event.table.seconds_end(st
 spindle_begins_subject.eegchannels{2}  = res_spindles_event.table.seconds_begin(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
 spindle_ends_subject.eegchannels{2}    = res_spindles_event.table.seconds_end(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
 
-% the trough with the larges amplitude of the spindle shall give its time
+% the trough with the largest amplitude of the spindle shall give its time
 % point, this is important for time-locked event related potentials
 spindle_troughs_subject.eegchannels{1} = res_spindles_event.table.seconds_trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{1}}));
 spindle_troughs_subject.eegchannels{2} = res_spindles_event.table.seconds_trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
@@ -417,16 +425,18 @@ cfg.channel                         = subject.eegchannels;
 cfg.continuous                      = 'yes';
 cfg.viewmode                        = 'vertical'; % 'vertical' or 'butterfly'
 cfg.blocksize                       = scoring.epochlength; %view the data in 30-s blocks
-cfg.event                           = struct('type', {}, 'sample', {});
-cfg.artfctdef.spindles_subject.eegchannels{1}.artifact          = [spindle_begins_subject.eegchannels{1}, spindle_ends_subject.eegchannels{1}];
-cfg.artfctdef.spindles_trough_subject.eegchannels{1}.artfctpeak = spindle_troughs_subject.eegchannels{1};
-cfg.artfctdef.spindles_subject.eegchannels{2}.artifact          = [spindle_begins_subject.eegchannels{2}, spindle_ends_subject.eegchannels{2}];
-cfg.artfctdef.spindles_trough_subject.eegchannels{2}.artfctpeak = spindle_troughs_subject.eegchannels{2};
-% cfg.artfctdef.event.artifact          = [spindle_begins_subject.eegchannels{1}, spindle_ends_subject.eegchannels{1}];
-% cfg.artfctdef.eventpeaks.artfctpeak   = spindle_troughs_subject.eegchannels{1};
-%cfg.selectmode                      =  'markpeakevent'; %'markartifact', 'markpeakevent', 'marktroughevent' (default = 'markartifact')
+%cfg.event                           = struct('type', {}, 'sample', {});
+
+
+artfctdef                  = [];
+artfctdef.spindles_ch1.artifact   = fix(data.fsample*[spindle_begins_subject.eegchannels{1}, spindle_ends_subject.eegchannels{1}]);
+%artfctdef.spindles_ch1_trough.artfctpeak = fix(data.fsample*spindle_troughs_subject.eegchannels{1});
+artfctdef.spindles_ch2.artifact   = fix(data.fsample*[spindle_begins_subject.eegchannels{2}, spindle_ends_subject.eegchannels{2}]);
+%artfctdef.spindles_ch2_trough.artfctpeak = fix(data.fsample*spindle_troughs_subject.eegchannels{2});
+% cfg.selectmode                        =  'markpeakevent'; %'markartifact', 'markpeakevent', 'marktroughevent' (default = 'markartifact')
+cfg.artfctdef = artfctdef;
 cfg.plotevents    = 'yes';
-cfg.renderer      = 'painters'; % 'painters' or 'opengl' or 'zbuffer'
+cfg.renderer      = 'opengl'; % 'painters' or 'opengl' or 'zbuffer'
 ft_databrowser(cfg, data);
 
 
@@ -442,14 +452,16 @@ padding_buffer = 4*data.fsample; % 8 seconds
 cfg     = [];
 
 cfg.trl = [event_minimum_samples_ch1-data.fsample-padding_buffer,...
-    event_minimum_samples_ch1+data.fsample+padding_buffer,...
-    repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch1),1)];
+           event_minimum_samples_ch1+data.fsample+padding_buffer,...
+           repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch1),1)];
 data_events_ch1 = ft_redefinetrial(cfg, data);
 
 cfg.trl = [event_minimum_samples_ch2-data.fsample-padding_buffer,...
-    event_minimum_samples_ch2+data.fsample+padding_buffer,...
-    repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch2),1)];
+           event_minimum_samples_ch2+data.fsample+padding_buffer,...
+           repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch2),1)];
 data_events_ch2 = ft_redefinetrial(cfg, data);
+
+cfg.trl = round(cfg.trl);
 
 %View the event average signal timelocked to the trough.
 cfg        = [];
@@ -488,7 +500,6 @@ event_freq_ch2 = ft_freqanalysis(cfg, data_events_ch2);
 
 
 % view the time-frequency of a slow wave or spindle event, for each channel
-
 cfg                = [];
 cfg.baseline       = [-1.5 1.5]; % a 3 s baseline around the event as it has no clear start or end.
 cfg.baselinetype   = 'normchange';
@@ -499,8 +510,6 @@ figure
 ft_singleplotTFR(cfg,event_freq_ch1);
 figure
 ft_singleplotTFR(cfg,event_freq_ch2);
-
-
 
 %practice, why did we extract more data then we needed? Does this change if
 % we detect sleep spindles in another way? are spindles riding on slow
@@ -574,13 +583,6 @@ end
 %note there is a new column in the table!
 res_power_bins_appended.table
 
-
-% take a look at the power spectrum using the st_freqpeak function
-cfg = [];
-cfg.peaknum = 1;
-[res_freqpeaks_dummy] = st_freqpeak(cfg,res_power_bins_appended);
-
-
 %practice: append some more results, how would we append results from a
 %structure, could 
 % res = {res1, res2, ...} be used with 
@@ -598,6 +600,7 @@ scoringfiles = {...
 lightsoffs = {...
     108.922,...
     73.102};
+
 % create some subjects
 
 nDatasets = numel(datasets);
@@ -628,6 +631,7 @@ save('subjects','subjects');
 
 
 %% get the first sleep cycle
+
 scoring_cycles_firsts = cell(1,numel(subjects));
 scorings = cell(1,numel(subjects));
 for iSubject = 1:numel(subjects)
@@ -659,6 +663,7 @@ save('scorings', 'scorings');
 save('scoring_cycles_firsts', 'scoring_cycles_firsts');
 
 %% caluculate the power
+
 res_power_bins = cell(1,numel(subjects));
 res_power_bands = cell(1,numel(subjects));
 

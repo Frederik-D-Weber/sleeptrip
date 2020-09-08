@@ -5,6 +5,17 @@ st = dbstack;
 functionname = st.name;
 fprintf([functionname ' function started\n']);
 
+if ~isfield(cfg,'functionname')
+    cfg.functionname = functionname;
+end
+
+if ~isfield(cfg,'subfolder')
+    cfg.subfolder = 'unknown';
+end
+
+dt = now;
+
+
 timestampfix = '';
     if istrue(cfg.timestamp)
         timestampfix = ['_' datestr(dt,'yyyy-mm-dd-HH-MM-SS-FFF')];
@@ -13,13 +24,13 @@ timestampfix = '';
     subfolderpath = '';
     if istrue(cfg.folderstructure)
         subfolderpath = ['res' filesep];
-        if ~isdir([subfolderpath functionname])
-            mkdir([subfolderpath functionname]);
+        if ~isdir([subfolderpath cfg.functionname])
+            mkdir([subfolderpath cfg.functionname]);
         end
-        if ~isdir([subfolderpath functionname filesep 'hypnograms'])
-            mkdir([subfolderpath functionname filesep 'hypnograms']);
+        if ~isdir([subfolderpath cfg.functionname filesep cfg.subfolder])
+            mkdir([subfolderpath cfg.functionname filesep cfg.subfolder]);
         end
-        subfolderpath = [subfolderpath functionname filesep 'hypnograms'];
+        subfolderpath = [subfolderpath cfg.functionname filesep 'hypnograms'];
         [path filename ext] = fileparts(cfg.figureoutputfile);
         cfg.figureoutputfile = [subfolderpath filesep filename timestampfix ext];
     else
