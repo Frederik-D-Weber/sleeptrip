@@ -463,13 +463,36 @@ cfg     = [];
 cfg.trl = [event_minimum_samples_ch1-data.fsample-padding_buffer,...
            event_minimum_samples_ch1+data.fsample+padding_buffer,...
            repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch1),1)];
+
+% round trials to integers
 cfg.trl = round(cfg.trl);
+       
+% remove trials that overlap with the beginning of the file
+sel = cfg.trl(:,1)>1;
+cfg.trl = cfg.trl(sel,:);
+       
+% remove trials that overlap with the end of the file
+sel = cfg.trl(:,2)<data.sampleinfo(2);
+cfg.trl = cfg.trl(sel,:);
+
+
 data_events_ch1 = ft_redefinetrial(cfg, data);
 
 cfg.trl = [event_minimum_samples_ch2-data.fsample-padding_buffer,...
            event_minimum_samples_ch2+data.fsample+padding_buffer,...
            repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch2),1)];
+       
+% round trials to integers
 cfg.trl = round(cfg.trl);
+       
+% remove trials that overlap with the beginning of the file
+sel = cfg.trl(:,1)>1;
+cfg.trl = cfg.trl(sel,:);
+       
+% remove trials that overlap with the end of the file
+sel = cfg.trl(:,2)<data.sampleinfo(2);
+cfg.trl = cfg.trl(sel,:);
+
 data_events_ch2 = ft_redefinetrial(cfg, data);
 
 
