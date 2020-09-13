@@ -79,6 +79,10 @@ subject.scoring_dataoffset = 0; % in seconds
 % only relevant for
 subject.lightsoff          = 0; 
 subject.eegchannels        = {'EEG L', 'EEG R'};
+subject.ppgchannels        = {'OXY_IR_AC'};
+subject.oxychannels        = {'OXY_IR_DC'};
+
+
 
 save('subject-1','subject');
 
@@ -459,14 +463,15 @@ cfg     = [];
 cfg.trl = [event_minimum_samples_ch1-data.fsample-padding_buffer,...
            event_minimum_samples_ch1+data.fsample+padding_buffer,...
            repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch1),1)];
+cfg.trl = round(cfg.trl);
 data_events_ch1 = ft_redefinetrial(cfg, data);
 
 cfg.trl = [event_minimum_samples_ch2-data.fsample-padding_buffer,...
            event_minimum_samples_ch2+data.fsample+padding_buffer,...
            repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch2),1)];
+cfg.trl = round(cfg.trl);
 data_events_ch2 = ft_redefinetrial(cfg, data);
 
-cfg.trl = round(cfg.trl);
 
 %View the event average signal timelocked to the trough.
 cfg        = [];
