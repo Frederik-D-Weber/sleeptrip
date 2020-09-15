@@ -32,7 +32,7 @@ function [res] = st_append_res(varargin)
 %
 % $Id$
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -144,6 +144,6 @@ res.appended = true;
 res.table = restab;
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end

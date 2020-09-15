@@ -41,7 +41,7 @@ function [filename, waited_seconds] = st_wait_exists(cfg, filename)
 %
 % $Id$
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -106,7 +106,7 @@ avail = present && ~locked;
 
 end
 
-waited_seconds = toc;
+waited_seconds = toc(ttic);
 fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be finally available'  '\n']);
 fprintf([functionname ' function finished\n']);
 memtoc

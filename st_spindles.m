@@ -136,11 +136,10 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 %
 % $Id$
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
-
 fprintf([functionname ' function started\n']);
 
 if ~isfield(cfg, 'scoring')
@@ -1589,7 +1588,7 @@ data = [];%clear
 chData = [];%clear
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end
 

@@ -125,7 +125,7 @@ function [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 %
 % $Id$
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -212,7 +212,7 @@ ah = gca;
 %cfg = cfg2;
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end
 

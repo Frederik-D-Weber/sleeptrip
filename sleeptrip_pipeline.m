@@ -194,6 +194,11 @@ figure_handle = st_hypnoplot(cfg, scoring);
 cfg = [];
 res_sleepdescriptive = st_scoringdescriptives(cfg, scoring);
 
+cfg = [];
+cfg. cycle = 'all';
+res_sleepdescriptive_cycle = st_scoringdescriptives(cfg, scoring);
+
+
 % lets take a look what we got in there
 res_sleepdescriptive.table
 

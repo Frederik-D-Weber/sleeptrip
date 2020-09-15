@@ -85,7 +85,7 @@ function [res_power_bin, res_power_band] = st_power(cfg, data)
 %
 % $Id$
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -724,7 +724,7 @@ pFreq = [];%clear
 
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end
 

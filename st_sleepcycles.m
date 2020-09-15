@@ -29,12 +29,12 @@ function [res_cycle] = st_sleepcycles(cfg,scoring)
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET
 
-timerVal = tic;
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
-
 fprintf([functionname ' function started\n']);
+
 
 
 cfg.smoothepochs      = ft_getopt(cfg, 'smoothepochs', 15*60/scoring.epochlength);
@@ -229,7 +229,7 @@ iCycle
 end
 
 fprintf([functionname ' function finished\n']);
-toc(timerVal)
+toc(ttic)
 memtoc
 end
 

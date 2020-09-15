@@ -62,7 +62,7 @@ function [filepaths] = st_write_res(cfg, varargin)
 % $Id$
 dt = now;
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
@@ -165,6 +165,6 @@ end
 
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end

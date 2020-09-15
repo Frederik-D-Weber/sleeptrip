@@ -108,11 +108,10 @@ function [res_channel, res_event, res_filter] = st_slowwaves(cfg, data)
 %
 % $Id$
 
-tic
+ttic = tic;
 memtic
 st = dbstack;
 functionname = st.name;
-
 fprintf([functionname ' function started\n']);
 
 if ~isfield(cfg, 'scoring')
@@ -1284,7 +1283,7 @@ chData = [];%clear
 
 
 fprintf([functionname ' function finished\n']);
-toc
+toc(ttic)
 memtoc
 end
 
