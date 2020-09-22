@@ -2,7 +2,7 @@ function filename = st_write_montage(cfg, montage)
 % ST_WRITE_MONTAGE write a montage file
 %
 % Use as
-%   row = st_write_montage(cfg, montage)
+%   filepath = st_write_montage(cfg, montage)
 %
 % Configutation parameters
 %   cfg.filename         = string, path to the new montage (default =
@@ -10,9 +10,7 @@ function filename = st_write_montage(cfg, montage)
 %
 % Optional configuration parameters are
 %   cfg.datatype         = string, either 'columns' (e.g. *.tsv, *.csv, *.txt)
-%                          or 'xml' (e.g. *.xml), or 'spisop' for (SpiSOP) like input, or 'fasst' (for FASST toolbox
-%                          export), (default =
-%                          'columns')
+%                          (default = 'columns')
 %   cfg.columndelimimter = string, of the column delimiter, must be either
 %                          ',', ' ', '|' or '\t' (a tab) (default = ',')
 %   cfg.fileencoding     = string, with encoding e.g. 'UTF-8', see matlab help of
@@ -20,8 +18,32 @@ function filename = st_write_montage(cfg, montage)
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET
 
+% Copyright (C) 2019-, Frederik D. Weber
+%
+% This file is part of SleepTrip, see http://www.sleeptrip.org
+% for the documentation and details.
+%
+%    SleepTrip is free software: you can redistribute it and/or modify
+%    it under the terms of the GNU General Public License as published by
+%    the Free Software Foundation, either version 3 of the License, or
+%    (at your option) any later version.
+%
+%    SleepTrip is distributed in the hope that it will be useful,
+%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%    GNU General Public License for more details.
+%
+%    SleepTrip is a branch of FieldTrip, see http://www.fieldtriptoolbox.org
+%    and adds funtionality to analyse sleep and polysomnographic data.
+%    SleepTrip is under the same license conditions as FieldTrip.
+%
+%    You should have received a copy of the GNU General Public License
+%    along with SleepTrip. If not, see <http://www.gnu.org/licenses/>.
+%
+% $Id$
+
 timerVal = tic;
-memtic
+mtic = memtic;
 st = dbstack;
 functionname = st.name;
 
@@ -89,13 +111,14 @@ for iRow = 1:numel(montage.labelnew)
     %fprintf(fid,rowwritestr,table{1,:});
 end
 
+filepath = fid;
 fclose(fid);
 
 
 
 fprintf([functionname ' function finished\n']);
 toc(timerVal)
-memtoc
+memtoc(mtic)
 end
 
 

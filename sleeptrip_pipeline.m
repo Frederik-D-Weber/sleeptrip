@@ -59,7 +59,49 @@ addpath(pathToSleepTrip)
 st_defaults
 
 
+%% create a montage
+
+%minimal montage example for zmax data
+montage_zmax          = [];
+montage_zmax.labelold = {'EEG L','EEG R'};
+montage_zmax.labelnew = {'EEG L-R'};
+%transition matrix 
+montage_zmax.tra = [
+%labelold: EEG L   EEG R  % labelnew:
+             1       -1   % EEG L-R 
+];
+
+% other examples of an average mastoid montage
+%         montage          = [];
+%         montage.labelold = {
+%             [mastoidChannelPrefixes{iDataset} '1'],[mastoidChannelPrefixes{iDataset} '2'],...
+%             'F3','F4',...
+%             'C3','C4',...
+%             'O1','O2'};
+%         montage.labelnew = {
+%             'F3' 'F4'...
+%             'C3' 'C4'...
+%             'O1' 'O2'};
+%         montage.tra      = [
+%             %  A1   A2   F3  F4  C3  C4  O1  O2 
+%               -0.5 -0.5  1   0   0   0   0   0 % F3-A1A2
+%               -0.5 -0.5  0   1   0   0   0   0 % F4-A1A2
+%               -0.5 -0.5  0   0   1   0   0   0 % C3-A1A2
+%               -0.5 -0.5  0   0   0   1   0   0 % C4-A1A2
+%               -0.5 -0.5  0   0   0   0   1   0 % O1-A1A2
+%               -0.5 -0.5  0   0   0   0   0   1 % O2-A1A2
+%               ];
+
+%% write and read montage with standard settings
+cfg = [];
+cfg.filename = 'montage_zmax.txt';
+montage_filepath = st_write_montage(cfg,montage_zmax);
+
+montage_zmax = st_read_montage(cfg,montage_filepath);
+
+
 %% prepare the subject data, e.g. zmax data in a compressed format
+
 
 % here you can prepare everyting you would need later on again
 subject = [];
@@ -81,7 +123,16 @@ subject.lightsoff          = 0;
 subject.eegchannels        = {'EEG L', 'EEG R'};
 subject.ppgchannels        = {'OXY_IR_AC'};
 subject.oxychannels        = {'OXY_IR_DC'};
+%  possible other channels for zmax are: 
+% {'BATT' 'BODY TEMP' ...
+%  'dX' 'dY' 'dZ' ...
+%  'EEG L' 'EEG R' 
+%  'LIGHT' 'NASAL L' 'NASAL R' 'NOISE' ...
+%  'OXY_DARK_AC' 'OXY_DARK_DC' 'OXY_IR_AC' 'OXY_IR_DC' ...
+%  'OXY_R_AC' 'OXY_R_DC' 'RSSI'}
 
+
+subject.montage = montage_zmax;
 
 
 save('subject-1','subject');
@@ -135,7 +186,7 @@ cfg.scoringfile   = subject.scoringfile;
 cfg.scoringformat = subject.scoringformat;
 cfg.standard      = subject.standard; % 'aasm' or 'rk'
 
-[scoring] = st_read_scoring(cfg);
+scoring = st_read_scoring(cfg);
 
 % do we know the lights-off moment, if yes then add it
 % this is good for SleepTrip to know, e.g. for the st_sleepdescriptive
@@ -194,6 +245,7 @@ figure_handle = st_hypnoplot(cfg, scoring);
 cfg = [];
 res_sleepdescriptive = st_scoringdescriptives(cfg, scoring);
 
+% or do so sleep-cycle wise
 cfg = [];
 cfg. cycle = 'all';
 res_sleepdescriptive_cycle = st_scoringdescriptives(cfg, scoring);
@@ -226,17 +278,75 @@ cfg = [];
 cfg.dataset    = subject.dataset;
 cfg.continuous = 'yes';
 cfg.channel    = subject.eegchannels;
-%  possible channels for zmax are: 
-% {'BATT' 'BODY TEMP' ...
-%  'dX' 'dY' 'dZ' ...
-%  'EEG L' 'EEG R' 
-%  'LIGHT' 'NASAL L' 'NASAL R' 'NOISE' ...
-%  'OXY_DARK_AC' 'OXY_DARK_DC' 'OXY_IR_AC' 'OXY_IR_DC' ...
-%  'OXY_R_AC' 'OXY_R_DC' 'RSSI'}
+
+%low pass filter to filter out signals higher than 35 Hz
 cfg.lpfilter = 'yes';
 cfg.lpfreq   = 35;
+
 data = st_preprocessing(cfg);
 % plot(data.trial{1}(1,1:(data.fsample*10)))
+
+%% apply montage
+%if there is a montage defined you might whant to use it or not
+if isfield(subject,'montage')
+    cfg.montage = subject.montage;
+end
+
+data_with_montage = st_preprocessing(cfg);
+
+
+%% resample the data, e.g. before exporting/convert it to your hard drive
+% not necessary as for many analysis the data 
+% is resampled to values that are sufficient
+cfg = [];
+cfg.resamplefs = 100;
+data = ft_resampledata(cfg, data);
+
+
+%% write the data out (end of conversion)
+
+%first create a header for the exported file
+hdr = [];
+hdr.nSamples = size(data.trial{1},2);
+hdr.nSamplesPre = 0;
+hdr.nTrials = 1;
+hdr.Fs = data.fsample;
+hdr.nChans = length(data.label);
+hdr.label = data.label;
+hdr.nTrials = 1;
+
+% chose a file name (without extension)
+file_name = [subject.name '_rs100'];
+
+% export as edf
+data_format_output = 'edf';
+hdr.edf_doautoscale = false; % if the data should be autoscaled, then hdr.edf_accuracy and hdr.edf_docutoff are not relevant
+hdr.edf_accuracy = 0.1; % in uV, e.g. 1 0.5, 0.1, 0.01 ...
+hdr.edf_docutoff = true; % cut the data at the limits
+file_extension = '.edf';
+% this is the final full file path
+data_export_filepath = [file_name file_extension];
+ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
+
+
+% export as brainvision int16 format  
+data_format_output = 'brainvision_eeg';
+% using int16 instead of the typical float32 saves half the disc space
+hdr.brainvision_outformat = 'int16';%float32 int16 int32;
+file_extension = ''; %brainvision exports do not have an extension
+% this is the final full file path
+data_export_filepath = [file_name file_extension];
+ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
+
+%zip the brainvision files take up only ~70% of space
+zipfilepaths = {[data_export_filepath '.eeg'], [data_export_filepath '.vhdr']};
+zip([data_export_filepath '.zip'],zipfilepaths);
+
+% Note: All in allwe have downsampled from 256 to 100 Hz, stored the data in 16 bit and
+% zipped it, if the original data would have been a typical brainvision file with the float32
+% data format the we only use (100/256) * (16/32) * 0.7 < 14% of space
+% that is we saved more than 85% of space!
+
 
 %practice, do some more preprocessing, how would you read in your own data
 % search on the web how fieldtrip can help to read in data http://www.fieldtriptoolbox.org/faq/dataformat/
@@ -500,11 +610,10 @@ cfg.trl = cfg.trl(sel,:);
 
 data_events_ch2 = ft_redefinetrial(cfg, data);
 
-
 %View the event average signal timelocked to the trough.
 cfg        = [];
-[timelock_ch1] = ft_timelockanalysis(cfg, data_events_ch1);
-[timelock_ch2] = ft_timelockanalysis(cfg, data_events_ch2);
+timelock_ch1 = ft_timelockanalysis(cfg, data_events_ch1);
+timelock_ch2 = ft_timelockanalysis(cfg, data_events_ch2);
 
 %filter the timelocked data in the slow band to make underlying slow wave
 %components more visible.
@@ -513,8 +622,8 @@ cfg = [];
 % cfg.hpfreq = 0.5;
 cfg.lpfilter = 'yes';
 cfg.lpfreq = 3;
-[timelock_ch1_SWA_fitlered] = st_preprocessing(cfg, timelock_ch1);
-[timelock_ch2_SWA_fitlered] = st_preprocessing(cfg, timelock_ch2);
+timelock_ch1_SWA_fitlered = st_preprocessing(cfg, timelock_ch1);
+timelock_ch2_SWA_fitlered = st_preprocessing(cfg, timelock_ch2);
 
 % view the timelocked signals for both channels
 figure
@@ -524,7 +633,7 @@ cfg.title  = 'Non-REM event ERP time-locked to trough';
 cfg.graphcolor = 'brbr';
 cfg.linestyle = {'-','-','-.','-.'};
 cfg.linewidth = 1;
-ft_singleplotER(cfg,timelock_ch1,timelock_ch2,timelock_ch1_SWA_fitlered,timelock_ch2_SWA_fitlered)
+fh = ft_singleplotER(cfg,timelock_ch1,timelock_ch2,timelock_ch1_SWA_fitlered,timelock_ch2_SWA_fitlered);
 
 % ERF
 cfg           = [];
@@ -545,9 +654,9 @@ cfg.zlim           = [-0.2 0.2];
 cfg.xlim           = [-1.5 1.5];
 cfg.title          = 'Event, time-frequency';
 figure
-ft_singleplotTFR(cfg,event_freq_ch1);
+fh = ft_singleplotTFR(cfg,event_freq_ch1);
 figure
-ft_singleplotTFR(cfg,event_freq_ch2);
+fh = ft_singleplotTFR(cfg,event_freq_ch2);
 
 %practice, why did we extract more data then we needed? Does this change if
 % we detect sleep spindles in another way? are spindles riding on slow
@@ -571,6 +680,7 @@ cfg.length = 120;
 [scorings] = st_cutscoring(cfg,scoring);
 
 cfg = [];
+%cfg.plottype = 'colorbar';
 cfg.timemin = numel(scoring.epochs)*scoring.epochlength/60 + scoring.dataoffset/60;
 cfg.plotsleeponset = 'no' ;  
 cfg.plotsleepoffset = 'no' ;      
@@ -638,6 +748,7 @@ scoringfiles = {...
 lightsoffs = {...
     108.922,...
     73.102};
+
 
 % create some subjects
 
@@ -731,7 +842,7 @@ filelist_res_power_appended = st_write_res(cfg, res_power_bins_appended, res_pow
 %% find the frequency power peaks, only one, e.g. for the 'fast spindles'
 cfg = [];
 cfg.peaknum = 1; %only one peak, to keep things simple
-[res_freqpeaks] = st_freqpeak(cfg,res_power_bins_appended);
+res_freqpeaks = st_freqpeak(cfg,res_power_bins_appended);
 
 %results are stored in the table take a look
 res_freqpeaks.table
@@ -839,6 +950,7 @@ for iSubject = 1:numel(subjects)
 
     % also plot event properties like amplitude and frequency for each event
     cfg = [];
+    cfg.plottype = 'colorblocks';
     cfg.plotunknown        = 'no'; 
     cfg.figureoutputfile   = [subject.name '.pdf'];
     cfg.figureoutputformat = 'pdf';
@@ -866,5 +978,3 @@ for iSubject = 1:numel(subjects)
                        ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}]};
     figure_handle = st_hypnoplot(cfg, scoring);
 end
-
-

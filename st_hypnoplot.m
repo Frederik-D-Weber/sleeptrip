@@ -357,7 +357,7 @@ switch cfg.plottype
         [b, idx_ori_labels] = sort(idxUsedLabels);
         hLegend = legend(hp(idx_ori_labels),collabels(idx_ori_labels),'Location','northoutside','Orientation','horizontal','Box','off');
         
-        
+        hold(axh,'on');
     otherwise
        ft_error('cfg.plottype = %s is unknown, please see the help for available options.', cfg.plottype)
 end
@@ -367,6 +367,47 @@ end
 
 
 
+if strcmp(cfg.plotsleeponset, 'yes')
+    if onsetCandidateIndex ~= -1
+        onset_time = (onsetCandidateIndex-0.5)*(scoring.epochlength/60) + (offsetseconds/60);%in minutes
+        switch cfg.plottype
+            case 'classic'
+                onset_y_coord_offset = 0.2;
+                onset_y_coord = hypn_plot_interpol(find(x_time >=onset_time,1,'first'))+onset_y_coord_offset;
+                
+            case 'colorblocks'
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{onsetCandidateIndex}))+onset_y_coord_offset;
+                
+            case 'colorbar'
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+        end
+        hold(axh,'on');
+        scatter(axh,onset_time,onset_y_coord,'filled','v','MarkerFaceColor',[0 1 0])
+    end
+end
+
+
+offset_time = max(x_time);
+if strcmp(cfg.plotsleepoffset, 'yes')
+    if onsetCandidateIndex ~= -1
+        offset_time = (lastsleepstagenumber+0.5)*(scoring.epochlength/60)+(offsetseconds/60);%in minutes
+        switch cfg.plottype
+            case 'classic'
+                offset_y_coord_offset = 0.2;
+                offset_y_coord = hypn_plot_interpol(find(x_time <=offset_time,1,'last'))+offset_y_coord_offset;
+            case 'colorblocks'
+                onset_y_coord_offset = 0.5;
+                offset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{lastsleepstagenumber}))+onset_y_coord_offset;
+            case 'colorbar'
+                onset_y_coord_offset = 0.5;
+                offset_y_coord =  yTick(1)+onset_y_coord_offset;
+        end
+        hold(axh,'on');
+        scatter(axh,offset_time,offset_y_coord,'filled','^','MarkerFaceColor',[0 0 1])
+    end
+end
 
 
 
@@ -376,6 +417,11 @@ eventTimeMaxSeconds = cfg.timemin*60;
 offset_step = 0.5;
 eventHeight = 0.4;
 offset_event_y = max(yTick);
+
+switch cfg.plottype
+    case {'colorbar', 'colorblocks'}
+        offset_event_y = offset_event_y - offset_y;
+end
 
 
 %find the maximal time of all events
@@ -422,21 +468,21 @@ if isfield(cfg, 'eventtimes')
 end
 
 
- switch cfg.plottype
-                case 'classic'
-                    temp_max_y = max(yTick);
+switch cfg.plottype
+    case 'classic'
+        temp_max_y = max(yTick);
+        
+        if istrue(cfg.plotexcluded)
+            temp_min_y = plot_exclude_offset;
+        else
+            temp_min_y = min(yTick) - 1;
+        end
+    case {'colorblocks', 'colorbar'}
+        temp_max_y = max(yTick)+0.5;
+        temp_min_y = min(yTick)-0.5;
+        
+end
 
-                    if istrue(cfg.plotexcluded)
-                        temp_min_y = plot_exclude_offset;
-                    else
-                        temp_min_y = min(yTick) - 1;
-                    end
-     case {'colorblocks', 'colorbar'}
-         temp_max_y = max(yTick)+0.5;
-         temp_min_y = min(yTick)-0.5;
-
- end
- 
 
 
 
@@ -444,47 +490,6 @@ if isfield(cfg, 'eventtimes')
     temp_max_y = temp_max_y + eventHeight;
 end
 
-if strcmp(cfg.plotsleeponset, 'yes')
-    if onsetCandidateIndex ~= -1
-        onset_time = (onsetCandidateIndex-0.5)*(scoring.epochlength/60) + (offsetseconds/60);%in minutes
-        switch cfg.plottype
-            case 'classic'
-                onset_y_coord_offset = 0.2;
-                onset_y_coord = hypn_plot_interpol(find(x_time >=onset_time,1,'first'))+onset_y_coord_offset;
-                
-            case 'colorblocks'
-                onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{onsetCandidateIndex}))+onset_y_coord_offset;
-                
-            case 'colorbar'
-                onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
-        end
-        hold(axh,'on');
-        scatter(axh,onset_time,onset_y_coord,'filled','v','MarkerFaceColor',[0 1 0])
-    end
-end
-
-
-offset_time = max(x_time);
-if strcmp(cfg.plotsleepoffset, 'yes')
-    if onsetCandidateIndex ~= -1
-        offset_time = (lastsleepstagenumber+0.5)*(scoring.epochlength/60)+(offsetseconds/60);%in minutes
-        switch cfg.plottype
-            case 'classic'
-                offset_y_coord_offset = 0.2;
-                offset_y_coord = hypn_plot_interpol(find(x_time <=offset_time,1,'last'))+offset_y_coord_offset;
-            case 'colorblocks'
-                onset_y_coord_offset = 0.5;
-                offset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{lastsleepstagenumber}))+onset_y_coord_offset;
-            case 'colorbar'
-                onset_y_coord_offset = 0.5;
-                offset_y_coord =  yTick(1)+onset_y_coord_offset;
-        end
-        hold(axh,'on');
-        scatter(axh,offset_time,offset_y_coord,'filled','^','MarkerFaceColor',[0 0 1])
-    end
-end
 
 if isfield(cfg,'plotexcluded')
     if istrue(cfg.plotexcluded)

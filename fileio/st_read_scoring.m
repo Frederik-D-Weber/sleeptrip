@@ -5,8 +5,8 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 % different importers.
 %
 % Use as
-%   [scoring] = st_read_scoring(cfg)
-%   [scoring] = st_read_scoring(cfg, tableScoring)
+%   scoring = st_read_scoring(cfg)
+%   scoring = st_read_scoring(cfg, tableScoring)
 %
 % 
 % The configuration structure needs to specify
