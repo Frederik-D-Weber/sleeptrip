@@ -978,3 +978,64 @@ for iSubject = 1:numel(subjects)
                        ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}]};
     figure_handle = st_hypnoplot(cfg, scoring);
 end
+
+%% Topoplots example
+
+% lets create an artificial result structure that is similar to what a
+% st_power function would return but has different column names. basically
+% any table with values associated to a channel will work.
+res = [];
+res.ori = 'st_power';
+res.type = 'power_band';
+res.cfg = [];
+% here an example to read from a file
+% res.table = readtable('power_values-N2_0.5-4Hz.tsv','FileType','text','Delimiter','\t');
+% 'rel_difference' with the values and one that is called 'channel'%
+% but we define it here explicitly 
+res.table = table({'C3'; 'C4'; 'F3'; 'F4'; 'P3'; 'P4'; 'O1'; 'O2'}, ...
+[-0.12 -0.14 -0.11 -0.14 -0.30 -0.19 -0.1 -0.08]',...
+[1 0 1 0 0.5 0.5 1 1]',...
+[1 1 1 1 1 1 0 0]'...
+,'VariableNames',{'channel','rel_difference','mask','use'});
+%{'yes'; 'yes'; 'yes'; 'yes'; 'yes'; 'yes'; 'no'; 'no'}...
+
+
+%{
+channel rel_difference  mask  use
+C3      -0.12           1     1
+C4      -0.14           0     1
+F3      -0.11           1     1
+F4      -0.14           0     1 
+P3      -0.30           0.5   1
+P4      -0.19           0.5   1
+O1      -0.10           0.5   0
+O2      -0.08           0.5   0
+%}
+
+% here another colorscheme than the standard one from Matlab
+load('colormap_bluewhitered.mat')
+
+figure
+cfg = [];
+cfg.property = 'rel_difference';
+
+%see http://www.fieldtriptoolbox.org/tutorial/layout/
+cfg.layout = 'easycapM25';
+
+%cfg.channel = {'all','-C4'};
+cfg.renderer = 'painters';
+cfg.maskproperty   = 'mask';
+cfg.gridscale = 256;
+%cfg.interplimits = 'electrodes';
+cfg.highlightchannel = {'C3', 'C4'};
+cfg.highlightcolor   = [1 0 0];
+cfg.highlight = 'on';
+cfg.colorbar = 'yes';
+cfg.colormap = colormap_bluewhitered;
+cfg.zlim = [-0.4 0];
+% FIXME: the next two lines wont work.
+%cfg.filtercolumns =  {'use'};
+%cfg.filtervalues  = {[1]};
+cfg = st_topoplotres(cfg, res);
+
+
