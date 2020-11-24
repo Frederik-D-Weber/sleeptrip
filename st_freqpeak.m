@@ -55,9 +55,10 @@ function [res_freqpeaks] = st_freqpeak(cfg, res)
 %
 % $Id$
 
-tic
-memtic
-fprintf('st_freqpeaks function started\n');
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
+fprintf([functionname ' function started\n']);
 
 cfg.channel       = ft_getopt(cfg, 'channel', 'all');
 cfg.foilim        = ft_getopt(cfg, 'foilim', [6 18]);
@@ -259,8 +260,7 @@ if cfg.peaknum == 2
 end
 
 res_freqpeaks = [];
-st = dbstack;
-res_freqpeaks.ori = st.name;
+res_freqpeaks.ori = functionname;
 res_freqpeaks.type = 'freqpeaks';
 res_freqpeaks.cfg = cfg;
 res_freqpeaks.table = table(...
@@ -268,8 +268,8 @@ res_freqpeaks.table = table(...
     freqpeaks2, ...
     'VariableNames',{'freqpeak1','freqpeak2'});
 
-fprintf('st_freqpeaks function finished\n');
-toc
-memtoc
+fprintf([functionname ' function finished\n']);
+toc(ttic)
+memtoc(mtic)
 end
 

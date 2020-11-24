@@ -34,8 +34,7 @@ function [res] = st_append_res(varargin)
 
 ttic = tic;
 memtic
-st = dbstack;
-functionname = st.name;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 % check if some are empty

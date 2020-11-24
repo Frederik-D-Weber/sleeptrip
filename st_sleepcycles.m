@@ -30,9 +30,8 @@ function [res_cycle] = st_sleepcycles(cfg,scoring)
 % See also ST_READ_SCORING, ST_SLEEPONSET
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 
@@ -224,13 +223,9 @@ for iCycle = 1:(nCycles-1)
     end
 end
 
-for iCycle = 1:(1)
-iCycle
-end
-
 fprintf([functionname ' function finished\n']);
 toc(ttic)
-memtoc
+memtoc(mtic)
 end
 
 function [starts, ends] = getCycleStartEndsByLabel(label,max_merge_inbetween_stages,stages)

@@ -137,9 +137,8 @@ function [res_channel, res_event, res_filter] = st_spindles(cfg, data)
 % $Id$
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 if ~isfield(cfg, 'scoring')
@@ -943,8 +942,8 @@ for iChan = 1:nChannels
                 candSignal_hilbert = frqBndPssSignal_hilbert(detectedBeginSample(iIterCand):detectedEndSample(iIterCand));
                 
                 
-                tempCandSignalminSample = find(min(candSignal) == candSignal);
-                tempCandSignalmaxSample = find(max(candSignal) == candSignal);
+                tempCandSignalminSample = find(min(candSignal) == candSignal,1,'first');
+                tempCandSignalmaxSample = find(max(candSignal) == candSignal,1,'first');
                 
                 
                 candSignalminSample = currentRawDataSampleOffset + tempCandSignalminSample;
@@ -974,7 +973,7 @@ for iChan = 1:nChannels
                 
                 
                 candSignalEnvelope = envelope(detectedBeginSample(iIterCand):detectedEndSample(iIterCand));
-                tempCandSignalEnvelopemaxSample = find(max(candSignalEnvelope) == candSignalEnvelope);
+                tempCandSignalEnvelopemaxSample = find(max(candSignalEnvelope) == candSignalEnvelope,1,'first');
                 candSignalEnvelopemax = candSignalEnvelope(tempCandSignalEnvelopemaxSample);
                 candSignalEnvelopemaxSample = currentRawDataSampleOffset + tempCandSignalEnvelopemaxSample;
                 
@@ -1075,7 +1074,7 @@ for iChan = 1:nChannels
             
             trl_detectedPeak2Peaks = cat(2,trl_detectedPeak2Peaks,detectedPeak2Peaks);
             trl_detectedPeaksSamples = cat(2,trl_detectedPeaksSamples,data.time{iTr}(detectedPeaksSamples));
-            trl_detectedTroughsSamples  = cat(2,trl_detectedTroughsSamples ,data.time{iTr}(detectedTroughsSamples));
+            trl_detectedTroughsSamples  = cat(2,trl_detectedTroughsSamples,data.time{iTr}(detectedTroughsSamples));
             tempsamples = detectedSignalTroughsSamples;
             tempsamples(~isnan(tempsamples)) = data.time{iTr}(tempsamples(~isnan(tempsamples)));
             trl_detectedSignalTroughsSamples = cat(1,trl_detectedSignalTroughsSamples,tempsamples);
@@ -1589,7 +1588,7 @@ chData = [];%clear
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)
-memtoc
+memtoc(mtic)
 end
 
 function v = replaceIfEmpty(v)

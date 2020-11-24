@@ -84,12 +84,10 @@ function [res_power_fluct_bin, res_power_fluct_signal] = st_power_fluct(cfg, dat
 %
 % $Id$
 
-tic
-memtic
-st = dbstack;
-functionname = st.name;
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
-
 
 if ~isfield(cfg, 'scoring')
     cfg.scoring = st_read_scoring(cfg);
@@ -656,7 +654,7 @@ res_power_fluct_signal.type = 'power_fluct_signal';
 res_power_fluct_signal.cfg = cfg;
 
 fprintf([functionname ' function finished\n']);
-toc
-memtoc
+toc(ttic)
+memtoc(mtic)
 end
 

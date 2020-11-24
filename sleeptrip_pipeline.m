@@ -84,7 +84,7 @@ montage_zmax.tra = [
 %             'O1' 'O2'};
 %         montage.tra      = [
 %             %  A1   A2   F3  F4  C3  C4  O1  O2 
-%               -0.5 -0.5  1   0   0   0   0   0 % F3-A1A2
+%               -0.5 -0.5  factor   0   0   0   0   0 % F3-A1A2
 %               -0.5 -0.5  0   1   0   0   0   0 % F4-A1A2
 %               -0.5 -0.5  0   0   1   0   0   0 % C3-A1A2
 %               -0.5 -0.5  0   0   0   1   0   0 % C4-A1A2
@@ -130,7 +130,6 @@ subject.oxychannels        = {'OXY_IR_DC'};
 %  'LIGHT' 'NASAL L' 'NASAL R' 'NOISE' ...
 %  'OXY_DARK_AC' 'OXY_DARK_DC' 'OXY_IR_AC' 'OXY_IR_DC' ...
 %  'OXY_R_AC' 'OXY_R_DC' 'RSSI'}
-
 
 subject.montage = montage_zmax;
 
@@ -213,6 +212,30 @@ lastsleepstage
 % practice: how does the sleep onset change according to the different
 % definitions?
 
+%% calculate a consensus scoring and stats (e.g. Fleiss's kappa)
+
+scoring_ref = scoring;
+scoring_alt = scoring;
+
+%alter something, here just one epoch and one excluded
+scoring_alt.epochs{100} = 'R';
+scoring_alt.excluded(101) = 1;
+scoring_alt.excluded(102) = 1;
+scoring_ref.excluded(102) = 1;
+
+cfg = [];
+%cfg.align = 'sleeponset';
+%cfg.reference = 'first';
+%cfg.stat_alpha = 0.05;
+[res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded  scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring, scoring_ref, scoring_alt);
+
+res_comp_fleiss_stat.table
+res_comp_cohen_stat.table
+res_contingency.table
+res_contingency_excluded.table
+scoring_consensus
+contingency_tables
+contingency_excluded_tables
 %% plot the scoring
 
 cfg = [];
@@ -243,7 +266,7 @@ figure_handle = st_hypnoplot(cfg, scoring);
 %% create a sleep table with the scoring parameters
 
 cfg = [];
-res_sleepdescriptive = st_scoringdescriptives(cfg, scoring);
+res_scoringdescriptive = st_scoringdescriptives(cfg, scoring);
 
 % or do so sleep-cycle wise
 cfg = [];
@@ -252,7 +275,7 @@ res_sleepdescriptive_cycle = st_scoringdescriptives(cfg, scoring);
 
 
 % lets take a look what we got in there
-res_sleepdescriptive.table
+res_scoringdescriptive.table
 
 % practice: how is sleep onset and lights-off moment related? 
 % When is the end of the Total sleep time?
@@ -263,7 +286,7 @@ cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
 cfg.posfix = '';
-filelist_res_sleepdescriptives = st_write_res(cfg, res_sleepdescriptive); 
+filelist_res_sleepdescriptives = st_write_res(cfg, res_scoringdescriptive); 
 
 % note: you can write mutliple results with st_write_res(cfg, res_sleep1, res_sleep2, ...)
 %       or if they are in a cell array with st_write_res(cfg, res_all{:})
@@ -293,6 +316,21 @@ if isfield(subject,'montage')
 end
 
 data_with_montage = st_preprocessing(cfg);
+
+%% extract the date from zmax data header
+
+hdr = ft_read_header('filepath/bla/BATT.edf');
+hdr = data.hdr;
+
+year = hdr.orig.T0(1);
+month = hdr.orig.T0(2);
+day = hdr.orig.T0(3);
+hour = hdr.orig.T0(4);
+minute = hdr.orig.T0(5);
+second = hdr.orig.T0(6);
+
+dt = datetime(year,month,day,hour,minute,second);
+
 
 
 %% resample the data, e.g. before exporting/convert it to your hard drive
@@ -553,12 +591,14 @@ cfg.blocksize                       = scoring.epochlength; %view the data in 30-
 
 
 artfctdef                  = [];
-artfctdef.spindles_ch1.artifact   = fix(data.fsample*[spindle_begins_subject.eegchannels{1}, spindle_ends_subject.eegchannels{1}]);
+artfctdef.spindles_ch1.artifact   = st_times2samples(data,[spindle_begins_subject.eegchannels{1}, spindle_ends_subject.eegchannels{1}]);
+%artfctdef.spindles_ch1.artifact   = fix(data.fsample*[spindle_begins_subject.eegchannels{1}, spindle_ends_subject.eegchannels{1}]);
 %artfctdef.spindles_ch1_trough.artfctpeak = fix(data.fsample*spindle_troughs_subject.eegchannels{1});
-artfctdef.spindles_ch2.artifact   = fix(data.fsample*[spindle_begins_subject.eegchannels{2}, spindle_ends_subject.eegchannels{2}]);
+artfctdef.spindles_ch2.artifact   = st_times2samples(data,[spindle_begins_subject.eegchannels{2}, spindle_ends_subject.eegchannels{2}]);
+%artfctdef.spindles_ch2.artifact   = fix(data.fsample*[spindle_begins_subject.eegchannels{2}, spindle_ends_subject.eegchannels{2}]);
 %artfctdef.spindles_ch2_trough.artfctpeak = fix(data.fsample*spindle_troughs_subject.eegchannels{2});
 % cfg.selectmode                        =  'markpeakevent'; %'markartifact', 'markpeakevent', 'marktroughevent' (default = 'markartifact')
-cfg.artfctdef = artfctdef;
+cfg.artfctdef     = artfctdef;
 cfg.plotevents    = 'yes';
 cfg.renderer      = 'opengl'; % 'painters' or 'opengl' or 'zbuffer'
 ft_databrowser(cfg, data);
@@ -566,48 +606,14 @@ ft_databrowser(cfg, data);
 
 %% plot a event related potentials (ERP) and frequency (ERF) of e.g. spindles
 % a buffer we need to have padding left and right to make nice
-% time-frequency graph later on
-% we look only in the first EEG channel
-event_minimum_samples_ch1 = spindle_troughs_subject.eegchannels{1}*data.fsample;
-event_minimum_samples_ch2 = spindle_troughs_subject.eegchannels{2}*data.fsample;
+% time-frequency graph later on, so +-5s should be enough buffer
+% for the +- 1s time window proper
 
-padding_buffer = 4*data.fsample; % 8 seconds
-
-cfg     = [];
-
-cfg.trl = [event_minimum_samples_ch1-data.fsample-padding_buffer,...
-           event_minimum_samples_ch1+data.fsample+padding_buffer,...
-           repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch1),1)];
-
-% round trials to integers
-cfg.trl = round(cfg.trl);
-       
-% remove trials that overlap with the beginning of the file
-sel = cfg.trl(:,1)>1;
-cfg.trl = cfg.trl(sel,:);
-       
-% remove trials that overlap with the end of the file
-sel = cfg.trl(:,2)<data.sampleinfo(2);
-cfg.trl = cfg.trl(sel,:);
-
-
+cfg = [];
+cfg.seconds = spindle_troughs_subject.eegchannels{1};
+cfg.bounds = [-5 5]; % 10 seconds around the events
 data_events_ch1 = ft_redefinetrial(cfg, data);
-
-cfg.trl = [event_minimum_samples_ch2-data.fsample-padding_buffer,...
-           event_minimum_samples_ch2+data.fsample+padding_buffer,...
-           repmat(-(data.fsample+padding_buffer),numel(event_minimum_samples_ch2),1)];
-       
-% round trials to integers
-cfg.trl = round(cfg.trl);
-       
-% remove trials that overlap with the beginning of the file
-sel = cfg.trl(:,1)>1;
-cfg.trl = cfg.trl(sel,:);
-       
-% remove trials that overlap with the end of the file
-sel = cfg.trl(:,2)<data.sampleinfo(2);
-cfg.trl = cfg.trl(sel,:);
-
+cfg.seconds = spindle_troughs_subject.eegchannels{2};
 data_events_ch2 = ft_redefinetrial(cfg, data);
 
 %View the event average signal timelocked to the trough.
@@ -1037,5 +1043,3 @@ cfg.zlim = [-0.4 0];
 %cfg.filtercolumns =  {'use'};
 %cfg.filtervalues  = {[1]};
 cfg = st_topoplotres(cfg, res);
-
-

@@ -42,9 +42,8 @@ function [filename, waited_seconds] = st_wait_exists(cfg, filename)
 % $Id$
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 % set defaults
@@ -68,7 +67,7 @@ if ~isempty(f) && present
     already_present = ~isempty(f) && present;
     if already_present
         already_present = true;
-        waited_seconds = toc;
+        waited_seconds = toc(ttic);
         fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be present'  '\n']);
         fprintf(['now waiting for file ' filename ' to be unlocked...'  '\n']);
     end
@@ -80,7 +79,7 @@ avail = present && ~locked;
 
 while ~avail
  pause(cfg.checkinterval)
- waited_seconds = toc;
+ waited_seconds = toc(ttic);
  if waited_seconds > cfg.timeout
    ft_warning([functionname ' timeout after waiting for ' num2str(waited_seconds) 'seconds']);
    break
@@ -94,7 +93,7 @@ f = dir(filename);
 if ~isempty(f) && present
     if ~already_present
         already_present = true;
-        waited_seconds = toc;
+        waited_seconds = toc(ttic);
         fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be present'  '\n']);
         fprintf(['now waiting for file ' filename ' to be unlocked...'  '\n']);
     end
@@ -108,6 +107,7 @@ end
 
 waited_seconds = toc(ttic);
 fprintf(['waited for ' num2str(waited_seconds) ' seconds ' 'for file ' filename ' to be finally available'  '\n']);
+
 fprintf([functionname ' function finished\n']);
-memtoc
+memtoc(mtic)
 end

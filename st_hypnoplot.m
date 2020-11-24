@@ -99,10 +99,9 @@ function [fh] = st_hypnoplot(cfg, scoring)
 % $Id$
 %dt = now;
 
-timerVal = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 
@@ -546,8 +545,8 @@ fh = hhyp;
 %%% plot hypnogram figure end
 
 fprintf([functionname ' function finished\n']);
-toc(timerVal)
-memtoc
+toc(ttic)
+memtoc(mtic)
 end
 
 

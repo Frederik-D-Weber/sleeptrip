@@ -180,9 +180,8 @@ function [res_summary, res_match_test_target, res_mismatch_test, res_mismatch_ta
 % $Id$
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 
@@ -1131,5 +1130,5 @@ end
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)
-memtoc
+memtoc(mtic)
 end

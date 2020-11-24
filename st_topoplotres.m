@@ -126,9 +126,8 @@ function [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 % $Id$
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 prev_renderer = get(0, 'DefaultFigureRenderer');
@@ -213,6 +212,6 @@ ah = gca;
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)
-memtoc
+memtoc(mtic)
 end
 

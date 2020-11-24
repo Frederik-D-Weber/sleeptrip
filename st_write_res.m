@@ -63,9 +63,8 @@ function [filepaths] = st_write_res(cfg, varargin)
 dt = now;
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 % set the defaults
@@ -166,5 +165,5 @@ end
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)
-memtoc
+memtoc(mtic)
 end

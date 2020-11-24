@@ -32,9 +32,19 @@ function [data] = ft_redefinetrial(cfg, data)
 %   cfg.begsample = single number or Nx1 vector, expressed in samples relative to the start of the input trial
 %   cfg.endsample = single number or Nx1 vector, expressed in samples relative to the start of the input trial
 %
+% Alternatively you can specify the begin and end sample in continous data 
+%   cfg.contbegsample = single number or Nx1 vector, expressed in samples relative to the start of the data
+%   cfg.contendsample = single number or Nx1 vector, expressed in samples relative to the start of the data
+%
 % Alternatively you can specify a new trial definition, expressed in
 % samples relative to the original recording
 %   cfg.trl       = Nx3 matrix with the trial definition, see FT_DEFINETRIAL
+%
+% Alternatively you can specify a new trial definition, expressed in
+% seconds as t=0 and  boundaries as offsets from that
+%   cfg.seconds  = Nx1 vector of seconds (t=0)
+%   cfg.bounds   = [offset_left_seconds offset_right_seconds], e.g. [-3 3]
+%                  for 3 seconds before and after t=0
 %
 % Alternatively you can specify the data to be cut into (non-)overlapping
 % segments, starting from the beginning of each trial. This may lead to loss
@@ -53,6 +63,7 @@ function [data] = ft_redefinetrial(cfg, data)
 % See also FT_DEFINETRIAL, FT_RECODEEVENT, FT_PREPROCESSING
 
 % Copyright (C) 2006-2008, Robert Oostenveld
+% Copyright (C) 2020, Frederik D. Weber
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -97,6 +108,10 @@ cfg.offset       = ft_getopt(cfg, 'offset',    []);
 cfg.toilim       = ft_getopt(cfg, 'toilim',    []);
 cfg.begsample    = ft_getopt(cfg, 'begsample', []);
 cfg.endsample    = ft_getopt(cfg, 'endsample', []);
+cfg.contbegsample    = ft_getopt(cfg, 'contbegsample', []);
+cfg.contendsample    = ft_getopt(cfg, 'contendsample', []);
+cfg.seconds    = ft_getopt(cfg, 'seconds', []);
+cfg.bounds    = ft_getopt(cfg, 'bounds', []);
 cfg.minlength    = ft_getopt(cfg, 'minlength', []);
 cfg.trials       = ft_getopt(cfg, 'trials',    'all', 1);
 cfg.feedback     = ft_getopt(cfg, 'feedback',  'yes');
@@ -146,7 +161,7 @@ end
 Ntrial = numel(data.trial);
 
 % check the input arguments, only one method for processing is allowed
-numoptions = ~isempty(cfg.toilim) + ~isempty(cfg.offset) + (~isempty(cfg.begsample) || ~isempty(cfg.endsample)) + ~isempty(cfg.trl) + ~isempty(cfg.length);
+numoptions = ~isempty(cfg.toilim) + ~isempty(cfg.offset) + (~isempty(cfg.begsample) || ~isempty(cfg.endsample)) + (~isempty(cfg.contbegsample) || ~isempty(cfg.contendsample)) + (~isempty(cfg.seconds) || ~isempty(cfg.bounds)) + ~isempty(cfg.trl) + ~isempty(cfg.length);
 if numoptions>1
   ft_error('you should specify only one of the options for redefining the data segments');
 end
@@ -231,6 +246,54 @@ elseif ~isempty(cfg.begsample) || ~isempty(cfg.endsample)
     data.sampleinfo(:, 2) = sampleinfo(:, 1) + endsample - begsample;
   end
   
+elseif ~isempty(cfg.contbegsample) || ~isempty(cfg.contendsample)
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % select new trials from the existing data by beginning and end samples
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % check if the input data is valid for this function, the input data must be raw
+    data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'hassampleinfo', 'yes');
+    if isfield(data, 'trial') && isfield(data, 'time')
+        % check if data structure is likely continous data
+        if ((numel(data.trial) ~= 1) || ~all(size(data.sampleinfo) == [1 2])) && ~(nargout > 1)
+            ft_error('data structure does not look like continous data and has more than one trial,\n continous data needed for cfg.contbegsample and cfg.contendsample to work.')
+        end
+    end
+    
+    dataold = data;   % make a copy of the old data
+    clear data        % this line is very important, we want to completely reconstruct the data from the old data!
+    
+    % make header
+    hdr = ft_fetch_header(dataold);
+    
+    begsample = cfg.contbegsample(:);
+    endsample = cfg.contendsample(:);
+    
+    % start with a completely new data structure
+    data          = [];
+    data.hdr      = hdr;
+    data.trial    = cell(1,size(begsample,1));
+    data.time     = cell(1,size(begsample,1));
+    data          = copyfields(dataold, data, {'fsample' 'label' 'topo' 'topolabel' 'unmixing' 'mixing' 'grad' 'elec' 'opto'}); % account for all potential fields to be copied over
+    
+    if isfield(dataold,'trialinfo')
+        ft_warning('Original data has trialinfo, using user specified trialinfo instead');
+    end
+    
+    %trllength = endsample - begsample + 1;
+    
+    for iTrl=1:size(begsample, 1)
+        data.trial{iTrl} = dataold.trial{1}(:,begsample(iTrl):endsample(iTrl));
+        data.time{iTrl}  = dataold.time{1}(begsample(iTrl):endsample(iTrl));
+    end
+    % adjust the sampleinfo in the output
+    if isfield(dataold, 'sampleinfo')
+        % adjust the sample information
+        data.sampleinfo  = [begsample endsample];
+    end
+    dataold = [];
+    
 elseif ~isempty(cfg.trl)
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % select new trials from the existing data
@@ -297,6 +360,58 @@ elseif ~isempty(cfg.trl)
     data.sampleinfo  = [begsample endsample];
   end
   
+elseif ~isempty(cfg.seconds) || ~isempty(cfg.bounds)
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % select new trials from the existing data by seconds and bounds
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % check if the input data is valid for this function, the input data must be raw
+    data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'hassampleinfo', 'yes');
+    if isfield(data, 'trial') && isfield(data, 'time')
+        % check if data structure is likely continous data
+        if ((numel(data.trial) ~= 1) || ~all(size(data.sampleinfo) == [1 2])) && ~(nargout > 1)
+            ft_error('data structure does not look like continous data and has more than one trial,\n continous data needed for cfg.seconds and cfg.bounds to work.')
+        end
+    end
+    
+    ntrial = numel(cfg.seconds);
+
+    event_samples = st_times2samples(data, cfg.seconds);
+    
+    event_samples = event_samples(~isnan(event_samples));
+    
+    offset_left_samples = cfg.bounds(1)*data.fsample;
+    offset_right_samples = cfg.bounds(2)*data.fsample;
+    
+    begsamples = event_samples+offset_left_samples;
+    endsamples = event_samples+offset_right_samples;
+    offsets = repmat(offset_left_samples, numel(event_samples),1);
+    
+    trl = [begsamples, endsamples, offsets];
+    
+
+    % make sure the trial is using samples
+    trl = round(trl);
+    
+    % remove trials that overlap with the beginning of the file
+    sel = trl(:,1)>1;
+    trl = trl(sel,:);
+    
+    % remove trials that overlap with the end of the file
+    datalengthsamples = size(data.trial{1},2);
+    sel = trl(:,2)<datalengthsamples;
+    trl = trl(sel,:);
+    
+    % what if data boundaries were violated
+    lost_trials_boundaries = ntrial-size(trl,1);
+    if lost_trials_boundaries > 0;
+        ft_warning('%d trials were lost due to data boundaries being violated.',lost_trials_boundaries)
+    end
+
+    cfg2     = [];
+    cfg2.trl = trl;
+    data = ft_redefinetrial(cfg2, data);
+    
 elseif ~isempty(cfg.length)
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % cut the existing trials into segments of the specified length

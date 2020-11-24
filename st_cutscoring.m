@@ -1,10 +1,11 @@
 function [scorings] = st_cutscoring(cfg, scoring)
 
-% ST_CUTSCORING cuts a a scoring into overlapping of non overlaping pieces
-% of a specific length relative to sleeponset or other references
+% ST_CUTSCORING cuts a scoring into overlapping of non overlaping pieces
+% of a specific length relative to sleeponset or other references or just
+% cut out one specific part
 %
 % Use as
-%   [scorings] = st_hypnoplot(cfg,scoring)
+%   [scorings] = st_cutscoring(cfg,scoring)
 %
 %   scoring is a structure provided by ST_READ_SCORING
 %   it returns many scoring sturctures stored in a cell array

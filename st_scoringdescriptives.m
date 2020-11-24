@@ -65,7 +65,7 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 tic
 memtic
 st = dbstack;
-functionname = st.name;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 
@@ -145,8 +145,7 @@ end
 
 
 res = [];
-st = dbstack;
-res.ori = st.name;
+res.ori = getfunctionname();
 res.type = 'descriptive';
 res.cfg = cfg;
 

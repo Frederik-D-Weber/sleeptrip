@@ -48,10 +48,9 @@ function [scoring] = st_scoringconvert(cfg, scoring)
 %
 % $Id$
 
-tic
-memtic
-st = dbstack;
-functionname = st.name;
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 % set defaults
@@ -127,6 +126,6 @@ end
 
 
 fprintf([functionname ' function finished\n']);
-toc
-memtoc
+toc(ttic)
+memtoc(mtic)
 end

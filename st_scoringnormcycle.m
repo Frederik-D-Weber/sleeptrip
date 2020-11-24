@@ -137,10 +137,9 @@ function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cyc
 %
 % $Id$
 
-tic
-memtic
-st = dbstack;
-functionname = st.name;
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 % FIXME check if the input res structures are from SleepTrip or result
@@ -637,8 +636,8 @@ end
 
 
 fprintf([functionname ' function finished\n']);
-toc
-memtoc
+toc(ttic)
+memtoc(mtic)
 end
 
 function vq = interp1_or_repeat(x,v,xq,method,defaultvalue) 

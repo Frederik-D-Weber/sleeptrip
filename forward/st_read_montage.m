@@ -43,12 +43,10 @@ function montage = st_read_montage(cfg, filename)
 %
 % $Id$
 
-timerVal = tic;
-memtic
-st = dbstack;
-functionname = st.name;
-
-fprintf([functionname ' function started\n']);
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
+fprintf([functionname ' function started\n']););
 
 cfg.datatype           = ft_getopt(cfg, 'datatype', 'columns');
 cfg.columndelimimter   = ft_getopt(cfg, 'columndelimimter', ',');
@@ -84,8 +82,8 @@ montage.tra = double(cellfun(@str2num,table2cell(montageTable(2:end,2:end))));
 
 
 fprintf([functionname ' function finished\n']);
-toc(timerVal)
-memtoc
+toc(ttic)
+memtoc(mtic)
 end
 
 

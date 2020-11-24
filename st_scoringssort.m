@@ -93,10 +93,9 @@ function [scorings_sorted sums_sorted sums_ori idx_ori] = st_scoringssort(cfg, s
 %
 % $Id$
 
-tic
-memtic
-st = dbstack;
-functionname = st.name;
+ttic = tic;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 % set defaults
@@ -219,6 +218,6 @@ scorings_sorted = scorings(idx_ori);
 
 
 fprintf([functionname ' function finished\n']);
-toc
-memtoc
+toc(ttic)
+memtoc(mtic)
 end

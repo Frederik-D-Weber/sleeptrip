@@ -109,9 +109,8 @@ function [res_channel, res_event, res_filter] = st_slowwaves(cfg, data)
 % $Id$
 
 ttic = tic;
-memtic
-st = dbstack;
-functionname = st.name;
+mtic = memtic;
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 if ~isfield(cfg, 'scoring')
@@ -674,8 +673,8 @@ for iChan = 1:nChannels
 
                 candSignal = frqBndPssSignal(detectedBeginSample(iIterCand):detectedEndSample(iIterCand));
                 
-                tempCandSignalmaxSample = find(max(candSignal) == candSignal);
-                tempCandSignalminSample = find(min(candSignal(1:tempCandSignalmaxSample)) == candSignal(1:tempCandSignalmaxSample));
+                tempCandSignalmaxSample = find(max(candSignal) == candSignal,1,'first');
+                tempCandSignalminSample = find(min(candSignal(1:tempCandSignalmaxSample)) == candSignal(1:tempCandSignalmaxSample),1,'first');
                               
                 candSignalminSample = currentRawDataSampleOffset + tempCandSignalminSample;
                 candSignalmaxSample = currentRawDataSampleOffset + tempCandSignalmaxSample;
@@ -1284,7 +1283,7 @@ chData = [];%clear
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)
-memtoc
+memtoc(mtic)
 end
 
 function v = replaceIfEmpty(v)

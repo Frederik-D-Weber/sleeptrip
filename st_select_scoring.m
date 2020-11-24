@@ -112,30 +112,38 @@ if ~isempty(epochsOfInterst)
 end
 
 
-cfg.trl = [begins+offsetSamples ends+offsetSamples begins-1+offsetSamples];
+%cfg.trl = [begins+offsetSamples ends+offsetSamples begins-1+offsetSamples];
+cfg.contbegsample = begins+offsetSamples;
+cfg.contendsample = ends+offsetSamples;
+
 
 % requested sleep stages are not present in dat
-if isempty(cfg.trl)
+%if isempty(cfg.trl)
+if isempty(cfg.contbegsample)
     ft_warning('requested sleep stages are not present in the scoring, will return empty trials.');
 end
 
 ends = [];
 if hasdata
     if nargout > 1
-        if ~isempty(cfg.trl)
-            ends = cfg.trl(:,2)/data.fsample;
-            cfg = cfg.trl(:,1)/data.fsample; % cfg = begins
+        if ~isempty(cfg.contbegsample)
+            %             ends = (cfg.trl(:,2)-1)/data.fsample;
+            %             cfg = (cfg.trl(:,1)-1)/data.fsample; % cfg = begins
+            %               ends = data.time{1}(cfg.trl(:,2));
+            %               cfg = data.time{1}(cfg.trl(:,1)); % cfg = begins
+            ends = data.time{1}(cfg.contendsample)';
+            cfg = data.time{1}(cfg.contbegsample)'; % cfg = begins
         else
             cfg = [];
         end
     else
-    if isempty(cfg.trl)
-        data.time = {};
-        data.trial = {};
-        data.sampleinfo = [];
-    else
-        data = ft_redefinetrial(cfg, data);
-    end
+        if isempty(cfg.contbegsample)
+            data.time = {};
+            data.trial = {};
+            data.sampleinfo = [];
+        else
+            data = ft_redefinetrial(cfg, data); 
+        end
         %FIXME set data.cfg.prev
         cfg = data;
     end

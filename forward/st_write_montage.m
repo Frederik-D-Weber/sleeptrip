@@ -42,11 +42,9 @@ function filename = st_write_montage(cfg, montage)
 %
 % $Id$
 
-timerVal = tic;
+ttic = tic;
 mtic = memtic;
-st = dbstack;
-functionname = st.name;
-
+functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
 hasFilename = false;
@@ -117,7 +115,7 @@ fclose(fid);
 
 
 fprintf([functionname ' function finished\n']);
-toc(timerVal)
+toc(ttic)
 memtoc(mtic)
 end
 
