@@ -63,7 +63,7 @@ function [data] = ft_redefinetrial(cfg, data)
 % See also FT_DEFINETRIAL, FT_RECODEEVENT, FT_PREPROCESSING
 
 % Copyright (C) 2006-2008, Robert Oostenveld
-% Copyright (C) 2020, Frederik D. Weber
+%               2020 modified Frederik D. Weber
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -127,19 +127,15 @@ oneRptTimelock = (strcmp(dtype, 'timelock') &&...
   strcmp(data.dimord, 'rpt_chan_time') &&...
   size(data.trial, 1) == 1);
 
-
 % check if the input data is valid for this function, this will convert it to raw if needed
 data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'feedback', cfg.feedback);
-fb   = istrue(cfg.feedback);
 
 % select trials of interest
 if ~strcmp(cfg.trials, 'all')
-  if fb
-    if islogical(cfg.trials)
-      fprintf('selecting %d trials\n', sum(cfg.trials));
-    else
-      fprintf('selecting %d trials\n', length(cfg.trials));
-    end
+  if islogical(cfg.trials)
+    ft_info('selecting %d trials\n', sum(cfg.trials));
+  else
+    ft_info('selecting %d trials\n', length(cfg.trials));
   end
   
   % select trials of interest
@@ -158,6 +154,7 @@ if ~strcmp(cfg.trials, 'all')
     cfg.endsample = cfg.endsample(cfg.trials);
   end
 end
+
 Ntrial = numel(data.trial);
 
 % check the input arguments, only one method for processing is allowed
@@ -207,7 +204,7 @@ if ~isempty(cfg.toilim)
   data.trial    = data.trial(~skiptrial);
   if isfield(data, 'sampleinfo'),  data.sampleinfo  = data.sampleinfo(~skiptrial, :); end
   if isfield(data, 'trialinfo'),   data.trialinfo   = data.trialinfo(~skiptrial, :);  end
-  if fb, fprintf('removing %d trials in which no data was selected\n', sum(skiptrial)); end
+  ft_info('removing %d trials in which no data was selected\n', sum(skiptrial));
   
 elseif ~isempty(cfg.offset)
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,16 +237,15 @@ elseif ~isempty(cfg.begsample) || ~isempty(cfg.endsample)
   
   % also correct the sampleinfo
   if isfield(data, 'sampleinfo')
-    sampleinfo = data.sampleinfo;
-    data.sampleinfo = [];
+    sampleinfo = data.sampleinfo(:, 1);
     data.sampleinfo(:, 1) = sampleinfo(:, 1) + begsample - 1;
-    data.sampleinfo(:, 2) = sampleinfo(:, 1) + endsample - begsample;
+    data.sampleinfo(:, 2) = sampleinfo(:, 1) + endsample - 1;
   end
   
 elseif ~isempty(cfg.contbegsample) || ~isempty(cfg.contendsample)
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % select new trials from the existing data by beginning and end samples
+    % select new trials from the existing continous data by beginning and end samples
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % check if the input data is valid for this function, the input data must be raw
@@ -262,7 +258,6 @@ elseif ~isempty(cfg.contbegsample) || ~isempty(cfg.contendsample)
     end
     
     dataold = data;   % make a copy of the old data
-    clear data        % this line is very important, we want to completely reconstruct the data from the old data!
     
     % make header
     hdr = ft_fetch_header(dataold);
@@ -275,7 +270,7 @@ elseif ~isempty(cfg.contbegsample) || ~isempty(cfg.contendsample)
     data.hdr      = hdr;
     data.trial    = cell(1,size(begsample,1));
     data.time     = cell(1,size(begsample,1));
-    data          = copyfields(dataold, data, {'fsample' 'label' 'topo' 'topolabel' 'unmixing' 'mixing' 'grad' 'elec' 'opto'}); % account for all potential fields to be copied over
+    data          = keepfields(dataold, {'fsample' 'label' 'topo' 'topolabel' 'unmixing' 'mixing' 'grad' 'elec' 'opto'}); % account for all potential fields to be copied over
     
     if isfield(dataold,'trialinfo')
         ft_warning('Original data has trialinfo, using user specified trialinfo instead');
@@ -287,6 +282,7 @@ elseif ~isempty(cfg.contbegsample) || ~isempty(cfg.contendsample)
         data.trial{iTrl} = dataold.trial{1}(:,begsample(iTrl):endsample(iTrl));
         data.time{iTrl}  = dataold.time{1}(begsample(iTrl):endsample(iTrl));
     end
+
     % adjust the sampleinfo in the output
     if isfield(dataold, 'sampleinfo')
         % adjust the sample information
@@ -299,50 +295,55 @@ elseif ~isempty(cfg.trl)
   % select new trials from the existing data
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
-  % ensure that sampleinfo is present, otherwise ft_fetch_data will crash
+  if ischar(cfg.trl)
+    % load the trial information from file
+    newtrl = loadvar(cfg.trl, 'trl');
+  else
+    newtrl = cfg.trl;
+  end
+
+  % ensure that sampleinfo is present, otherwise ft_fetch_data will crash  
   data = ft_checkdata(data, 'hassampleinfo', 'yes');
   
-  dataold = data;   % make a copy of the old data
-  clear data        % this line is very important, we want to completely reconstruct the data from the old data!
+  % make a copy of the old data
+  dataold = data;
   
-  % make header
+  % make the header
   hdr = ft_fetch_header(dataold);
   
-  trl = cfg.trl;
-  
   % start with a completely new data structure
-  data          = [];
+  data          = keepfields(dataold, {'cfg' 'fsample' 'label' 'topo' 'topolabel' 'unmixing' 'mixing' 'grad' 'elec' 'opto'}); % account for all potential fields to be copied over
   data.hdr      = hdr;
-  data.trial    = cell(1,size(trl,1));
-  data.time     = cell(1,size(trl,1));
-  data          = copyfields(dataold, data, {'fsample' 'label' 'topo' 'topolabel' 'unmixing' 'mixing' 'grad' 'elec' 'opto'}); % account for all potential fields to be copied over
+  data.trial    = cell(1,size(newtrl,1));
+  data.time     = cell(1,size(newtrl,1));
   
-  if isfield(dataold,'trialinfo')
-    ft_warning('Original data has trialinfo, using user specified trialinfo instead');
+  if isfield(dataold, 'trialinfo')
+    ft_warning('Original data has trialinfo, using user-specified trialinfo instead');
   end
   
-  if ~istable(trl)
-    begsample = trl(:,1);
-    endsample = trl(:,2);
-    offset    = trl(:,3);
+  if ~istable(newtrl)
+    begsample = newtrl(:,1);
+    endsample = newtrl(:,2);
+    offset    = newtrl(:,3);
   else
-    begsample = trl.begsample;
-    endsample = trl.endsample;
-    offset    = trl.offset;
+    begsample = newtrl.begsample;
+    endsample = newtrl.endsample;
+    offset    = newtrl.offset;
   end
   trllength = endsample - begsample + 1;
   
-  for iTrl=1:size(trl, 1)
+  for iTrl=1:size(newtrl, 1)
     
     data.trial{iTrl} = ft_fetch_data(dataold, 'header', hdr, 'begsample', begsample(iTrl), 'endsample', endsample(iTrl), 'chanindx', 1:hdr.nChans, 'skipcheckdata', 1);
     data.time{iTrl}  = offset2time(offset(iTrl), dataold.fsample, trllength(iTrl));
     
-    % ensure correct handling of trialinfo.
-    % original trial
-    iTrlorig  =  find(begsample(iTrl) <= dataold.sampleinfo(:,2) & endsample(iTrl) >= dataold.sampleinfo(:,1)); % Determines which old trials are present in new trials
+    % The following ensures correct handling of trialinfo.
     
-    if size(cfg.trl,2)>3 % In case user specified a trialinfo
-      data.trialinfo(iTrl,:) = cfg.trl(iTrl,4:end);
+    % Determine which old trials are present in new trials
+    iTrlorig = find(begsample(iTrl) <= dataold.sampleinfo(:,2) & endsample(iTrl) >= dataold.sampleinfo(:,1));
+    
+    if size(newtrl,2)>3 % In case user specified additional trialinfo
+      data.trialinfo(iTrl,:) = newtrl(iTrl,4:end);
     elseif isfield(dataold,'trialinfo') % If old data has trialinfo
       if (numel(iTrlorig) == 1 ...      % only 1 old trial to copy trialinfo from, or
           || size(unique(dataold.trialinfo(iTrlorig,:),'rows'),1)) ... % all old trialinfo rows are identical
@@ -364,6 +365,10 @@ elseif ~isempty(cfg.seconds) || ~isempty(cfg.bounds)
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % select new trials from the existing data by seconds and bounds
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+  if isempty(cfg.seconds)
+        ft_error('cfg.seconds is empty')
+  end
     
     % check if the input data is valid for this function, the input data must be raw
     data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'hassampleinfo', 'yes');
@@ -393,24 +398,26 @@ elseif ~isempty(cfg.seconds) || ~isempty(cfg.bounds)
     % make sure the trial is using samples
     trl = round(trl);
     
-    % remove trials that overlap with the beginning of the file
-    sel = trl(:,1)>1;
-    trl = trl(sel,:);
-    
-    % remove trials that overlap with the end of the file
-    datalengthsamples = size(data.trial{1},2);
-    sel = trl(:,2)<datalengthsamples;
-    trl = trl(sel,:);
-    
+    if ~isempty(trl)
+        % remove trials that overlap with the beginning of the file
+        sel = trl(:,1)>1;
+        trl = trl(sel,:);
+        
+        % remove trials that overlap with the end of the file
+        datalengthsamples = size(data.trial{1},2);
+        sel = trl(:,2)<datalengthsamples;
+        trl = trl(sel,:);
+    end
     % what if data boundaries were violated
     lost_trials_boundaries = ntrial-size(trl,1);
-    if lost_trials_boundaries > 0;
+    if lost_trials_boundaries > 0
         ft_warning('%d trials were lost due to data boundaries being violated.',lost_trials_boundaries)
     end
-
+    
     cfg2     = [];
     cfg2.trl = trl;
     data = ft_redefinetrial(cfg2, data);
+    
     
 elseif ~isempty(cfg.length)
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -481,7 +488,7 @@ if ~isempty(cfg.minlength)
   data.trial = data.trial(~skiptrial);
   if isfield(data, 'sampleinfo'), data.sampleinfo  = data.sampleinfo(~skiptrial, :); end
   if isfield(data, 'trialinfo'),  data.trialinfo   = data.trialinfo (~skiptrial, :); end
-  if fb, fprintf('removing %d trials that are too short\n', sum(skiptrial));         end
+  ft_info('removing %d trials that are too short\n', sum(skiptrial));
 end
 
 % convert back to input type if necessary
@@ -501,12 +508,7 @@ end
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
 ft_postamble trackconfig
-if ~isempty(cfg.trl) && exist('dataold', 'var')
-  % the input data has been renamed to dataold
-  ft_postamble previous dataold
-else
-  ft_postamble previous data
-end
+ft_postamble previous   data
 ft_postamble provenance data
 ft_postamble history    data
 ft_postamble savevar    data

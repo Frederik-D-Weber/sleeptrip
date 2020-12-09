@@ -44,7 +44,7 @@
 
 %%% add sleeptrip to the path
 %addpath('D:/sleeptrip')
-pathToSleepTrip = uigetdir('','choose spisop path, e.g. D:\sleeptrip');
+pathToSleepTrip = uigetdir('','choose SleepTrip path, e.g. D:\sleeptrip-main');
 addpath(pathToSleepTrip)
 
 %%% disable some toolboxes if necessary and check if 
@@ -227,7 +227,7 @@ cfg = [];
 %cfg.align = 'sleeponset';
 %cfg.reference = 'first';
 %cfg.stat_alpha = 0.05;
-[res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded  scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring, scoring_ref, scoring_alt);
+[res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring_ref, scoring_alt, scoring_alt);
 
 res_comp_fleiss_stat.table
 res_comp_cohen_stat.table
@@ -319,7 +319,7 @@ data_with_montage = st_preprocessing(cfg);
 
 %% extract the date from zmax data header
 
-hdr = ft_read_header('filepath/bla/BATT.edf');
+hdr = ft_read_header(subject.dataset);
 hdr = data.hdr;
 
 year = hdr.orig.T0(1);
@@ -330,8 +330,7 @@ minute = hdr.orig.T0(5);
 second = hdr.orig.T0(6);
 
 dt = datetime(year,month,day,hour,minute,second);
-
-
+dt
 
 %% resample the data, e.g. before exporting/convert it to your hard drive
 % not necessary as for many analysis the data 
@@ -340,56 +339,70 @@ cfg = [];
 cfg.resamplefs = 100;
 data = ft_resampledata(cfg, data);
 
+%% write the data out in a BIDS compatible dataformat (but zipped)
 
-%% write the data out (end of conversion)
-
-%first create a header for the exported file
-hdr = [];
-hdr.nSamples = size(data.trial{1},2);
-hdr.nSamplesPre = 0;
-hdr.nTrials = 1;
-hdr.Fs = data.fsample;
-hdr.nChans = length(data.label);
-hdr.label = data.label;
-hdr.nTrials = 1;
-
-% chose a file name (without extension)
-file_name = [subject.name '_rs100'];
-
-% export as edf
-data_format_output = 'edf';
-hdr.edf_doautoscale = false; % if the data should be autoscaled, then hdr.edf_accuracy and hdr.edf_docutoff are not relevant
-hdr.edf_accuracy = 0.1; % in uV, e.g. 1 0.5, 0.1, 0.01 ...
-hdr.edf_docutoff = true; % cut the data at the limits
-file_extension = '.edf';
-% this is the final full file path
-data_export_filepath = [file_name file_extension];
-ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
-
-
-% export as brainvision int16 format  
-data_format_output = 'brainvision_eeg';
-% using int16 instead of the typical float32 saves half the disc space
-hdr.brainvision_outformat = 'int16';%float32 int16 int32;
-file_extension = ''; %brainvision exports do not have an extension
-% this is the final full file path
-data_export_filepath = [file_name file_extension];
-ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
-
-%zip the brainvision files take up only ~70% of space
-zipfilepaths = {[data_export_filepath '.eeg'], [data_export_filepath '.vhdr']};
-zip([data_export_filepath '.zip'],zipfilepaths);
+% chose a file name (without extension or with, does not matter)
+% data is stored in 16bit brainvision format and compressd in a zip to save
+% a lot of space on the hard drive.
+cfg = [];
+cfg.filename = [subject.name '_rs100'];
+%cfg.format = 'edf';
+%cfg.compress = 'no';
+%cfg.posmarker = 'no';
+[cfg filepaths] = st_write_continuous_data(cfg, data);
 
 % Note: All in allwe have downsampled from 256 to 100 Hz, stored the data in 16 bit and
 % zipped it, if the original data would have been a typical brainvision file with the float32
 % data format the we only use (100/256) * (16/32) * 0.7 < 14% of space
 % that is we saved more than 85% of space!
 
-
 %practice, do some more preprocessing, how would you read in your own data
 % search on the web how fieldtrip can help to read in data http://www.fieldtriptoolbox.org/faq/dataformat/
-% Note you can read in .zip data directly, this saves typically one third
-% of space your hard drive at least but needs longer to open
+% Note you can read in .zip data directly with ST_PREPROCESSING, this saves typically one third
+% of space your hard drive at least, ... but it needs longer to open
+
+
+%% convert the scoring to a homogenous or well known format 
+
+% to AASM format
+cfg = [];
+cfg.to = 'aasm';
+scoring_aasm = st_scoringconvert(cfg, scoring);
+
+% to Rechtschaffen&Kales format (i.e. having sleep Stage 4 preserved)
+cfg = [];
+cfg.to = 'rk';
+scoring_rk = st_scoringconvert(cfg, scoring);
+
+% you can also convert to your custom scoring format, but keep in mind, 
+% that using custom scorings will be limited, however you can use this to
+% convert your custom format back into 'aasm' or 'rk' which work here.
+
+%% reorder channels
+cfg = [];
+cfg.order = 'alphabetical';
+data_reord = st_reoderdata(cfg, data);
+
+%% applying grammer to data
+
+cfg = [];
+%cfg.grammer = 'hp 0.3 lp 35';
+cfg.grammer = '( ( bp 12 14 mult 4 ) + ( hp 0.5 lp 2 ) ) + ( bp 6 8 mult 2 )';
+cfg.channel = 1;
+data_new = st_datagrammer(cfg, data);
+
+
+%% looking at the data in the "score" browser STILL ALPHA version
+cfg = [];
+cfg.renderer = 'opengl'; % to get things plotted a little faster
+cfg.scoring = scoring;
+cfg.bgcolor = 'dark'; % 'white' or 'dark'
+cfg_postscore = st_scorebrowser(cfg ,data);
+
+%st_scorebrowser(cfg,data); % without an output argument the browser will give the handling back to Matlab immediately. Not recommended!
+% There are many features, it is recommended to never press Ctrl+C while
+% using it (as to not crash it) and to see the button "shortcuts" to get
+% some help on what can be done.
 
 %% take a look at the data, MIGHT NOT WORK ON ALL MATLAB VERSIONS!
 
@@ -642,6 +655,7 @@ cfg.linewidth = 1;
 fh = ft_singleplotER(cfg,timelock_ch1,timelock_ch2,timelock_ch1_SWA_fitlered,timelock_ch2_SWA_fitlered);
 
 % ERF
+padding_buffer = 1;
 cfg           = [];
 cfg.channel   = subject.eegchannels{1};
 cfg.method    = 'wavelet';

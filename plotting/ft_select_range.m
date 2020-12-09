@@ -276,7 +276,9 @@ switch lower(event)
       set(userData.box(end), 'xData', xData);
       set(userData.box(end), 'yData', yData);
       set(userData.box(end), 'Color', [0 0 0]);
-      set(userData.box(end), 'EraseMode', 'xor');
+      %FIXME, the following line with ...'EraseMode', 'xor' ... creates
+      %future compatibility issues and seems not necessary for 2015b upward
+      %set(userData.box(end), 'EraseMode', 'xor');
       set(userData.box(end), 'LineStyle', '--');
       set(userData.box(end), 'LineWidth', 1.5);
       set(userData.box(end), 'Visible', 'on');

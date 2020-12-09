@@ -46,7 +46,7 @@ function montage = st_read_montage(cfg, filename)
 ttic = tic;
 mtic = memtic;
 functionname = getfunctionname();
-fprintf([functionname ' function started\n']););
+fprintf([functionname ' function started\n']);
 
 cfg.datatype           = ft_getopt(cfg, 'datatype', 'columns');
 cfg.columndelimimter   = ft_getopt(cfg, 'columndelimimter', ',');

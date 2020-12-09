@@ -67,7 +67,11 @@ if nargin > 1
         end
     end
     hasdata = true;
-    nSamplesInData = data.sampleinfo(2);
+    if iscell(data.time{1})
+        nSamplesInData = numel(data.time{1});
+    else
+        nSamplesInData = numel(data.time);
+    end
     fsample = data.fsample;
 else
     % no data structure provided

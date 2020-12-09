@@ -1,10 +1,10 @@
-function [spectrum,ntaper,freqoi,timeoi] = ft_specest_mtmconvol(dat, time, varargin)
+function [spectrum,ntaper,freqoi,timeoi] = ft_specest_mtmconvol_memeff(dat, time, varargin)
 
-% FT_SPECEST_MTMCONVOL performs wavelet convolution in the time domain by
-% multiplication in the frequency domain.
+% FT_SPECEST_MTMCONVOL_MEMEFF performs wavelet convolution in the time domain by
+% multiplication in the frequency domain while being memmory efficient.
 %
 % Use as
-%   [spectrum,ntaper,freqoi,timeoi] = ft_specest_mtmconvol(dat,time,...)
+%   [spectrum,ntaper,freqoi,timeoi] = ft_specest_mtmconvol_memeff(dat,time,...)
 % where input
 %   dat       = matrix of chan*sample
 %   time      = vector, containing time in seconds for each sample
@@ -339,7 +339,6 @@ for ifreqoi = 1:nfreqoi
                     spectrum{itap,ifreqoi} = complex(nan(nchan,ntimeboi));
                 else
                     dum = fftshift(ifft(datspectrum .* repmat(wltspctrm(itap,:),[nchan 1]), [], 2),2); % fftshift is necessary to implement zero-phase/acyclic/acausal convolution (either here, or the wavelet should be wrapped around sample=0)
-                    wltspctrm = [];
                     tmp = complex(nan(nchan,ntimeboi));
                     tmp(:,reqtimeboiind) = dum(:,reqtimeboi);
                     tmp = tmp .* sqrt(2 ./ timwinsample(ifreqoi));
@@ -366,7 +365,6 @@ for ifreqoi = 1:nfreqoi
                 
                 % compute datspectrum*wavelet, if there are reqtimeboi's that have data
                 dum = fftshift(ifft(datspectrum .* repmat(wltspctrm(itap,:),[nchan 1]), [], 2),2); % fftshift is necessary to implement zero-phase/acyclic/acausal convolution (either here, or the wavelet should be wrapped around sample=0)
-                wltspctrm = [];
                 tmp = complex(nan(nchan,ntimeboi),nan(nchan,ntimeboi));
                 tmp(:,reqtimeboiind) = dum(:,reqtimeboi);
                 tmp = tmp .* sqrt(2 ./ timwinsample(ifreqoi));
@@ -374,8 +372,7 @@ for ifreqoi = 1:nfreqoi
             end
             %     end % for nfreqoi
     end % switch dimord
-    
-    
+    wltspctrm = [];
     
     
     

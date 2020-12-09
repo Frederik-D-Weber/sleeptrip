@@ -11,7 +11,18 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 % 
 % The configuration structure needs to specify
 %   cfg.scoringfile      = string, the scoring file (and path)
-%   cfg.scoringformat    = string, the scoring file format (and path) 
+%   cfg.scoringformat    = string, the scoring file format
+%                          either:
+%                          'custom' with a scoremap file
+%                          'zmax'   for hypnodyne corp Zmax exported scoring
+%                                   files
+%                          'somnomedics_english' or 'somnomedics' for
+%                                   somnomedics exproted scoring files
+%                          'spisop', 'schlafaus' or 'sleepin' for files
+%                                   that are from Schlafaus/SpiSOP or sleepin
+%                                   software
+%                          'fasst' for scoring files exported from FASST
+%                                  scoing software
 %
 % optional paramters are
 %   cfg.standard         = string, scoring standard either 'aasm' or AASM
@@ -26,7 +37,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          READTABLE for FileEncoding, (default = '', try system specific)
 %
 % Alternatively one can specify a more general data format with datatype
-% with a configuration of onlye the following necessary optoins
+% with a configuration of only the following necessary options
 %   cfg.scoringfile      = string, the scoring file (and path)
 %   cfg.scoremap         = structure, a mapping from , see below
 % 
@@ -163,7 +174,7 @@ switch  cfg.scoringformat
         cfg.ignorelines      = {'LOUT','LON'};
         cfg.columnnum        = 4;
 
-    case 'somnomedics'
+    case {'somnomedics_english', 'somnomedics'}
         % Somnomedics english version exported profile txt
         scoremap = [];
         scoremap.labelold  = {'Wake', 'N1', 'N2', 'N3', 'REM', 'A'};

@@ -4,13 +4,13 @@ function [scoring] = st_scoringconvert(cfg, scoring)
 % a structure provided by ST_READ_SCORING 
 %
 % Use as
-%   [cfg] = st_scoringconvert(cfg, scoring)
+%   [scoring] = st_scoringconvert(cfg, scoring)
 %
 % Required configuration parameters are:
 %   cfg.to    = string, scoring standard to convert to either 
 %               'aasm' for AASM
 %               'rk' for Rechtschaffen&Kales or 
-%               'numbers' for conversion to {0, 1,  2,  3,  4,  5, -1} for {W, N1/S1,  N2/S2,  N3/S3,  N3/S4,  R, ?}
+%               'number' or 'numbers' for conversion to {0, 1,  2,  3,  4,  5, -1} for {W, N1/S1,  N2/S2,  N3/S3,  N3/S4,  R, ?}
 %               'custom' for providing a scoremap
 % 
 % in case cfg.to = 'custom' the following parameter also needs to be present
@@ -70,7 +70,7 @@ switch scoring.standard
         scoremap.labelold  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?', 'W'};
     case 'rk'
         scoremap.labelold  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?', 'MT'};
-    case 'number'
+    case {'number', 'numbers'}
         scoremap.labelold  = {'0', '1', '2', '3', '4', '5', '-1', '8'};
     case 'custom'
         if ~isfield(cfg,'scoremap')
@@ -87,7 +87,7 @@ switch cfg.to
     case 'rk'
         scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?', 'MT'};
         scoring.standard = 'rk';
-    case 'number'
+    case {'number', 'numbers'}
         scoremap.labelnew  = {'0', '1', '2', '3', '4', '5', '-1', '8'};
         scoring.standard = 'number';
         scoremap.unknown   = '-1';
