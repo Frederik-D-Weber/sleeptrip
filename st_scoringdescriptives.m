@@ -73,9 +73,6 @@ fprintf([functionname ' function started\n']);
 cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 
 
-
-
-
 % assumes there is at least
 % one valid epoch of N2 or N3 or S4 or R
 

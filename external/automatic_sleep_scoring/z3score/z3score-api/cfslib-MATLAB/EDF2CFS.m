@@ -2,7 +2,7 @@
 % raw data is 4 X Sample matrix, the 4 channels in order are:
 % C3, C4, EL and ER respectively
 %
-% Patents pending (c)-2016 Amiya Patanaik amiyain@gmail.com
+% (c)-2018 Neurobit Technologies - Amiya Patanaik 
 %
 % THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 % IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -27,10 +27,17 @@ function EDF2CFS(filepath)
     C4N = input('Please select the C4:A1 channel number: ');
     ELN = input('Please select the EOGl:A2 channel number: ');
     ERN = input('Please select the EOGr:A1 channel number: ');
+    EMGN = input('Please select the chin EMG channel number: ');
+    
+    f_EEG = signalHeader(C3N).samples_in_record/header.data_record_duration;
+    f_EOG = signalHeader(ELN).samples_in_record/header.data_record_duration;
+    f_EMG = signalHeader(EMGN).samples_in_record/header.data_record_duration;
     
     samplingRate = signalHeader(C3N).samples_in_record/header.data_record_duration;
     EEGData = [signalCell{C3N}'; signalCell{C4N}'; signalCell{ELN}'; signalCell{ERN}'];
-    writeCFS([path '/' filename '.cfs'], EEGData, samplingRate);
+    
+    writeCFS([path '/' filename '_v1.cfs'], EEGData, samplingRate);
+    writeCFS_V2([path '/' filename '_v2.cfs'], signalCell{C3N}, signalCell{C4N}, signalCell{ELN}, signalCell{ERN}, signalCell{EMGN}, f_EEG, f_EOG, f_EMG);
     
 end
     

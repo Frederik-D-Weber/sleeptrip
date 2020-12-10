@@ -3182,7 +3182,7 @@ switch key
                         ask_again = true;
                         while ask_again
                             cfg = [];
-                            sca = AutoSleepScoringZ3score(opt.orgdata,cfg);
+                            sca = AutoSleepScoringZ3score(cfg,opt.orgdata);
                             answer_temp = questdlg(sca.status(),'Automatic Scoring Status', ...
                                 'OK','OK');
                             

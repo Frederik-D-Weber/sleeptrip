@@ -1,5 +1,5 @@
 % function to read CFS files to Matlab
-% Patents pending (c)-2016 Amiya Patanaik amiyain@gmail.com
+% (c)-2018 Neurobit Technologies Amiya Patanaik amiya@neurobit.io
 %
 % THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 % IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,7 +24,7 @@ function data = readCFS(filename)
     end
     %file version next 1 byte
     version = fread(fileID,1);
-    if(version ~= 1),
+    if(version ~= 1 && version ~=2),
         disp('Invalid version number');
         return;
     end

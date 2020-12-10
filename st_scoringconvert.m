@@ -63,6 +63,7 @@ end
 fprintf([functionname ' function initialized\n']);
 
 
+iscustom = false;
 scoremap = [];
 scoremap.unknown   = '?';
 switch scoring.standard
@@ -77,20 +78,26 @@ switch scoring.standard
             ft_error('the scoring was a ''custom'' label and thus it requires also a cfg.scoremap as parameter in the configuration.');
         end
         scoremap.labelold  = cfg.scoremap.labelold;
+        iscustom = true;
 end
 
+
+tononcustom = false;
 
 switch cfg.to
     case 'aasm'
         scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?', 'W'};
         scoring.standard = 'aasm';
+        tononcustom = true;
     case 'rk'
         scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?', 'MT'};
         scoring.standard = 'rk';
+        tononcustom = true;
     case {'number', 'numbers'}
         scoremap.labelnew  = {'0', '1', '2', '3', '4', '5', '-1', '8'};
         scoring.standard = 'number';
         scoremap.unknown   = '-1';
+        tononcustom = true;
     case 'custom'
         scoremap.labelnew  = cfg.scoremap.labelnew;
         scoring.standard = 'custom';
@@ -99,18 +106,23 @@ switch cfg.to
 end
 
 
-
-epochs = repmat({scoremap.unknown},size(scoring.epochs));
-label = scoring.label;
-for iLabel = 1:numel(scoremap.labelold)
-    old = scoremap.labelold{iLabel};
-    new = scoremap.labelnew{iLabel};
-    match = cellfun(@(x) strcmp(x, old), scoring.epochs, 'UniformOutput', 1);
-    epochs(match) = {new};
-    match = cellfun(@(x) strcmp(x, old), scoring.label, 'UniformOutput', 1);
-    label(match) = {new};
+if iscustom && tononcustom
+    label = scoremap.labelnew';
+    [iold inew] = ismember(scoring.epochs, scoremap.labelnew);
+    scoring.epochs(~iold) = {scoremap.unknown};
+else
+    epochs = repmat({scoremap.unknown},size(scoring.epochs));
+    label = scoring.label;
+    for iLabel = 1:numel(scoremap.labelold)
+        old = scoremap.labelold{iLabel};
+        new = scoremap.labelnew{iLabel};
+        match = cellfun(@(x) strcmp(x, old), scoring.epochs, 'UniformOutput', 1);
+        epochs(match) = {new};
+        match = cellfun(@(x) strcmp(x, old), scoring.label, 'UniformOutput', 1);
+        label(match) = {new};
+    end
+    scoring.epochs = epochs;
 end
-scoring.epochs = epochs;
 [scoring.label,ia,ic] = unique(label);
 
 if isfield(scoring,'prob')

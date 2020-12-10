@@ -8,7 +8,7 @@
 % Compress is optional argument (default = 1), to control compression
 % Hash is optional argument (default = 1), to control transport security
 %
-% Patents pending (c)-2016 Amiya Patanaik amiyain@gmail.com
+% (c)-2018 Neurobit Technologies Amiya Patanaik amiya@neurobit.io
 %
 % THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 % IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -17,7 +17,7 @@
 % LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 % THE SOFTWARE.
-function stream = streamCFS(EEGData, samplingRate, varargin)
+function [stream, status, message, quality] = streamCFS(EEGData, samplingRate, varargin)
 
 % set defaults for optional inputs
 optargs = {1 1};
@@ -28,6 +28,14 @@ end
 optargs(1:numvarargs) = varargin;
 [compress, hash] = optargs{:};
 
+%apply a dc block filter
+p = dcblock(0.1,samplingRate);             
+b = [1 -1];                         % set up differentiator
+a = [1 -p];                         % set up integrator
+for i=1:4
+    EEGData(i,:) = filter(b, a, EEGData(i,:));
+end
+
 %Order 50 FIR filter
 %Basic Settings
 SRATE = 100; %Hz
@@ -35,6 +43,7 @@ LOWPASS = 45; %Hz
 HIGHPASS = 0.3; %Hz
 LOWPASSEOG = 12; %Hz
 EPOCH = 30*SRATE; %Samples
+threshold = 10;
 Fs = samplingRate/2;
 bEEG = fir1(50,[HIGHPASS/Fs LOWPASS/Fs]);
 bEOG = fir1(50,[HIGHPASS/Fs LOWPASSEOG/Fs]);
@@ -76,6 +85,22 @@ for j=1:totalEpochs,
     s(33:end,:) = [];
     data(:,:,3,j) = abs(s);
     
+end
+
+quality = sum(squeeze(mean(mean(squeeze(data))))>800,2)*100/size(data,4);
+status = 0;
+electrodes = {'C3/C4', 'EoG-L', 'EoG-R', 'EMG'};
+message = 'All channels passed quality checks.';
+failed_channels = '';
+qc = quality > threshold;
+if(any(qc))
+    status = 1;
+    for i = 1: numel(qc),
+        if qc(i) 
+            failed_channels = strcat(failed_channels, electrodes{i}, ', ');
+        end
+    end
+    message = strcat('The following channel(s) failed quality checks: ', failed_channels);
 end
 
 %Signature first 3 bytes
