@@ -28,6 +28,8 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   cfg.standard         = string, scoring standard either 'aasm' or AASM
 %                          or 'rk' for Rechtschaffen&Kales or 'custom' for 
 %                          which case a scoremap needs to be given (default = 'aasm')
+%   cfg.to               = string, if it is set it will convert to a known standard  
+%                          see ST_SCORINGCONVERT for details
 %   cfg.epochlength      = scalar, epoch length in seconds, (default = 30)
 %   cfg.dataoffset       = scalar, offest from data in seconds, 
 %                          positive number for scoring starting after data
@@ -76,7 +78,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   scoremap.unknown       = string, in case the occuring string to label is not
 %                            covered in scoremap.old
 %
-% As an example, for an A SpiSOP to AASM scoring, 
+% As an example, for an a SpiSOP to AASM scoring, 
 %   scoremap = [];
 %   scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '8'};
 %   scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', 'W'};
@@ -357,3 +359,12 @@ scoring.cfg = cfg;
 scoring.epochlength = cfg.epochlength;
 scoring.dataoffset = cfg.dataoffset;
 scoring.standard = cfg.standard;
+
+if isfield(cfg.to)
+    cfg_sc = [];
+    cfg_sc.to = cfg.to;
+    if strcmp(cfg.standard,'custom')
+        cfg_sc.scoremap = cfg.scoremap;
+    end
+    scoring = st_scoringconvert(cfg_sc, scoring);
+end
