@@ -386,6 +386,11 @@ classdef AutoSleepScoringZ3score
                 
                 cfg_sc = [];
                 cfg_sc.scoremap = scoremap;
+                cfg_sc.to = 'custom';
+                obj.scoring = st_scoringconvert(cfg_sc, obj.scoring);
+                
+                cfg_sc = [];
+                cfg_sc.scoremap = scoremap;
                 cfg_sc.to = 'aasm';
                 obj.scoring = st_scoringconvert(cfg_sc, obj.scoring);
                 
