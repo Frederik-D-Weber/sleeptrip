@@ -10,7 +10,7 @@
 %
 % cfg.licensefile =  string, file path with a license file, haveing two
 %                    lines. First line is username and second the api key,
-%                    e.g,:
+%                    e.g:
 %                    example@email.com
 %                    1234567890abcdefghijklmnopqrstuvwxyz12345678
 %

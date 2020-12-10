@@ -360,7 +360,7 @@ scoring.epochlength = cfg.epochlength;
 scoring.dataoffset = cfg.dataoffset;
 scoring.standard = cfg.standard;
 
-if isfield(cfg.to)
+if isfield(cfg,'to')
     cfg_sc = [];
     cfg_sc.to = cfg.to;
     if strcmp(cfg.standard,'custom')
