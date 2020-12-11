@@ -136,7 +136,7 @@ ft_nargout  = nargout;
 
 
 % do the general setup of the function
-ft_defaults
+st_defaults
 ft_preamble init
 ft_preamble provenance
 ft_preamble trackconfig
@@ -1272,9 +1272,10 @@ if strcmp(cfg.doSleepScoring,'yes')
     cfg.use_ruler = 'no';
     
     %cfg.autosave_hypnogram = 'yes';
-    cfg.autosave_hypnogram_every_number_change = 5;
+    cfg.autosave_hypnogram_every_number_change = 1;
     opt.autosave_hypnogram_change_interator = 0;
     
+    cfg.skip_to_next_unknown = 'no';
     cfg.confidence_skip_to_lower_than_threshold = 0;
     
     cfg.display_power_spectrum = 'no';
@@ -1389,7 +1390,8 @@ if strcmp(cfg.doSleepScoring,'yes')
     uicontrol('tag', 'scbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'S3(3)','position', [0.48, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', '3')
     uicontrol('tag', 'scbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'S4(4)','position', [0.52, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', '4')
     uicontrol('tag', 'scoptbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '?(7/D)','position', [0.56, temp_lower_line_y2 , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'd')
-    
+    uicontrol('tag', 'scoptbuttons_nextunk', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '[]','position', [0.56, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'u')
+
     uicontrol('tag', 'scoptbuttons_SOdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '(+)_.·\_.·\_.·','Fontsize',5,'FontUnits','normalized','position', [0.62, temp_lower_line_y+0.08/5+0.08/5+0.08/5+0.08/5 , 0.05, 0.08/5],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'k')
     uicontrol('tag', 'scoptbuttons_SOdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(_.·\)--','Fontsize',5,'FontUnits','normalized','position', [0.62, temp_lower_line_y+0.08/5+0.08/5+0.08/5 , 0.05, 0.08/5],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'o')
     uicontrol('tag', 'scoptbuttons_SPdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--~~-~~--','Fontsize',5,'FontUnits','normalized', 'position', [0.62, temp_lower_line_y+0.08/5+0.08/5 , 0.05, 0.08/5],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'j')
@@ -1477,6 +1479,7 @@ if strcmp(cfg.doSleepScoring,'yes');
     ft_uilayout(h, 'tag', 'scoptbuttons_mark', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_zoom', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_grid', 'style', 'pushbutton', 'callback', @keyboard_cb);
+    ft_uilayout(h, 'tag', 'scoptbuttons_nextunk', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_min', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_ruler', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_pow', 'style', 'pushbutton', 'callback', @keyboard_cb);
@@ -2479,6 +2482,18 @@ switch key
                 end
             end
             
+            next_unknown_epoch = [];
+            if istrue(cfg.skip_to_next_unknown)
+                    if curr_epoch < size(cfg.hypn,1)
+                        next_unknown_epoch = find(cfg.hypn((curr_epoch+1):end,1) == -1,1,'first');
+                        if ~isempty(next_unknown_epoch)
+                            next_unknown_epoch = curr_epoch + next_unknown_epoch;
+                            temp_skip_to_next_epoch = true;
+                        end
+                    end
+            end
+
+            
             
             opt.prev_stages = getPrevStageString_stage(cfg.hypn,curr_epoch,6);
             opt.next_stages = getNextStageString_stage(cfg.hypn,curr_epoch,6);
@@ -2540,11 +2555,18 @@ switch key
             end
             
             if temp_skip_to_next_epoch
+                next_epoch = opt.trlop + 1;
                 if ~isempty(next_low_conf_epoch)
-                    opt.trlop = min(next_low_conf_epoch, size(opt.trlvis,1)); % should not be larger than the number of trials
-                else
-                    opt.trlop = min(opt.trlop + 1, size(opt.trlvis,1)); % should not be larger than the number of trials
+                    next_epoch = next_low_conf_epoch;
                 end
+                if ~isempty(next_unknown_epoch)
+                    if ~isempty(next_low_conf_epoch)
+                    	next_epoch = min(next_unknown_epoch,next_low_conf_epoch);
+                    else
+                        next_epoch = next_unknown_epoch;
+                    end
+                end
+                opt.trlop = min(next_epoch, size(opt.trlvis,1)); % should not be larger than the number of trials
                 if isfield(opt,'marks')
                     opt.marks = [];
                 end
@@ -2695,6 +2717,20 @@ switch key
             set(h,'MenuBar','figure');
         end
         redraw_cb(h, eventdata);
+    case 'u'
+        if strcmp(cfg.doSleepScoring,'yes')
+            if ~isfield(cfg,'skip_to_next_unknown')
+                cfg.skip_to_next_unknown = 'yes';
+            else
+                if strcmp(cfg.skip_to_next_unknown,'yes')
+                    cfg.skip_to_next_unknown = 'no';
+                else
+                    cfg.skip_to_next_unknown = 'yes';
+                end
+            end
+            setappdata(h, 'opt', opt);
+            setappdata(h, 'cfg', cfg);
+        end
     case 'e'
         if strcmp(cfg.doSleepScoring,'yes')
             if ~isfield(cfg,'use_ruler')
@@ -3559,8 +3595,12 @@ if strcmp(cfg.doSleepScoring,'yes')
         ft_uilayout(h, 'tag', 'scoptbuttons_ruler', 'string', ['ruler']);
     end
     
-
-
+    
+    if istrue(cfg.skip_to_next_unknown)
+        ft_uilayout(h, 'tag', 'scoptbuttons_nextunk', 'string', ['[?]']);
+    else
+        ft_uilayout(h, 'tag', 'scoptbuttons_nextunk', 'string', ['[]']);
+    end
     
     if istrue(cfg.drawgrid)
         ft_uilayout(h, 'tag', 'scoptbuttons_grid', 'string', ['|gr:id|']);

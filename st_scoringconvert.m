@@ -113,13 +113,19 @@ if iscustom && tononcustom
 else
     epochs = repmat({scoremap.unknown},size(scoring.epochs));
     label = scoring.label;
+    [labelold ia iItems] = unique(scoremap.labelold,'stable');
+    usedItems = [];
     for iLabel = 1:numel(scoremap.labelold)
+        if ismember(iItems(iLabel),usedItems)
+            continue
+        end
         old = scoremap.labelold{iLabel};
         new = scoremap.labelnew{iLabel};
         match = cellfun(@(x) strcmp(x, old), scoring.epochs, 'UniformOutput', 1);
         epochs(match) = {new};
         match = cellfun(@(x) strcmp(x, old), scoring.label, 'UniformOutput', 1);
         label(match) = {new};
+        usedItems = [usedItems iItems(iLabel)];
     end
     scoring.epochs = epochs;
 end

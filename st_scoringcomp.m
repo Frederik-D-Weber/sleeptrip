@@ -23,7 +23,17 @@ function [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingen
 %                         see ST_CUTSCORING cfg.start parameter for details
 %   cfg.stat_alpha      = value for statistical alpha level (default is 0.05)
 %   cfg.reference       = which of the scorings should be chosen as reference 
-%                         either 'first' or 'consensus' (fefault = 'first')
+%                         either 'first' or 'consensus' (default = 'first')
+%   cfg.agreementthres  = number for the minimal agreement threshold in the range [0 1] 
+%                         to decide if the consensus scoring in an epoch is reached. 
+%                         0.5 means half of the raters needs to agree to
+%                         reach consensus.
+%                         (default = 0.5)
+%   cfg.agreementthres  = number for the minimal agreement threshold in the range [0 1] 
+%                         to decide if the consensus scoring if an epoch is excluded is reached. 
+%                         0.5 means half of the raters needs to agree to
+%                         reach consensus to exclude this epoch.
+%                         (default = 0.5)
 %
 % See also ST_READ_SCORING, ST_SCORINGCONVERT, ST_SLEEPONSET, ST_CUTSCORING
 
@@ -58,9 +68,11 @@ fprintf([functionname ' function started\n']);
 
 % set defaults
 %cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
-cfg.align = ft_getopt(cfg, 'align', 'no');
-cfg.stat_alpha = ft_getopt(cfg, 'stat_alpha', 0.05);
-cfg.reference = ft_getopt(cfg, 'reference', 'first');
+cfg.align          = ft_getopt(cfg, 'align', 'no');
+cfg.stat_alpha     = ft_getopt(cfg, 'stat_alpha', 0.05);
+cfg.reference      = ft_getopt(cfg, 'reference', 'first');
+cfg.agreementthres = ft_getopt(cfg, 'agreementthres', 0.5);
+cfg.agreementthres_excl = ft_getopt(cfg, 'agreementthres_excl', 0.5);
 
 
 %TODO: consider scoring offsets that might differ,
@@ -196,9 +208,11 @@ excludedNorm(isnan(excludedNorm)) = -1;
           ctbls_MA] = ...
     muliple_kappa(excludedNorm,cfg.stat_alpha,cfg.reference);
 
+agreement_epochs_single = all(bsxfun(@eq,numbersNorm,numbersNorm(1,:)));
+agreement_excluded_single = all(bsxfun(@eq,excludedNorm,excludedNorm(1,:)));
 
-agreement = sum(all(bsxfun(@eq,numbersNorm,numbersNorm(1,:))))/size(numbersNorm,2);
-agreement_excluded = sum(all(bsxfun(@eq,excludedNorm,excludedNorm(1,:))))/size(excludedNorm,2);
+agreement = sum(agreement_epochs_single)/size(numbersNorm,2);
+agreement_excluded = sum(agreement_excluded_single)/size(excludedNorm,2);
 
 
 
@@ -247,9 +261,19 @@ scoringnew.label = scorings{1}.label;
 scoringnew.epochlength = scorings{1}.epochlength;
 scoringnew.numbers = consensusModusVoteMatrix_norm;
 scoringnew.epochs = cellfun(@num2str,num2cell(scoringnew.numbers),'UniformOutput',0);
+idxNoConsensusReached = ~any((consensusModusCountMatrix_norm .* 1/nScorings) >= cfg.agreementthres);
+scoringnew.numbers(idxNoConsensusReached) = -1;
+scoringnew.epochs(idxNoConsensusReached) = {'-1'};
 %scoring_consensus.prob = scorings_cycle_prop_adjusted;
 scoringnew.excluded = logical(consensusModusVoteMatrix_MA);
+idxNoConsensusReached = ~any((consensusModusCountMatrix_MA .* 1/nScorings) >= cfg.agreementthres_excl);
+scoringnew.excluded(idxNoConsensusReached) = false;
 scoringnew.standard = 'number';
+scoringnew.agreement = max(consensusModusCountMatrix_norm .* 1/nScorings);
+scoringnew.agreement_excluded = max(consensusModusCountMatrix_MA .* 1/nScorings);
+scoringnew.full_agreement = logical(agreement_epochs_single);
+scoringnew.full_agreement_excluded = logical(agreement_excluded_single);
+scoringnew.dataoffset = scorings{1}.dataoffset;
 
 cfg_scc = [];
 cfg_scc.to = scoring.standard;
