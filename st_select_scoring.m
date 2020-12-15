@@ -67,7 +67,7 @@ if nargin > 1
         end
     end
     hasdata = true;
-    if iscell(data.time{1})
+    if iscell(data.time)
         nSamplesInData = numel(data.time{1});
     else
         nSamplesInData = numel(data.time);

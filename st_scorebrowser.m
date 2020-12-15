@@ -612,7 +612,7 @@ if isfield(cfg, 'scoring')
     epochLengthSamples = round(cfg.scoring.epochlength*data.fsample);
     offsetSamples = round(cfg.scoring.dataoffset*data.fsample);
     
-    if iscell(data.time{1})
+    if iscell(data.time)
         nSamplesInData = numel(data.time{1});
     else
         nSamplesInData = numel(data.time);
