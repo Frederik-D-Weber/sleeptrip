@@ -1,6 +1,6 @@
 function [f_k,f_sek,f_p,f_z,f_ci,f_kj,f_sekj,f_zkj,f_pkj,...
           consensusModusVoteMatrix,consensusCountMatrix,cross_comparisons,chi2_cross,p_cross, ...
-          ctbls] = muliple_kappa(alignmentMatrix,alphalevel,referenceOption)
+          ctbls] = mulitple_kappa(alignmentMatrix,alphalevel,referenceOption)
 % Copyright (C) 2019-, Frederik D. Weber 
 %               with code from Giuseppe Cardillo
 %               with code from  Cardillo G. (2007) Fleiss'es kappa: compute the Fleiss'es kappa for multiple raters.   
@@ -73,12 +73,19 @@ end
 
 switch referenceOption
     case 'first'
-        reference = alignmentMatrix(1,:);
+        reference_index = 1;
+        reference_label = '1';
+        reference = alignmentMatrix(reference_index,:);
         startCompIndex = 2;
-    case 'consenus'
+    case 'consensus'
+        reference_index = -1;
+        reference_label = 'consensus';
         reference = consensusModusVoteMatrix;
         startCompIndex = 1;
+    case 'all'
+        reference_index = -1;
     otherwise
+        ft_error('referenceOption called %s unknown.',referenceOption)
 end
 
 
@@ -87,26 +94,65 @@ end
 cross_comparisons = {};
 chi2_cross = [];
 p_cross = [];
-for iComp = startCompIndex:nSamples
-    test = alignmentMatrix(iComp,:);
-    [tbl,chi2_cross_temp,p_cross_temp,labels] = crosstab(test,reference);
-    row_lab = labels(:,1);
-    row_lab_index = cellfun(@(s) ~isempty(s),row_lab,'UniformOutput',false);
-    row_lab_index = [row_lab_index{:}];
-    row_lab = row_lab(row_lab_index);
-    
-    col_lab = labels(:,2);
-    col_lab_index = cellfun(@(s) ~isempty(s),col_lab,'UniformOutput',false);
-    col_lab_index = [col_lab_index{:}];
-    col_lab = col_lab(col_lab_index);
-    
-    row_lab = cellfun(@(s) strrep(s,'-1','unscored'), row_lab,'UniformOutput',false);
-    col_lab = cellfun(@(s) strrep(s,'-1','unscored'), col_lab,'UniformOutput',false);
-
-
-    cross_comparisons{iComp} = array2table(tbl,'RowNames',cellfun(@(s) ['comp_' s], row_lab,'UniformOutput',false),'VariableNames',cellfun(@(s) ['ref_' s], col_lab,'UniformOutput',false));
-    chi2_cross(iComp) = chi2_cross_temp;
-    p_cross(iComp) = p_cross_temp;
+nComparison = 0;
+scoring_num_ref_labels = {};
+scoring_num_to_ref_labels = {};
+switch referenceOption
+    case {'first' 'consensus'}
+        for iComp = startCompIndex:nSamples
+            nComparison = nComparison+1;
+            
+            test = alignmentMatrix(iComp,:);
+            [tbl,chi2_cross_temp,p_cross_temp,labels] = crosstab(test,reference);
+            row_lab = labels(:,1);
+            row_lab_index = cellfun(@(s) ~isempty(s),row_lab,'UniformOutput',false);
+            row_lab_index = [row_lab_index{:}];
+            row_lab = row_lab(row_lab_index);
+            
+            col_lab = labels(:,2);
+            col_lab_index = cellfun(@(s) ~isempty(s),col_lab,'UniformOutput',false);
+            col_lab_index = [col_lab_index{:}];
+            col_lab = col_lab(col_lab_index);
+            
+            row_lab = cellfun(@(s) strrep(s,'-1','unscored'), row_lab,'UniformOutput',false);
+            col_lab = cellfun(@(s) strrep(s,'-1','unscored'), col_lab,'UniformOutput',false);
+            
+            
+            cross_comparisons{nComparison} = array2table(tbl,'RowNames',cellfun(@(s) ['comp_' s], row_lab,'UniformOutput',false),'VariableNames',cellfun(@(s) ['ref_' s], col_lab,'UniformOutput',false));
+            chi2_cross(nComparison) = chi2_cross_temp;
+            p_cross(nComparison) = p_cross_temp;
+            scoring_num_ref_labels = cat(1,scoring_num_ref_labels,{reference_label});
+            scoring_num_to_ref_labels = cat(1,scoring_num_to_ref_labels,{num2str(iComp)});
+        end
+    case 'all'
+        for iComp = 1:(nSamples-1)
+            reference_label = num2str(iComp);
+            for iComp2 = (iComp+1):nSamples
+                nComparison = nComparison+1;
+                
+                reference = alignmentMatrix(iComp,:);
+                test = alignmentMatrix(iComp2,:);
+                [tbl,chi2_cross_temp,p_cross_temp,labels] = crosstab(test,reference);
+                row_lab = labels(:,1);
+                row_lab_index = cellfun(@(s) ~isempty(s),row_lab,'UniformOutput',false);
+                row_lab_index = [row_lab_index{:}];
+                row_lab = row_lab(row_lab_index);
+                
+                col_lab = labels(:,2);
+                col_lab_index = cellfun(@(s) ~isempty(s),col_lab,'UniformOutput',false);
+                col_lab_index = [col_lab_index{:}];
+                col_lab = col_lab(col_lab_index);
+                
+                row_lab = cellfun(@(s) strrep(s,'-1','unscored'), row_lab,'UniformOutput',false);
+                col_lab = cellfun(@(s) strrep(s,'-1','unscored'), col_lab,'UniformOutput',false);
+                
+                cross_comparisons{nComparison} = array2table(tbl,'RowNames',cellfun(@(s) ['comp_' s], row_lab,'UniformOutput',false),'VariableNames',cellfun(@(s) ['ref_' s], col_lab,'UniformOutput',false));
+                chi2_cross(nComparison) = chi2_cross_temp;
+                p_cross(nComparison) = p_cross_temp;
+                scoring_num_ref_labels = cat(1,scoring_num_ref_labels,{reference_label});
+                scoring_num_to_ref_labels = cat(1,scoring_num_to_ref_labels,{num2str(iComp2)});
+            end
+        end
 end
 
 
@@ -114,41 +160,85 @@ end
 %%% Cohen's kappa
 
 ctbls = [];
-for iComp = startCompIndex:nSamples
+nComparison = 0;
+
+%for iComp = 1:nComparison
 %     alignmentMatrix_pair = cat(1,alignmentMatrix(iComp,:),reference);
-%     
+%
 %     categories_pair = unique(alignmentMatrix_pair);
 %     categories_pair = categories_pair(~isnan(categories_pair));
 %     nCategories_pair = numel(categories_pair);
-%     
+%
 %     nObservations_pair = size(alignmentMatrix_pair,2);
 %     nSamples_pair = size(alignmentMatrix_pair,1);
-%     
-%     
+%
+%
 %     consensusCountMatrix_pair = zeros(nCategories_pair,nObservations_pair);
-%     
+%
 %     for iColumn = 1:nObservations_pair
 %         for iCat = 1:nCategories_pair
 %             consensusCountMatrix_pair(iCat,iColumn) = sum(alignmentMatrix_pair(:,iColumn) == categories_pair(iCat));
 %         end
 %     end
-    
-    confusionmat_pair = confusionmat(reference,alignmentMatrix(iComp,:));
-    
-    [c_k,c_sek,c_ci,c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari,c_z,c_p] = cohenskappa(confusionmat_pair, alphalevel);
-    
-    pair = cat(1,reference,alignmentMatrix(iComp,:));
-    agreement = sum(all(bsxfun(@eq,pair,pair(1,:))))/size(pair,2);
 
-    tbl = array2table([iComp,agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
-    'VariableNames',{'scoring_num_to_ref','agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
-    
-    if isempty(ctbls)
-        ctbls = tbl;
-    else
-        ctbls = cat(1,ctbls,tbl);
-    end
+switch referenceOption
+    case {'first' 'consensus'}
+        for iComp = startCompIndex:nSamples
+            nComparison = nComparison+1;
+            
+            test = alignmentMatrix(iComp,:);
+            confusionmat_pair = confusionmat(reference,test);
+            
+            [c_k,c_sek,c_ci,c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari,c_z,c_p] = cohenskappa(confusionmat_pair, alphalevel);
+            
+            pair = cat(1,reference,test);
+            agreement = sum(all(bsxfun(@eq,pair,pair(1,:))))/size(pair,2);
+            
+            tbl = array2table([scoring_num_ref_labels(nComparison),scoring_num_to_ref_labels(nComparison),agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
+                'VariableNames',{'scoring_num_ref','scoring_num_test','agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
+            
+            if isempty(ctbls)
+                ctbls = tbl;
+            else
+                ctbls = cat(1,ctbls,tbl);
+            end
+        end
+    case 'all'
+        for iComp = 1:(nSamples-1)
+            reference_label = num2str(iComp);
+            for iComp2 = (iComp+1):nSamples
+                nComparison = nComparison+1;
+                
+                reference = alignmentMatrix(iComp,:);
+                test = alignmentMatrix(iComp2,:);
+                
+                confusionmat_pair = confusionmat(reference,test);
+                
+                [c_k,c_sek,c_ci,c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari,c_z,c_p] = cohenskappa(confusionmat_pair, alphalevel);
+                
+                pair = cat(1,reference,test);
+                agreement = sum(all(bsxfun(@eq,pair,pair(1,:))))/size(pair,2);
+                
+                
+                tbl_first = table(scoring_num_ref_labels(nComparison),scoring_num_to_ref_labels(nComparison),...
+                    'VariableNames',{'scoring_num_ref','scoring_num_test'});
+                
+                tbl_second = array2table([agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
+                    'VariableNames',{'agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
+                tbl = cat(2,tbl_first,tbl_second);
+                
+                if isempty(ctbls)
+                    ctbls = tbl;
+                else
+                    ctbls = cat(1,ctbls,tbl);
+                end
+            end
+        end
 end
+
+
+
+%end
 
 end
 

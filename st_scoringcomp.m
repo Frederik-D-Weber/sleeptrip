@@ -8,7 +8,7 @@ function [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingen
 % the subject.
 %
 % Use as
-%   [res_comp_stat res_contingency res_contingency_excluded scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring1, scoring2, ...)
+%   [[res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded  scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring1, scoring2, ...)
 %
 % Optional configuration parameters are:
 %
@@ -29,7 +29,7 @@ function [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingen
 %                         0.5 means half of the raters needs to agree to
 %                         reach consensus.
 %                         (default = 0.5)
-%   cfg.agreementthres  = number for the minimal agreement threshold in the range [0 1] 
+%   cfg.agreementthres_excl = number for the minimal agreement threshold in the range [0 1] 
 %                         to decide if the consensus scoring if an epoch is excluded is reached. 
 %                         0.5 means half of the raters needs to agree to
 %                         reach consensus to exclude this epoch.
@@ -142,7 +142,7 @@ numbersNorm(isnan(numbersNorm)) = -1;
 [k_norm,sek_norm,p_norm,z_norm,ci_norm,kj_norm,sekj_norm,zkj_norm,pkj_norm,...
     consensusModusVoteMatrix_norm,consensusModusCountMatrix_norm,cross_comparisons_norm,chi2_cross_norm,p_cross_norm,...
     ctbls] = ...
-    muliple_kappa(numbersNorm,cfg.stat_alpha,cfg.reference);
+    multiple_kappa(numbersNorm,cfg.stat_alpha,cfg.reference);
 
 % rename the labels to the ones that fit with the original scoring
 for iCrossComp = 1:numel(cross_comparisons_norm)
@@ -206,7 +206,7 @@ excludedNorm(isnan(excludedNorm)) = -1;
 
 [k_MA,sek_MA,p_MA,z_MA,ci_MA,kj_MA,sekj_MA,zkj_MA,pkj_MA,consensusModusVoteMatrix_MA,consensusModusCountMatrix_MA,cross_comparisons_MA,chi2_cross_MA,p_cross_MA...
           ctbls_MA] = ...
-    muliple_kappa(excludedNorm,cfg.stat_alpha,cfg.reference);
+    multiple_kappa(excludedNorm,cfg.stat_alpha,cfg.reference);
 
 agreement_epochs_single = all(bsxfun(@eq,numbersNorm,numbersNorm(1,:)));
 agreement_excluded_single = all(bsxfun(@eq,excludedNorm,excludedNorm(1,:)));
@@ -232,8 +232,9 @@ res_comp_cohen_stat.ori = functionname;
 res_comp_cohen_stat.type = 'comp_cohen_stats';
 res_comp_cohen_stat.cfg = cfg;
 
-ctbls_MA.Properties.VariableNames = cellfun(@(s) [s '_excluded'], ctbls_MA.Properties.VariableNames,'UniformOutput',false);
-
+if ~isempty(ctbls_MA)
+    ctbls_MA.Properties.VariableNames = cellfun(@(s) [s '_excluded'], ctbls_MA.Properties.VariableNames,'UniformOutput',false);
+end
 res_comp_cohen_stat.table = cat(2,ctbls, ctbls_MA);
 
 contingency_tables = cross_comparisons_norm;
@@ -286,6 +287,22 @@ end
 
 
 function cc_all = concatCrossComp(cross_comparisons,chi2_cross,p_cross)
+colnames = {};
+for iCrossComp = 1:numel(cross_comparisons)
+    colnames = cat(2,colnames,cross_comparisons{iCrossComp}.Properties.VariableNames);
+end
+
+colnames = unique(colnames);
+
+for iCrossComp = 1:numel(cross_comparisons)
+    tmptbl = cross_comparisons{iCrossComp};
+    missing = find(~ismember(colnames,tmptbl.Properties.VariableNames));
+    for iMissing = missing
+        tmptbl.(colnames{iMissing}) = zeros(size(tmptbl,1),1);
+    end
+    cross_comparisons{iCrossComp} = tmptbl(:,colnames);
+end
+
 cc_all = [];
 for iCrossComp = 1:numel(cross_comparisons)
     %iCrossComp = 2
