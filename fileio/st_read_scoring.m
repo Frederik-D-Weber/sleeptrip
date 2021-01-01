@@ -23,6 +23,9 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                                   software
 %                          'fasst' for scoring files exported from FASST
 %                                  scoing software
+%                          'sleeptrip' for scoring files exported SleepTrip as a .mat
+%                                  containing a scoring structure 
+%                                  (named 'scoring')
 %
 % optional paramters are
 %   cfg.standard         = string, scoring standard either 'aasm' or AASM
@@ -212,20 +215,8 @@ switch  cfg.scoringformat
         cfg.columndelimimter = '';
         cfg.exclcolumnstr = {'1' '2' '3' '4' '5' '6' '7' '8' '9' '10'};
         readoption = 'load';
-    case {'fasst'}
-        scoremap = [];
-        scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '7'};
-        switch cfg.standard
-            case 'aasm'
-                scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?'};
-            case 'rk'
-                scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
-        end
-        scoremap.unknown   = '?';
-        
-        cfg.scoremap         = scoremap;
-        cfg.columnnum        = 1;
-        
+    case {'sleeptrip'}
+    	readoption = 'loadmat';
     otherwise
 end
 
@@ -244,7 +235,7 @@ end
 else
     cfg.scoringfile = [];
 end
-
+processTableStucture = true;
 switch readoption
     case 'table';
         tableScoring = tableScoring;
@@ -266,11 +257,15 @@ switch readoption
     case 'load'
         hyp = load(filename);
         tableScoring = table(hyp(:,1),hyp(:,2));
-        
+    case 'loadmat'
+        processTableStucture = false;
+        scoring = load(filename, 'scoring');
     otherwise
         ft_error('the type %s to read scoring files is not handled. please choose a valid option', readoption);
 end
 
+if processTableStucture
+    
 tableScoringNcols = size(tableScoring,2);
 
 if tableScoringNcols < cfg.columnnum
@@ -360,6 +355,8 @@ scoring.epochlength = cfg.epochlength;
 scoring.dataoffset = cfg.dataoffset;
 scoring.standard = cfg.standard;
 
+end
+
 if isfield(cfg,'to')
     cfg_sc = [];
     cfg_sc.to = cfg.to;
@@ -367,4 +364,5 @@ if isfield(cfg,'to')
         cfg_sc.scoremap = cfg.scoremap;
     end
     scoring = st_scoringconvert(cfg_sc, scoring);
+end
 end

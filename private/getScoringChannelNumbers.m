@@ -21,15 +21,21 @@
 %    along with SleepTrip. If not, see <http://www.gnu.org/licenses/>.
 %
 % $Id$
-function [numberEEG numberEOG numberEMG] = getScoringChannelNumbers(datachannel)
+function [numberEEG numberEEG_frontal numberEEG_occipital numberEOG numberEMG numberECG] = getScoringChannelNumbers(datachannel)
 % datachannel = data.label
 
 numberEEG = -1;
+numberEEG_frontal = -1;
+numberEEG_occipital = -1;
 numberEOG = -1;
 numberEMG = -1;
+numberECG = -1;
 eeg_channel = ft_channelselection('*C4*',datachannel);
+eeg_frontal_channel = ft_channelselection('*F4*',datachannel);
+eeg_occipital_channel = ft_channelselection('*O2*',datachannel);
 eog_channel = ft_channelselection('*EOG*',datachannel);
 emg_channel = ft_channelselection('*EMG*',datachannel);
+ecg_channel = ft_channelselection('*ECG*',datachannel);
 
 if ~isempty(eeg_channel)
     numberEEG = find(strcmp(eeg_channel(1),datachannel));
@@ -38,6 +44,26 @@ else
         numberEEG = 2;
     else
         numberEEG = 1;
+    end
+end
+
+if ~isempty(eeg_frontal_channel)
+    numberEEG_frontal = find(strcmp(eeg_frontal_channel(1),datachannel));
+else
+    if numel(datachannel) > 2
+        numberEEG_frontal = 2;
+    else
+        numberEEG_frontal = 1;
+    end
+end
+
+if ~isempty(eeg_occipital_channel)
+    numberEEG_occipital = find(strcmp(eeg_occipital_channel(1),datachannel));
+else
+    if numel(datachannel) > 2
+        numberEEG_occipital = 2;
+    else
+        numberEEG_occipital = 1;
     end
 end
 
@@ -51,6 +77,16 @@ if ~isempty(emg_channel)
     numberEMG = find(strcmp(emg_channel(1),datachannel));
 else
     numberEMG = numel(datachannel);
+end
+
+
+if ~isempty(ecg_channel)
+    numberECG = find(strcmp(ecg_channel(1),datachannel));
+else
+    ecg_channel = ft_channelselection('*EKG*',datachannel);
+    if ~isempty(ecg_channel)
+        numberECG = find(strcmp(ecg_channel(1),datachannel));
+    end
 end
 
 end

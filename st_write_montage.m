@@ -14,7 +14,7 @@ function filename = st_write_montage(cfg, montage)
 %   cfg.columndelimimter = string, of the column delimiter, must be either
 %                          ',', ' ', '|' or '\t' (a tab) (default = ',')
 %   cfg.fileencoding     = string, with encoding e.g. 'UTF-8', see matlab help of
-%                          READTABLE for FileEncoding, (default = '', try system specific)
+%                          fopen for InEncoding, (default = '', try system specific)
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET
 
@@ -54,7 +54,6 @@ end
 cfg.filename           = ft_getopt(cfg, 'filename', 'montage');
 cfg.datatype           = ft_getopt(cfg, 'datatype', 'columns');
 cfg.columndelimimter   = ft_getopt(cfg, 'columndelimimter', ',');
-cfg.skiplines          = ft_getopt(cfg, 'skiplines', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
 
 
@@ -78,7 +77,7 @@ else
     filename = cfg.filename;
 end
 
-fid = fopen(filename,'Wt'); % the capital W means opening in nonflush mode for faster writing!!!
+fid = fopen(filename,'Wt','n',cfg.fileencoding); % the capital W means opening in nonflush mode for faster writing!!!
 
 %fid = fopen([filename],'Wt'); % the capital W means opening in nonflush
 %mode for faster writing!!! t is for text mode.

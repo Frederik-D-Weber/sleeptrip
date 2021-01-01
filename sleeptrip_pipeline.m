@@ -97,8 +97,13 @@ cfg = [];
 cfg.filename = 'montage_zmax.txt';
 montage_filepath = st_write_montage(cfg,montage_zmax);
 
+cfg = [];
 montage_zmax = st_read_montage(cfg,montage_filepath);
 
+%% read a data grammer
+
+cfg = [];
+datagrammer = st_read_datagrammer(cfg, 'datagrammer/datagrammer.txt');
 
 %% prepare the subject data, e.g. zmax data in a compressed format
 
@@ -133,28 +138,27 @@ subject.oxychannels        = {'OXY_IR_DC'};
 
 subject.montage = montage_zmax;
 
-
 save('subject-1','subject');
 
 %% alternative subject brainvision
 
-% subject = [];
-% subject.name               = 'example_brainvision';
-% subject.dataset            = 'test_lindev_sleep_score_preprocout_datanum_1.eeg';
-% subject.scoringfile        = 'test_lindev_sleep_score_preprocout_datanum_1.txt';
-% subject.scoringformat      = 'spisop'; % e.g. 'zmax' or 'spisop'
-% subject.standard           = 'rk'; % 'aasm' or 'rk'
-% % does the scoring start 
-% %   at the beginning of data (=0) or 
-% %   before (<0) or
-% %   after (>0)
-% subject.scoring_dataoffset = 0; % in seconds
-% % at which time in seconds was the lights off
-% % with respect to the beginning of scoring,
-% % only relevant for
-% subject.lightsoff          = 108.922;
-% subject.eegchannels        = {'C3:A2', 'C4:A1'};
-% % 
+subject = [];
+subject.name               = 'example_brainvision';
+subject.dataset            = 'test_lindev_sleep_score_preprocout_datanum_1.eeg';
+subject.scoringfile        = 'test_lindev_sleep_score_preprocout_datanum_1.txt';
+subject.scoringformat      = 'spisop'; % e.g. 'zmax' or 'spisop'
+subject.standard           = 'rk'; % 'aasm' or 'rk'
+% does the scoring start 
+%   at the beginning of data (=0) or 
+%   before (<0) or
+%   after (>0)
+subject.scoring_dataoffset = 0; % in seconds
+% at which time in seconds was the lights off
+% with respect to the beginning of scoring,
+% only relevant for
+subject.lightsoff          = 108.922;
+subject.eegchannels        = {'C3:A2', 'C4:A1'};
+% 
 % save('subject-2','subject');
 %
 %% alternative subject somnomedics edf
@@ -199,6 +203,21 @@ scoring.lightsoff = subject.lightsoff;
 
 %practice: read in another format, maybe a custom format.
 
+%% write out the scoring again and re-read it in.
+cfg = [];
+cfg.filename = 'scoring_test';
+cfg.dataformat = 'numbersincolumns';% 'sleeptrip' 'numbersincolumns'
+%cfg.to = 'rk'
+scoring_filepath = st_write_scoring(cfg, scoring);
+
+%%% note that writing in numbersincolumns corresponds to cfg.scoringformat = 'spisop'
+cfg = [];
+cfg.scoringfile = scoring_filepath;
+cfg.scoringformat = 'spisop'; %'sleeptrip' 'spisop'
+%cfg.to = 'rk'
+scoring_reread = st_read_scoring(cfg);
+
+
 %% check when is sleep onset/offset
 
 cfg = [];
@@ -225,8 +244,10 @@ scoring_ref.excluded(102) = 1;
 
 cfg = [];
 %cfg.align = 'sleeponset';
-%cfg.reference = 'first';
+%cfg.reference = 'all'; % 'first' 'consensus' 'all'
 %cfg.stat_alpha = 0.05;
+%cfg.agreementthres  = 0.5;
+%cfg.agreementthres_excl = 0.5;
 [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring_ref, scoring_alt, scoring_alt);
 
 res_comp_fleiss_stat.table
@@ -236,11 +257,20 @@ res_contingency_excluded.table
 scoring_consensus
 contingency_tables
 contingency_excluded_tables
+
+%practice: play around with cfg.agreementthres and see how the
+%scoring_consensus introduces unknown scoring (i.e. '?') into the
+%scoring_consensus.epochs
+%Try to align on the sleep onset, when would this matter?
+%What if not all periods are scored?
+
+
+
 %% plot the scoring
 
 cfg = [];
 cfg.title           = subject.name;
-cfg.plottype        = 'colorbar'; %'classic' 'colorblocks' 'colorbar'
+cfg.plottype        = 'colorblocks'; %'classic' 'colorblocks' 'colorbar'
 % cfg.yaxdisteqi      = 'yes';
 % cfg.timeticksdiff   = 60;
 cfg.plotunknown     = 'no'; % 'yes' or 'no' 
@@ -268,6 +298,9 @@ figure_handle = st_hypnoplot(cfg, scoring);
 cfg = [];
 res_scoringdescriptive = st_scoringdescriptives(cfg, scoring);
 
+% lets take a look what we got in there
+res_scoringdescriptive.table
+
 % or do so sleep-cycle wise
 cfg = [];
 cfg. cycle = 'all';
@@ -275,7 +308,7 @@ res_sleepdescriptive_cycle = st_scoringdescriptives(cfg, scoring);
 
 
 % lets take a look what we got in there
-res_scoringdescriptive.table
+res_sleepdescriptive_cycle.table
 
 % practice: how is sleep onset and lights-off moment related? 
 % When is the end of the Total sleep time?
@@ -337,9 +370,9 @@ dt
 % is resampled to values that are sufficient
 cfg = [];
 cfg.resamplefs = 100;
-data = ft_resampledata(cfg, data);
+data_100Hz = ft_resampledata(cfg, data);
 
-%% write the data out in a BIDS compatible dataformat (but zipped)
+%% write the data out in a BIDS compatible dataformat (but zipped) by default
 
 % chose a file name (without extension or with, does not matter)
 % data is stored in 16bit brainvision format and compressd in a zip to save
@@ -349,7 +382,7 @@ cfg.filename = [subject.name '_rs100'];
 %cfg.format = 'edf';
 %cfg.compress = 'no';
 %cfg.posmarker = 'no';
-[cfg filepaths] = st_write_continuous_data(cfg, data);
+[cfg filepaths] = st_write_continuous_data(cfg, data_100Hz);
 
 % Note: All in allwe have downsampled from 256 to 100 Hz, stored the data in 16 bit and
 % zipped it, if the original data would have been a typical brainvision file with the float32
@@ -439,8 +472,8 @@ ft_databrowser(cfg, data);
 % power values in some sleep stages, e.g. non-REM
 cfg = [];
 cfg.scoring     = scoring;
-cfg.stages      = {'N2', 'N3'}; % {'R'};
-%cfg.stages      = {'S2', 'S3', 'S4'}; % {'R'};
+%cfg.stages      = {'N2', 'N3'}; % {'R'};
+cfg.stages      = {'S2', 'S3', 'S4'}; % {'R'};
 cfg.channel     = subject.eegchannels;
 % cfg.foilim      = [0.01 30];
 % cfg.bands       = ...
@@ -517,7 +550,7 @@ freqpeak = res_freqpeaks.table.freqpeak1(1);
 cfg = [];
 cfg.scoring          =  scoring;
 cfg.stages           = {'N2','N3'};
-% cfg.stages           = {'S2', 'S3', 'S4'}; % {'R'};
+%cfg.stages           = {'S2', 'S3', 'S4'}; % {'R'};
 cfg.channel          = subject.eegchannels;
 % freqpeak1 for slow spindles
 % freqpeak2 for fast spindles
