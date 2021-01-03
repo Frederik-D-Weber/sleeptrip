@@ -10,7 +10,7 @@ function [tri] = projecttri(pos, method)
 %
 % See also NORMALS, PCNORMALS
 
-% Copyright (C) 2006, Robert Oostenveld
+% Copyright (C) 2006-2019, Robert Oostenveld
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -30,18 +30,30 @@ function [tri] = projecttri(pos, method)
 %
 % $Id$
 
-if nargin<2
-  r = rank(pos);
-  switch r
-    case 1
-      ft_warning('points are lying on a line, cannot make triangulation');
-      tri = zeros(0,3);
-      return
-    case 2
+tmp = pos;
+tmp(:,1) = tmp(:,1) - mean(tmp(:,1));
+tmp(:,2) = tmp(:,2) - mean(tmp(:,2));
+tmp(:,3) = tmp(:,3) - mean(tmp(:,3));
+r = rank(tmp);
+switch r
+  case 0
+    ft_warning('vertices are lying on a single point, cannot make triangulation');
+    tri = zeros(0,3);
+    return
+  case 1
+    ft_warning('vertices are lying on a straight line, cannot make triangulation');
+    tri = zeros(0,3);
+    return
+  case 2
+    if nargin<2
       method = 'delaunay';
-    otherwise
+    end
+  case 3
+    if nargin<2
       method = 'convhull';
-  end
+    end
+  otherwise
+    ft_error('unexpected input');
 end
 
 switch method
@@ -59,20 +71,23 @@ switch method
       % make the surface outward oriented
       tri = fliplr(tri);
     end
-
+    
   case 'delaunay'
-    if all(pos(:,3)==0)
+    if all(pos(:,1)==0)
       % this can happen with simulated electrode grids
-      prj = pos(:,1:2);
+      prj = pos(:,[2 3]);
+    elseif all(pos(:,2)==0)
+      % this can happen with simulated electrode grids
+      prj = pos(:,[1 3]);
+    elseif all(pos(:,3)==0)
+      % this can happen with simulated electrode grids
+      prj = pos(:,[1 2]);
     else
       % make a 2D triangulation of the projected points using delaunay
       prj = elproj(pos);
     end
     tri = delaunay(prj(:,1), prj(:,2));
-
+    
   otherwise
     ft_error('unsupported method');
 end
-
-
-

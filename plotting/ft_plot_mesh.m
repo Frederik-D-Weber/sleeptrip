@@ -1,9 +1,10 @@
 function [hs] = ft_plot_mesh(mesh, varargin)
 
-% FT_PLOT_MESH visualizes a surface or volumetric mesh, for example describing the
-% realistic shape of the head. Surface meshes should be described by triangles and
-% contain the fields "pos" and "tri". Volumetric meshes should be described with
-% tetraheders or hexaheders and have the fields "pos" and "tet" or "hex".
+% FT_PLOT_MESH visualizes a surface or volumetric mesh, for example with the cortical
+% folding of the brain, or the scalp surface of the head. Surface meshes are
+% described by triangles and consist of a structure with the fields "pos" and "tri".
+% Volumetric meshes are described with tetraheders or hexaheders and have the fields
+% "pos" and "tet" or "hex".
 %
 % Use as
 %   ft_plot_mesh(mesh, ...)
@@ -99,6 +100,8 @@ vertexsize   = ft_getopt(varargin, 'vertexsize',  10);
 vertexmarker = ft_getopt(varargin, 'vertexmarker', '.');
 facealpha    = ft_getopt(varargin, 'facealpha',   1);
 edgealpha    = ft_getopt(varargin, 'edgealpha',   1);
+edgelinewidth = ft_getopt(varargin, 'edgelinewidth', .5);
+material_    = ft_getopt(varargin, 'material');
 tag          = ft_getopt(varargin, 'tag',         '');
 surfaceonly  = ft_getopt(varargin, 'surfaceonly');  % default is handled below
 unit         = ft_getopt(varargin, 'unit');
@@ -107,29 +110,30 @@ alphalim     = ft_getopt(varargin, 'alphalim');
 alphamapping = ft_getopt(varargin, 'alphamap', 'rampup');
 cmap         = ft_getopt(varargin, 'colormap');
 maskstyle    = ft_getopt(varargin, 'maskstyle', 'opacity');
-contour      = ft_getopt(varargin, 'contour', false);
+contour      = ft_getopt(varargin, 'contour',   []);
 
-contourcolor      = ft_getopt(varargin, 'contourcolor', 'k');
+contourcolor      = ft_getopt(varargin, 'contourcolor',     'k');
 contourlinewidth  = ft_getopt(varargin, 'contourlinewidth', 3);
-contourlinestyle  = ft_getopt(varargin, 'contourlinestyle');
+contourlinestyle  = ft_getopt(varargin, 'contourlinestyle', '-');
 
-
-haspos   = isfield(mesh, 'pos');  % vertices
-hastri   = isfield(mesh, 'tri');  % triangles   as a Mx3 matrix with vertex indices
-hastet   = isfield(mesh, 'tet');  % tetraheders as a Mx4 matrix with vertex indices
-hashex   = isfield(mesh, 'hex');  % hexaheders  as a Mx8 matrix with vertex indices
-hasline  = isfield(mesh, 'line'); % line segments in 3-D
-haspoly  = isfield(mesh, 'poly'); % polynomial surfaces in 3-D
+haspos   = isfield(mesh, 'pos');   % vertices
+hastri   = isfield(mesh, 'tri');   % triangles   as a Mx3 matrix with vertex indices
+hastet   = isfield(mesh, 'tet');   % tetraheders as a Mx4 matrix with vertex indices
+hashex   = isfield(mesh, 'hex');   % hexaheders  as a Mx8 matrix with vertex indices
+hasline  = isfield(mesh, 'line');  % line segments in 3-D
+haspoly  = isfield(mesh, 'poly');  % polygons describing a surface in 3-D
 hascolor = isfield(mesh, 'color'); % color code for vertices
 
-if hastet && isempty(surfaceonly)
-  ft_warning('only visualizing the outer surface of the tetrahedral mesh, see the "surfaceonly" option')
-  surfaceonly = true;
-elseif hashex && isempty(surfaceonly)
-  ft_warning('only visualizing the outer surface of the hexahedral mesh, see the "surfaceonly" option')
-  surfaceonly = true;
-else
-  surfaceonly = false;
+if isempty(surfaceonly)
+  if hastet
+    ft_warning('only visualizing the outer surface of the tetrahedral mesh, see the "surfaceonly" option')
+    surfaceonly = true;
+  elseif hashex
+    ft_warning('only visualizing the outer surface of the hexahedral mesh, see the "surfaceonly" option')
+    surfaceonly = true;
+  else
+    surfaceonly = false;
+  end
 end
 
 if ~isempty(unit)
@@ -142,6 +146,7 @@ if surfaceonly
   hastri   = isfield(mesh, 'tri');  % triangles   as a Mx3 matrix with vertex indices
   hastet   = isfield(mesh, 'tet');  % tetraheders as a Mx4 matrix with vertex indices
   hashex   = isfield(mesh, 'hex');  % hexaheders  as a Mx8 matrix with vertex indices
+  haspoly  = isfield(mesh, 'poly'); % polygons
 end
 
 % convert string into boolean values
@@ -263,7 +268,12 @@ if haspos
   end
   %set(hs, 'FaceColor', facecolor);
   set(hs, 'EdgeColor', edgecolor);
+  set(hs, 'LineWidth', edgelinewidth);
   set(hs, 'tag', tag);
+end
+
+if ~isempty(material_)
+  material(material_); % dull, shiny or default
 end
 
 % the vertexcolor can be specified either as a RGB color for each vertex, or as a single value at each vertex
@@ -280,13 +290,13 @@ switch maskstyle
       set(hs, 'FaceVertexCData', vertexcolor, 'FaceColor', 'interp');
       if numel(vertexcolor)==size(pos,1)
         if ~isempty(clim), set(gca, 'clim', clim); end
-        if ~isempty(cmap), colormap(cmap); end
+        if ~isempty(cmap), ft_colormap(cmap); end
       end
     elseif facepotential
       set(hs, 'FaceVertexCData', facecolor, 'FaceColor', 'flat');
       if numel(facecolor)==size(tri,1)
         if ~isempty(clim), set(gca, 'clim', clim); end
-        if ~isempty(cmap), colormap(cmap); end
+        if ~isempty(cmap), ft_colormap(cmap); end
       end
     else
       % the color is indicated as a single character or as a single RGB triplet
@@ -330,25 +340,37 @@ switch maskstyle
     if ~isempty(clim); caxis(clim); end % set colorbar scale to match [fcolmin fcolmax]
 end
 
-if numel(contour)>1 && any(contour)
-    cfg                 = [];
-    cfg.connectivity    = triangle2connectivity(tri);
-    neighcmb            = full(ft_getopt(cfg, 'connectivity', false));
-    
-    posclusobs = findcluster(contour,neighcmb,0); %minnbchan=0
-    
-    for cl = 1:max(posclusobs)
-        idxcl = find(posclusobs==cl);
-        [xbnd, ybnd, zbnd] = extract_contour(pos,tri,idxcl,contour);
-        
-        % draw each individual line segment of the intersection
-        for i = 1:length(xbnd)
-            p(i) = patch(xbnd(i,:)', ybnd(i,:)', zbnd(i,:)',NaN);
-        end
-        if ~isempty(contourcolor),     set(p(:), 'EdgeColor', contourcolor); end
-        if ~isempty(contourlinewidth), set(p(:), 'LineWidth', contourlinewidth); end
-        if ~isempty(contourlinestyle), set(p(:), 'LineStyle', contourlinestyle); end
+if ~isempty(contour)
+  if ~iscell(contour), contour = {contour}; end
+  if ~iscell(contourlinestyle), contourlinestyle = {contourlinestyle}; end
+  
+  if ischar(contourcolor)
+    if numel(contour)>numel(contourcolor)
+      contourcolor = repmat(contourcolor(:), [numel(contour) 1]);
+    else
+      contourcolor = contourcolor(:);
     end
+  end
+  if size(contourcolor,2)==3 && numel(contour)>size(contourcolor,1), contourcolor = repmat(contourcolor, [numel(contour) 1] ); end
+  if numel(contour)>numel(contourlinewidth), contourlinewidth = repmat(contourlinewidth, [1 numel(contour)]); end
+  if numel(contour)>numel(contourlinestyle), contourlinestyle = repmat(contourlinestyle, [1 numel(contour)]); end
+  
+  for m = 1:numel(contour)
+    C    = full(triangle2connectivity(tri));
+    clus = findcluster(contour{m},C,0);
+    
+    for cl = 1:max(clus)
+      idxcl = find(clus==cl);
+      [xbnd, ybnd, zbnd] = extract_contour(pos,tri,idxcl,contour{m});
+      
+      % draw each individual line segment of the intersection
+      p = [];
+      for i = 1:length(xbnd)
+        p(i) = patch(xbnd(i,:)', ybnd(i,:)', zbnd(i,:)',NaN);
+      end
+      set(p(:), 'EdgeColor', contourcolor(m,:), 'LineWidth', contourlinewidth(m), 'LineStyle', contourlinestyle{m});
+    end
+  end
 end
 
 if faceindex
@@ -471,7 +493,6 @@ if ~isequal(vertexcolor, 'none') && ~vertexpotential
   end
   
 end % plotting the vertices as points
-
 
 if vertexindex
   % plot the vertex indices (numbers) at each node

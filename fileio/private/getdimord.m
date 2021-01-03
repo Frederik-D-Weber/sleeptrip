@@ -79,11 +79,14 @@ nchancmb  = inf;
 nsubj     = nan;
 nrpt      = nan;
 nrpttap   = nan;
-npos      = inf;
-nori      = nan; % this will be 3 in many cases
 ntopochan = inf;
 nspike    = inf; % this is only for the first spike channel
 nlag      = nan;
+npos      = inf;
+nori      = nan; % this will be 3 in many cases, 1 after projectmom, and can be >3 for parcels
+ntri      = nan;
+ntet      = nan;
+nhex      = nan;
 ndim1     = nan;
 ndim2     = nan;
 ndim3     = nan;
@@ -149,6 +152,24 @@ if isfield(data, 'pos')
   npos = size(data.pos,1);
 elseif isfield(data, 'dim')
   npos = prod(data.dim);
+elseif isfield(data, 'leadfield')
+  npos = numel(data.leadfield);
+elseif isfield(data, 'filter')
+  npos = numel(data.filter);
+elseif isfield(data, 'inside')
+  npos = numel(data.inside);
+end
+
+if isfield(data, 'tri')
+  ntri = size(data.tri,1);
+end
+
+if isfield(data, 'tet')
+  ntet = size(data.tet,1);
+end
+
+if isfield(data, 'hex')
+  nhex = size(data.hex,1);
 end
 
 if isfield(data, 'dim')
@@ -171,7 +192,15 @@ if isfield(data, 'csdlabel')
     % one list of labels for all positions
     nori = length(data.csdlabel);
   end
-elseif isfinite(npos)
+elseif isfield(data, 'mom') && isfield(data, 'inside') && iscell(data.mom)
+  % this is used in LCMV beamformers
+  size1 = @(x) size(x, 1);
+  len = cellfun(size1, data.mom(data.inside));
+  if all(len==len(1))
+    % they all have the same length
+    nori = len(1);
+  end
+else
   % assume that there are three dipole orientations per source
   nori = 3;
 end
@@ -182,7 +211,7 @@ if isfield(data, 'topolabel')
 end
 
 if isfield(data, 'timestamp') && iscell(data.timestamp)
-  nspike = length(data.timestamp{1}); % spike data: only for the first channel
+  nspike = length(data.timestamp{1}); % only for the first spike unit
 end
 
 if isfield(data, 'dimord') && ~isempty(strfind(data.dimord, 'lag')) && isfield(data, 'coeffs')
@@ -193,8 +222,8 @@ end
 % determine the size of the actual data
 datsiz = getdimsiz(data, field);
 
-tok = {'subj' 'rpt' 'rpttap' 'chan' 'chancmb' 'freq' 'time' 'pos' 'ori' 'topochan' 'lag' 'dim1' 'dim2' 'dim3'};
-siz = [nsubj nrpt nrpttap nchan nchancmb nfreq ntime npos nori ntopochan nlag ndim1 ndim2 ndim3];
+tok = {'subj' 'rpt' 'rpttap' 'chan' 'chancmb' 'freq' 'time' 'topochan' 'lag' 'pos' 'ori' 'tri' 'tet' 'hex' 'dim1' 'dim2' 'dim3'};
+siz = [nsubj nrpt nrpttap nchan nchancmb nfreq ntime ntopochan nlag npos nori ntri ntet nhex ndim1 ndim2 ndim3];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ATTEMPT 2: a general dimord is present and might apply
@@ -245,17 +274,17 @@ switch field
     end
     
   case {'tri'}
-    if datsiz(2)==3
+    if isequalwithoutnans(datsiz, [ntri 3])
       dimord = 'tri_unknown';
     end
     
   case {'tet'}
-    if datsiz(2)==4
+    if isequalwithoutnans(datsiz, [ntet 4])
       dimord = 'tet_unknown';
     end
     
   case {'hex'}
-    if datsiz(2)==8
+    if isequalwithoutnans(datsiz, [nhex 8])
       dimord = 'hex_unknown';
     end
     
@@ -362,7 +391,7 @@ switch field
       dimord = 'pos_freq_time';
     end
     
-  case {'pow' 'noise' 'rv' 'nai'}
+  case {'pow' 'noise' 'rv' 'nai' 'kurtosis'}
     if isequal(datsiz, [npos ntime])
       dimord = 'pos_time';
     elseif isequal(datsiz, [npos nfreq])
@@ -441,8 +470,10 @@ switch field
     end
     
   case {'ori' 'eta'}
-    if isequal(datsiz, [npos nori]) || isequal(datsiz, [npos 3])
+    if isequal(datsiz, [npos nori]) || isequal(datsiz, [npos nori 1]) || isequal(datsiz, [npos 3]) || isequal(datsiz, [npos 3 1])
       dimord = 'pos_ori';
+    elseif isequal(datsiz, [npos 1 nori]) || isequal(datsiz, [npos 1 3])
+      dimord = 'pos_unknown_ori';
     end
     
   case {'csdlabel'}
@@ -546,11 +577,16 @@ if ~exist('dimord', 'var')
   end
   
   if all(~cellfun(@isempty, dimtok))
+    % each of the dimensions matches uniquely with a single known size
     if iscell(data.(field))
       dimtok{1} = ['{' dimtok{1} '}'];
     end
     dimord = sprintf('%s_', dimtok{:});
     dimord = dimord(1:end-1);
+    return
+  elseif ~isempty(dimtok{1}) && numel(datsiz)==2 && datsiz(2)==1
+    % it is often impossible to determine or specify what the 2nd dimension is in a Nx1 matrix
+    dimord = dimtok{1};
     return
   end
 end % if dimord does not exist
@@ -603,8 +639,10 @@ if ~exist('dimord', 'var')
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if isequal(datsiz, [ndim1 ndim2 ndim3])
     dimord = 'dim1_dim2_dim3';
+    return
   elseif isfield(data, 'pos') && prod(datsiz)==size(data.pos, 1)
     dimord = 'dim1_dim2_dim3';
+    return
   end
 end % if dimord does not exist
 
@@ -640,35 +678,35 @@ end % function
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function warning_dimord_could_not_be_determined(field,data)
-  msg=sprintf('could not determine dimord of "%s" in:',field);
+msg=sprintf('could not determine dimord of "%s" in:',field);
 
-  if isempty(which('evalc'))
-    % May not be available in Octave
-    content=sprintf('object of type ''%s''',class(data));
+if isempty(which('evalc'))
+  % May not be available in Octave
+  content=sprintf('object of type ''%s''',class(data));
+else
+  % in Octave, disp typically shows full data arrays which can result in
+  % very long output. Here we take out the middle part of the output if
+  % the output is very long (more than 40 lines)
+  full_content=evalc('disp(data)');
+  max_pre_post_lines=20;
+  
+  newline_pos=find(full_content==newline);
+  newline_pos=newline_pos(max_pre_post_lines:(end-max_pre_post_lines));
+  
+  if numel(newline_pos)>=2
+    pre_end=newline_pos(1)-1;
+    post_end=newline_pos(end)+1;
+    
+    content=sprintf('%s\n\n... long output omitted ...\n\n%s',...
+      full_content(1:pre_end),...
+      full_content(post_end:end));
   else
-    % in Octave, disp typically shows full data arrays which can result in
-    % very long output. Here we take out the middle part of the output if
-    % the output is very long (more than 40 lines)
-    full_content=evalc('disp(data)');
-    max_pre_post_lines=20;
-
-    newline_pos=find(full_content==newline);
-    newline_pos=newline_pos(max_pre_post_lines:(end-max_pre_post_lines));
-
-    if numel(newline_pos)>=2
-      pre_end=newline_pos(1)-1;
-      post_end=newline_pos(end)+1;
-
-      content=sprintf('%s\n\n... long output omitted ...\n\n%s',...
-                                full_content(1:pre_end),...
-                                full_content(post_end:end));
-    else
-      content=full_content;
-    end
+    content=full_content;
   end
+end
 
-  msg = sprintf('%s\n\n%s', msg, content);
-  ft_warning(msg);
+msg = sprintf('%s\n\n%s', msg, content);
+ft_warning(msg);
 end % function warning_dimord_could_not_be_determined
 
 

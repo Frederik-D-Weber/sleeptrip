@@ -96,14 +96,14 @@ if needhdr
   BSLASH=char(92);
 
   cname=computer;
-  if cname(1:2)=='PC' SLASH=BSLASH; end;
+  if cname(1:2)=='PC' SLASH=BSLASH; end
 
   try
     fid=fopen_or_error(FILENAME,'r','ieee-le');
   catch err
     fprintf(2,['Error LOADEDF: File ' FILENAME ' not found\n']);
     return;
-  end;
+  end
 
   EDF.FILE.FID=fid;
   EDF.FILE.OPEN = 1;
@@ -146,14 +146,14 @@ if needhdr
   EDF.Dur  = str2num(H1(245:252));     % 8 Byte  # duration of data record in sec
   EDF.NS   = str2num(H1(253:256));     % 8 Byte  # of signals
   
-  EDF.Label      = char(fread(EDF.FILE.FID,[16,EDF.NS],'char')');
-  EDF.Transducer = char(fread(EDF.FILE.FID,[80,EDF.NS],'char')');
-  EDF.PhysDim    = char(fread(EDF.FILE.FID,[ 8,EDF.NS],'char')');
+  EDF.Label      = char(fread(EDF.FILE.FID,[16,EDF.NS],'uint8=>char')');
+  EDF.Transducer = char(fread(EDF.FILE.FID,[80,EDF.NS],'uint8=>char')');
+  EDF.PhysDim    = char(fread(EDF.FILE.FID,[ 8,EDF.NS],'uint8=>char')');
   
-  EDF.PhysMin = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.PhysMax = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.DigMin  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.DigMax  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.PhysMin = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'uint8=>char')'));
+  EDF.PhysMax = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'uint8=>char')'));
+  EDF.DigMin  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'uint8=>char')'));
+  EDF.DigMax  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'uint8=>char')'));
   
   % match physical and digital maximum numbers in case one erronously
   % exedes the maximum number of channels.
@@ -194,8 +194,8 @@ if needhdr
                'Typically this is intentional as to indicate to a visualizer/browser to plot negative values up and the positive down.\n']);    %EDF.PhysMin = EDF.DigMin;
     %EDF.PhysMax = EDF.DigMax;
   end
-  EDF.PreFilt= char(fread(EDF.FILE.FID,[80,EDF.NS],'char')');
-  EDF.SPR = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));  % samples per data record
+  EDF.PreFilt= char(fread(EDF.FILE.FID,[80,EDF.NS],'uint8=>char')');
+  EDF.SPR = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'uint8=>char')'));  % samples per data record
   fseek(EDF.FILE.FID,32*EDF.NS,0);
 
 

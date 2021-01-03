@@ -43,6 +43,7 @@ function [headmodel, cfg] = ft_prepare_headmodel(cfg, data)
 %   dipoli             boundary element method, based on the implementation from Thom Oostendorp
 %   asa                boundary element method, based on the (commercial) ASA software
 %   simbio             finite element method, based on the SimBio software
+%   duneuro            finite element method, based on duneuro software
 %   fns                finite difference method, based on the FNS software
 %   infinite           electric dipole in an infinite homogenous medium
 %   halfspace          infinite homogenous medium on one side, vacuum on the other
@@ -100,7 +101,6 @@ function [headmodel, cfg] = ft_prepare_headmodel(cfg, data)
 %   cfg.elec
 %   cfg.grad
 %   cfg.transform
-%   cfg.unit
 %
 % HALFSPACE
 %   cfg.point
@@ -157,7 +157,6 @@ end
 
 % check if the input cfg is valid for this function
 cfg = ft_checkconfig(cfg, 'deprecated', 'geom');
-cfg = ft_checkconfig(cfg, 'forbidden', 'unit'); % see http://bugzilla.fieldtriptoolbox.org/show_bug.cgi?id=2375
 cfg = ft_checkconfig(cfg, 'renamed', {'geom', 'headshape'});
 cfg = ft_checkconfig(cfg, 'renamedval', {'method', 'bem_openmeeg', 'openmeeg'});
 cfg = ft_checkconfig(cfg, 'renamedval', {'method', 'bem_dipoli', 'dipoli'});
@@ -184,20 +183,23 @@ cfg.smooth          = ft_getopt(cfg, 'smooth');
 cfg.threshold       = ft_getopt(cfg, 'threshold');
 
 % other options
-cfg.numvertices     = ft_getopt(cfg, 'numvertices', 3000);
-cfg.isolatedsource  = ft_getopt(cfg, 'isolatedsource'); % used for dipoli and openmeeg
-cfg.point           = ft_getopt(cfg, 'point');          % used for halfspace
-cfg.submethod       = ft_getopt(cfg, 'submethod');      % used for halfspace
+cfg.numvertices     = ft_getopt(cfg, 'numvertices');
+cfg.isolatedsource  = ft_getopt(cfg, 'isolatedsource');   % used for dipoli and openmeeg
+cfg.point           = ft_getopt(cfg, 'point');            % used for halfspace
+cfg.submethod       = ft_getopt(cfg, 'submethod');        % used for halfspace
 cfg.feedback        = ft_getopt(cfg, 'feedback');
 cfg.radius          = ft_getopt(cfg, 'radius');
 cfg.maxradius       = ft_getopt(cfg, 'maxradius');
 cfg.baseline        = ft_getopt(cfg, 'baseline');
 cfg.singlesphere    = ft_getopt(cfg, 'singlesphere');
-cfg.tissueval       = ft_getopt(cfg, 'tissueval');      % used for simbio
+cfg.grid_filename   = ft_getopt(cfg, 'grid_filename');    % used for duneuro
+cfg.tensors_filename= ft_getopt(cfg, 'tensors_filename'); % used for duneuro
+cfg.tissueval       = ft_getopt(cfg, 'tissueval');        % used for simbio
 cfg.transform       = ft_getopt(cfg, 'transform');
-cfg.siunits         = ft_getopt(cfg, 'siunits', 'no');  % yes/no, convert the input and continue with SI units
-cfg.smooth          = ft_getopt(cfg, 'smooth');         % used for interpolate
-cfg.headmodel       = ft_getopt(cfg, 'headmodel');      % can contain CTF localspheres model
+cfg.siunits         = ft_getopt(cfg, 'siunits', 'no');    % yes/no, convert the input and continue with SI units
+cfg.unit            = ft_getopt(cfg, 'unit');
+cfg.smooth          = ft_getopt(cfg, 'smooth');           % used for interpolate
+cfg.headmodel       = ft_getopt(cfg, 'headmodel');        % can contain CTF localspheres model
 
 % the data can be passed as input arguments or can be read from disk
 hasdata = exist('data', 'var');
@@ -215,16 +217,21 @@ else
   data = [];
 end
 
+% convert to SI units
 if istrue(cfg.siunits)
-  % convert to SI units
+  cfg.unit = 'm';
+end
+
+% convert the geometrical data to the desired units for the source model
+if ~isempty(cfg.unit)
   if ~isempty(data)
-    data = ft_convert_units(data, 'm');
+    data = ft_convert_units(data, cfg.unit);
   end
   if isfield(cfg, 'grad') && ~isempty(cfg.grad)
-    cfg.grad = ft_convert_units(cfg.grad, 'm');
+    cfg.grad = ft_convert_units(cfg.grad, cfg.unit);
   end
   if isfield(cfg, 'elec') && ~isempty(cfg.elec)
-    cfg.elec = ft_convert_units(cfg.elec, 'm');
+    cfg.elec = ft_convert_units(cfg.elec, cfg.unit);
   end
 end
 
@@ -250,36 +257,45 @@ switch cfg.method
     % return an existing one
     headmodel = cfg.headmodel;
     cfg = rmfield(cfg, 'method'); % FIXME this is not documented
-  
+
   case 'interpolate'
     % the "data" here represents the output of FT_PREPARE_LEADFIELD, i.e. a regular dipole
     % grid with pre-computed leadfields
     sens = ft_fetch_sens(cfg, data);
     headmodel = ft_headmodel_interpolate(cfg.outputfile, sens, data, 'smooth', cfg.smooth);
-    
+
   case 'besa'
     % cfg.headmodel points to the filename of the FEM solution that was computed in BESA
     % cfg.elec points to the filename of the corresponding electrode specification
     sens = ft_fetch_sens(cfg, data);
     headmodel = ft_headmodel_interpolate(cfg.outputfile, sens, cfg.headmodel, 'smooth', cfg.smooth);
-    
+
   case 'asa'
     if ~ft_filetype(cfg.headmodel, 'asa_vol')
       ft_error('You must supply a valid cfg.headmodel for use with ASA headmodel')
     end
     headmodel = ft_headmodel_asa(cfg.headmodel);
-    
+
   case {'bemcp' 'dipoli' 'openmeeg'}
     % the low-level functions all need a mesh
     if isfield(data, 'pos') && isfield(data, 'tri')
-      geometry = data;
+      if isempty(cfg.numvertices) || isequal(cfg.numvertices, arrayfun(@(x) size(x.pos, 1), data))
+        % copy the input data
+        geometry = data;
+      else
+        % retriangulate the input data
+        tmpcfg.method = 'headshape';
+        tmpcfg.headshape = data;
+        tmpcfg.numvertices = cfg.numvertices;
+        geometry = ft_prepare_mesh(tmpcfg);
+      end
     elseif isfield(data, 'transform') && isfield(data, 'dim')
-      tmpcfg   = keepfields(cfg, {'numvertices', 'tissue', 'spmverion'});
+      tmpcfg   = keepfields(cfg, {'numvertices', 'tissue', 'spmversion'});
       geometry = ft_prepare_mesh(tmpcfg, data);
     else
       ft_error('Either a segmented MRI or data with closed triangulated mesh is required as data input for the bemcp, dipoli or openmeeg method');
     end
-    
+
     if strcmp(cfg.method, 'bemcp')
       headmodel = ft_headmodel_bemcp(geometry, 'conductivity', cfg.conductivity);
       if any(isnan(headmodel.mat(:)))
@@ -296,16 +312,16 @@ switch cfg.method
     else
       headmodel = ft_headmodel_openmeeg(geometry, 'conductivity', cfg.conductivity, 'isolatedsource', cfg.isolatedsource, 'tissue', cfg.tissue);
     end
-    
+
   case 'concentricspheres'
     cfg.fitind = ft_getopt(cfg, 'fitind');
     cfg.order  = ft_getopt(cfg, 'order');
-    
+
     % the low-level functions needs surface points, triangles are not needed
     if input_mesh || input_pos
       geometry = data;
     elseif input_seg
-      tmpcfg   = keepfields(cfg, {'numvertices', 'tissue', 'spmverion'});
+      tmpcfg   = keepfields(cfg, {'numvertices', 'tissue', 'spmversion'});
       geometry = ft_prepare_mesh(tmpcfg, data);
     elseif input_elec
       geometry.pos = data.chanpos;
@@ -317,9 +333,9 @@ switch cfg.method
     else
       ft_error('You must give a mesh, segmented MRI, sensor data type, or cfg.headshape');
     end
-    
+
     headmodel = ft_headmodel_concentricspheres(geometry, 'conductivity', cfg.conductivity, 'fitind', cfg.fitind, 'order', cfg.order);
-    
+
   case 'halfspace'
     if input_mesh || input_pos
       geometry = data;
@@ -329,16 +345,16 @@ switch cfg.method
     if isempty(cfg.point)
       ft_error('cfg.point is required for halfspace method');
     end
-    
+
     headmodel = ft_headmodel_halfspace(geometry, cfg.point, 'conductivity', cfg.conductivity, 'sourcemodel', cfg.submethod);
-    
+
   case 'infinite'
     % this takes no input arguments
     headmodel = ft_headmodel_infinite();
-    
+
   case {'localspheres' 'singlesphere' 'singleshell'}
     cfg.grad = ft_getopt(cfg, 'grad');           % used for localspheres
-    
+
     % these three methods all require a single set of surface points
     if input_mesh || input_pos
       geometry = data;
@@ -390,7 +406,7 @@ switch cfg.method
     else
       ft_error('this requires a mesh, set of surface points or a segmented mri');
     end
-    
+
     switch cfg.method
       case 'singlesphere'
         if ~isempty(cfg.headmodel)
@@ -409,7 +425,7 @@ switch cfg.method
           % construct the volume conduction model
           headmodel = ft_headmodel_singlesphere(geometry, 'conductivity', cfg.conductivity);
         end % headmodel
-        
+
       case 'localspheres'
         if ~isempty(cfg.headmodel)
           % read the volume conduction model from a CTF *.hdm file
@@ -431,7 +447,7 @@ switch cfg.method
           end
           headmodel = ft_headmodel_localspheres(geometry, cfg.grad, 'feedback', cfg.feedback, 'radius', cfg.radius, 'maxradius', cfg.maxradius, 'baseline', cfg.baseline, 'singlesphere', cfg.singlesphere);
         end % headmodel
-        
+
       case 'singleshell'
         cfg.order  = ft_getopt(cfg, 'order');
         if ~isfield(geometry, 'tri')
@@ -440,11 +456,11 @@ switch cfg.method
           geometry = ft_prepare_mesh(tmpcfg);
         end
         headmodel = ft_headmodel_singleshell(geometry, 'order', cfg.order);
-        
+
       otherwise
         ft_error('unsupported method %s', cfg.method);
     end % switch method
-    
+
   case {'simbio'}
     if input_elec || isfield(data, 'pos') || input_mesh
       geometry = data; % more serious checks of validity of the mesh occur inside ft_headmodel_simbio
@@ -452,7 +468,16 @@ switch cfg.method
       ft_error('you must provide a mesh with tetrahedral or hexahedral elements, where each element has a scalar or tensor conductivity');
     end
     headmodel = ft_headmodel_simbio(geometry, 'conductivity', cfg.conductivity);
-    
+
+  case {'duneuro'}
+    if input_mesh
+      geometry = data; % more serious checks of validity of the mesh occur inside ft_headmodel_duneuro
+    else
+      error('You must provide a mesh with tetrahedral or hexahedral elements, where each element has a scalar or tensor conductivity');
+    end
+    headmodel = ft_headmodel_duneuro(geometry, 'grid_filename', cfg.grid_filename, 'tensors_filename', cfg.tensors_filename,...
+      'conductivity', cfg.conductivity);
+
   case {'fns'}
     if input_seg
       data = ft_datatype_segmentation(data, 'segmentationstyle', 'indexed');
@@ -461,7 +486,7 @@ switch cfg.method
     end
     sens = ft_fetch_sens(cfg, data);
     headmodel = ft_headmodel_fns(data.seg, 'tissue', cfg.tissue, 'tissueval', cfg.tissueval, 'tissuecond', cfg.conductivity, 'sens', sens, 'transform', cfg.transform);
-    
+
   otherwise
     ft_error('unsupported method "%s"', cfg.method);
 end % switch method

@@ -1,5 +1,4 @@
 function inspect_bug3033
-
 % DEPENDENCY ft_plot_topo ft_databrowser ft_topoplotER
 
 cd(dccnpath('/home/common/matlab/fieldtrip/data/test/bug3033'));
@@ -14,9 +13,9 @@ if true
   cfg.trl(:,3) = 0;
   cfg.demean = 'yes';
   ctf = ft_preprocessing(cfg);
-  
+
   save ctf ctf
-  
+
   cfg = [];
   cfg.dataset = dccnpath('/home/common/matlab/fieldtrip/data/ftp/tutorial/natmeg/oddball1_mc_downsampled.fif');
   cfg.continuous = 'yes';
@@ -25,7 +24,7 @@ if true
   cfg.trl(:,3) = 0;
   cfg.demean = 'yes';
   elekta = ft_preprocessing(cfg);
-  
+
   save elekta elekta
 end
 
@@ -58,7 +57,7 @@ cfg.method = 'wavelet';
 ctf_meg_planar_freq = ft_timelockanalysis(cfg, ctf_meg_planar);
 
 
-%% make some derived data from the original Elekta file
+%% make some derived data from the original Neuromag/Elekta/Megin file
 
 cfg = [];
 cfg.channel = 'EEG';
@@ -103,4 +102,3 @@ cfg = [];
 cfg.layout = ft_prepare_layout(cfg, data);
 
 ft_databrowser(cfg, data);
-

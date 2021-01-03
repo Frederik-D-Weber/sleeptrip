@@ -7,23 +7,36 @@ function [varargout] = ft_plot_text(X, Y, str, varargin)
 %   ft_plot_text(X, Y, str, ...)
 %
 % Optional arguments should come in key-value pairs and can include
-%   Color               =
-%   FontSize            =
-%   FontName            =
-%   HorizontalAlignment =
-%   tag                 =
+%   'fontcolor'           = string, color specification (default = 'k')
+%   'fontsize'            = number, sets the size of the text (default = 10)
+%   'fontunits'           =
+%   'fontname'            =
+%   'fontweight'          =
+%   'horizontalalignment' =
+%   'verticalalignment'   =
+%   'interpreter'         = string, can be 'none', 'tex' or 'latex' (default = 'none')
+%   'rotation'            =
+%   'tag'                 = string, the name assigned to the object. All tags with the same name can be deleted in a figure, without deleting other parts of the figure.
 %
 % It is possible to plot the object in a local pseudo-axis (c.f. subplot), which is specfied as follows
-%   hpos        = horizontal position of the center of the local axes
-%   vpos        = vertical position of the center of the local axes
-%   width       = width of the local axes
-%   height      = height of the local axes
-%   hlim        = horizontal scaling limits within the local axes
-%   vlim        = vertical scaling limits within the local axes
+%   'hpos'                = horizontal position of the center of the local axes
+%   'vpos'                = vertical position of the center of the local axes
+%   'width'               = width of the local axes
+%   'height'              = height of the local axes
+%   'hlim'                = horizontal scaling limits within the local axes
+%   'vlim'                = vertical scaling limits within the local axes
+%
+% Example
+%   figure
+%   ft_plot_vector(randn(1,10), rand(1,10), 'hpos', 1, 'vpos', 1, 'width', 0.2, 'height', 0.2, 'box', true)
+%   ft_plot_text(0, 0 , '+',                'hpos', 1, 'vpos', 1, 'width', 0.2, 'height', 0.2)
+%   axis([0 2 0 2])
+%
+% See also FT_PLOT_VECTOR, FT_PLOT_MATRIX, FT_PLOT_LINE, FT_PLOT_BOX
 
 % Copyrights (C) 2009-2011, Robert Oostenveld
 %
-% This file is part of FieldTrip, see http://www.ru.nl/neuroimaging/fieldtrip
+% This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
 %
 %    FieldTrip is free software: you can redistribute it and/or modify
@@ -39,9 +52,9 @@ function [varargout] = ft_plot_text(X, Y, str, varargin)
 %    You should have received a copy of the GNU General Public License
 %    along with FieldTrip. If not, see <http://www.gnu.org/licenses/>.
 %
-% $Id: ft_plot_text.m 8271 2013-06-16 11:38:09Z roevdmei $
+% $Id$
 
-ws = warning('on', 'MATLAB:divideByZero');
+ws = ft_warning('on', 'MATLAB:divideByZero');
 
 % get the optional input arguments
 hpos                = ft_getopt(varargin, 'hpos');
@@ -50,18 +63,26 @@ width               = ft_getopt(varargin, 'width');
 height              = ft_getopt(varargin, 'height');
 hlim                = ft_getopt(varargin, 'hlim');
 vlim                = ft_getopt(varargin, 'vlim');
-Color               = ft_getopt(varargin, 'Color', 'k');
-FontSize            = ft_getopt(varargin, 'FontSize');
-FontName            = ft_getopt(varargin, 'FontName');
-FontUnits           = ft_getopt(varargin, 'FontUnits');
-HorizontalAlignment = ft_getopt(varargin, 'HorizontalAlignment', 'center');
-rotation            = ft_getopt(varargin, 'rotation', 0);
-VerticalAlignment   = ft_getopt(varargin, 'VerticalAlignment', 'middle');
 tag                 = ft_getopt(varargin, 'tag', '');
-interpreter         = ft_getopt(varargin, 'interpreter', 'tex');
+% these have to do with the font
+color               = ft_getopt(varargin, 'color', 'k');
+fontsize            = ft_getopt(varargin, 'fontsize',   get(0, 'defaulttextfontsize'));
+fontname            = ft_getopt(varargin, 'fontname',   get(0, 'defaulttextfontname'));
+fontweight          = ft_getopt(varargin, 'fontweight', get(0, 'defaulttextfontweight'));
+fontunits           = ft_getopt(varargin, 'fontunits',  get(0, 'defaulttextfontunits'));
+% these also have to do with the font
+horizontalalignment = ft_getopt(varargin, 'horizontalalignment', 'center');
+verticalalignment   = ft_getopt(varargin, 'verticalalignment', 'middle');
+rotation            = ft_getopt(varargin, 'rotation', 0);
+interpreter         = ft_getopt(varargin, 'interpreter', 'none');
 % fw begin
 ax          = ft_getopt(varargin, 'axis');
 % fw end
+
+% color management
+if ischar(color) && exist([color '.m'], 'file')
+  color = eval(color);
+end
 
 if isempty(hlim) && isempty(vlim) && isempty(hpos) && isempty(vpos) && isempty(height) && isempty(width)
   % no scaling is needed, the input X and Y are already fine
@@ -76,48 +97,41 @@ else
     abc = ax;
   end
   % fw end
-  
   if isempty(hlim)
+    ft_warning('use hlim/vlim when specifying local axes');
     hlim = abc([1 2]);
   end
   
   if isempty(vlim)
+    ft_warning('use hlim/vlim when specifying local axes');
     vlim = abc([3 4]);
   end
   
-  if isempty(hpos);
+  if isempty(hpos)
     hpos = (hlim(1)+hlim(2))/2;
   end
   
-  if isempty(vpos);
+  if isempty(vpos)
     vpos = (vlim(1)+vlim(2))/2;
   end
   
-  if isempty(width),
+  if isempty(width)
     width = hlim(2)-hlim(1);
   end
   
-  if isempty(height),
+  if isempty(height)
     height = vlim(2)-vlim(1);
   end
-  
-  % first shift the horizontal axis to zero
-  X = X - (hlim(1)+hlim(2))/2;
-  % then scale to length 1
+
+  X = X - hlim(1);
   X = X ./ (hlim(2)-hlim(1));
-  % then scale to the new width
   X = X .* width;
-  % then shift to the new horizontal position
-  X = X + hpos;
+  X = X + hpos - width/2;
   
-  % first shift the vertical axis to zero
-  Y = Y - (vlim(1)+vlim(2))/2;
-  % then scale to length 1
+  Y = Y - vlim(1);
   Y = Y ./ (vlim(2)-vlim(1));
-  % then scale to the new width
   Y = Y .* height;
-  % then shift to the new vertical position
-  Y = Y + vpos;
+  Y = Y + vpos - height/2;
   
 end % shortcut
 
@@ -125,20 +139,17 @@ end % shortcut
 X = double(X);
 Y = double(Y);
 
-h = text(X, Y, str);
-set(h, 'HorizontalAlignment', HorizontalAlignment);
-set(h, 'Color', Color);
-set(h, 'rotation', rotation);
-set(h, 'VerticalAlignment',VerticalAlignment); 
-if ~isempty(FontSize),  set(h, 'FontSize', FontSize);  end
-if ~isempty(FontName),  set(h, 'FontName', FontName);  end
-if ~isempty(FontUnits), set(h, 'FontUnits', FontUnits); end
+h = text(X, Y, str, 'color', color, 'fontunits', fontunits, 'fontsize', fontsize, 'fontname', fontname, 'fontweight', fontweight);
+if ~isempty(horizontalalignment), set(h, 'horizontalalignment', horizontalalignment); end
+if ~isempty(verticalalignment), set(h, 'verticalalignment', verticalalignment); end
+if ~isempty(rotation), set(h, 'rotation', rotation); end
+
 set(h, 'tag', tag);
 set(h, 'interpreter', interpreter);
 
 % the (optional) output is the handle
-if nargout == 1;
+if nargout == 1
   varargout{1} = h;
 end
 
-warning(ws); %revert to original state
+ft_warning(ws); % revert to original state

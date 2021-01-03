@@ -1,8 +1,7 @@
 function test_bug937
 
-% MEM 1500mb
+% MEM 2gb
 % WALLTIME 00:10:00
-
 % DEPENDENCY ft_prepare_mesh ft_headmodeltype ft_plot_mesh
 
 
@@ -25,7 +24,7 @@ assert(ft_headmodeltype(svol,'unknown'))
 
 tcfg=[];
 tcfg.headshape=svol.bnd;
-tcfg.method = 'concentricspheres'
+tcfg.method = 'concentricspheres';
 svolcs = ft_prepare_headmodel(tcfg);
 assert(ft_headmodeltype(svolcs,'concentricspheres'))
 

@@ -7,22 +7,24 @@ function h = ft_plot_line(X, Y, varargin)
 %   ft_plot_line(X, Y, ...)
 %
 % Optional arguments should come in key-value pairs and can include
-%   color      =
-%   linestyle  =
-%   linewidth  =
-%   tag        =
+%   'color'           =
+%   'linestyle'       =
+%   'linewidth'       =
+%   'tag'             = string, the name assigned to the object. All tags with the same name can be deleted in a figure, without deleting other parts of the figure.
 %
 % It is possible to plot the object in a local pseudo-axis (c.f. subplot), which is specfied as follows
-%   hpos        = horizontal position of the center of the local axes
-%   vpos        = vertical position of the center of the local axes
-%   width       = width of the local axes
-%   height      = height of the local axes
-%   hlim        = horizontal scaling limits within the local axes
-%   vlim        = vertical scaling limits within the local axes
+%   'hpos'            = horizontal position of the center of the local axes
+%   'vpos'            = vertical position of the center of the local axes
+%   'width'           = width of the local axes
+%   'height'          = height of the local axes
+%   'hlim'            = horizontal scaling limits within the local axes
+%   'vlim'            = vertical scaling limits within the local axes
+%
+% See also FT_PLOT_BOX, FT_PLOT_CROSSHAIR
 
 % Copyrights (C) 2009-2011, Robert Oostenveld
 %
-% This file is part of FieldTrip, see http://www.ru.nl/neuroimaging/fieldtrip
+% This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
 %
 %    FieldTrip is free software: you can redistribute it and/or modify
@@ -38,7 +40,7 @@ function h = ft_plot_line(X, Y, varargin)
 %    You should have received a copy of the GNU General Public License
 %    along with FieldTrip. If not, see <http://www.gnu.org/licenses/>.
 %
-% $Id: ft_plot_line.m 7123 2012-12-06 21:21:38Z roboos $
+% $Id$
 
 ws = warning('on', 'MATLAB:divideByZero');
 
@@ -56,6 +58,11 @@ tag         = ft_getopt(varargin, 'tag',        '');
 % fw begin
 ax          = ft_getopt(varargin, 'axis');
 % fw end
+
+% color management
+if ischar(color) && exist([color '.m'], 'file')
+  color = eval(color);
+end
 
 if isempty(hlim) && isempty(vlim) && isempty(hpos) && isempty(vpos) && isempty(height) && isempty(width)
   % no scaling is needed, the input X and Y are already fine
@@ -79,19 +86,19 @@ else
     vlim = abc([3 4]);
   end
   
-  if isempty(hpos);
+  if isempty(hpos)
     hpos = (hlim(1)+hlim(2))/2;
   end
   
-  if isempty(vpos);
+  if isempty(vpos)
     vpos = (vlim(1)+vlim(2))/2;
   end
   
-  if isempty(width),
+  if isempty(width)
     width = hlim(2)-hlim(1);
   end
   
-  if isempty(height),
+  if isempty(height)
     height = vlim(2)-vlim(1);
   end
   
@@ -118,4 +125,4 @@ end % shortcut
 h = line(X, Y, 'Color', color, 'LineStyle', linestyle, 'LineWidth', linewidth);
 set(h, 'tag', tag);
 
-warning(ws); %revert to original state
+warning(ws); % revert to original state

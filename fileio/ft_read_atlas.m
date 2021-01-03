@@ -14,6 +14,8 @@ function atlas = ft_read_atlas(filename, varargin)
 % Additional options should be specified in key-value pairs and can include
 %   'format'      = string, see below
 %   'unit'        = string, e.g. 'mm' (default is to keep it in the native units of the file)
+%   'map'         = string, 'maxprob' (default), or 'prob', for FSL-based atlases, providing 
+%                   either a probabilistic segmentation or a maximum a posterior probability map
 %
 % For individual surface-based atlases from FreeSurfer you should specify two
 % filenames as a cell-array: the first points to the file that contains information
@@ -28,8 +30,7 @@ function atlas = ft_read_atlas(filename, varargin)
 %
 % See also FT_READ_MRI, FT_READ_HEADSHAPE, FT_PREPARE_SOURCEMODEL, FT_SOURCEPARCELLATE, FT_PLOT_MESH
 
-% Copyright (C) 2005-2019, Robert Oostenveld, Ingrid Nieuwenhuis,
-% Jan-Mathijs Schoffelen, Arjen Stolk
+% Copyright (C) 2005-2019, Robert Oostenveld, Ingrid Nieuwenhuis, Jan-Mathijs Schoffelen, Arjen Stolk
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -65,7 +66,7 @@ filename = fetch_url(filename);
 [p, f, x] = fileparts(filename);
 
 if strcmp(f, 'TTatlas+tlrc')
-  defaultformat = 'afni';
+  format = 'afni';
 elseif strcmp(x, '.nii') && exist(fullfile(p, [f '.txt']), 'file')
   % This is a combination of nii+txt file, where the txt file may contain three columns like this
   %   FAG	Precentral_L	2001
@@ -81,40 +82,40 @@ elseif strcmp(x, '.nii') && exist(fullfile(p, [f '.txt']), 'file')
   fid = fopen_or_error(labelfile, 'rt');
   l1  = fgetl(fid);
   if strcmp(l1(1),'[') && strcmp(l1(end),']')
-    defaultformat = 'aal_ext';
+    format = 'aal_ext';
   elseif strcmp(l1,'Brainnetome Atlas')
-    defaultformat= 'brainnetome';
+    format= 'brainnetome';
   else
-    defaultformat = 'aal';
+    format = 'aal';
   end
   fclose(fid);
 elseif strcmp(x, '.mgz') && ~isempty(strfind(f, 'aparc')) || ~isempty(strfind(f, 'aseg'))
   % individual volume based segmentation from freesurfer
-  defaultformat = 'freesurfer_volume';
+  format = 'freesurfer_volume';
 elseif ft_filetype(filename, 'caret_label')
   % this is a gifti file that contains both the values for a set of
   % vertices as well as the labels.
-  defaultformat = 'caret_label';
+  format = 'caret_label';
 elseif ~isempty(strfind(filename, 'MPM'))
   % assume to be from the spm_anatomy toolbox
-  defaultformat = 'spm_anatomy';
+  format = 'spm_anatomy';
 elseif strcmp(x, '.xml') && (isfolder(strtok(fullfile(p,f), '_')) || isfolder(strtok(fullfile(p,f), '-')))
   % fsl-format atlas, this is assumed to consist of an .xml file that
   % specifies the labels, as well as the filenames of the files with the actual data stored
   % in a directory with the of the strtok'ed (with '-' or '_') file name.
-  defaultformat = 'fsl';
+  format = 'fsl';
 elseif strcmp(x, '.mat')
-  defaultformat = 'mat';
+  format = 'mat';
 elseif strcmp(x, '.nii') && ~isempty(strfind(f, 'Yeo2011_7Networks'))
-  defaultformat = 'yeo7';
+  format = 'yeo7';
 elseif strcmp(x, '.nii') && ~isempty(strfind(f, 'Yeo2011_17Networks'))
-  defaultformat = 'yeo17';
+  format = 'yeo17';
 else
-  defaultformat = 'wfu';
+  format = 'wfu';
 end
 
 % get the optional input arguments
-fileformat = ft_getopt(varargin, 'format', defaultformat);
+fileformat = ft_getopt(varargin, 'format', format);
 unit       = ft_getopt(varargin, 'unit');
 
 switch fileformat
@@ -137,7 +138,7 @@ switch fileformat
     % important to keep the original numbers or to make the list with
     % labels compact. This could be made optional.
     compact = true;
-    if compact
+    if compact && ~isempty(atlas.tissuelabel)
       [a, i, j] = unique(atlas.tissue);
       atlas.tissue = reshape(j-1, atlas.dim);
       atlas.tissuelabel = atlas.tissuelabel(a(a~=0));
@@ -162,13 +163,13 @@ switch fileformat
     % important to keep the original numbers or to make the list with
     % labels compact. This could be made optional.
     compact = true;
-    if compact
+    if compact && ~isempty(atlas.tissuelabel)
       [a, i, j] = unique(atlas.tissue);
       atlas.tissue = reshape(j-1, atlas.dim);
       atlas.tissuelabel = atlas.tissuelabel(a(a~=0));
     end
-  case 'brainnetome'
     
+  case 'brainnetome'
     % Brainnetome Atlas
     % L. Fan, et al.The Human Brainnetome Atlas: A New Brain Atlas Based on
     % Connectional Architecture. Cereb Cortex 2016; 26 (8): 3508-3526.
@@ -199,10 +200,11 @@ switch fileformat
     atlas = ft_read_mri(filename);
     
     % the AFNI atlas contains two volumes at 1mm resolution
-    atlas.brick0 = atlas.anatomy(:,:,:,1);
-    atlas.brick1 = atlas.anatomy(:,:,:,2);
-    atlas        = rmfield(atlas, 'anatomy');
-    atlas.coordsys  = 'tal';
+    atlas.brick0   = atlas.anatomy(:,:,:,1);
+    atlas.brick1   = atlas.anatomy(:,:,:,2);
+    atlas          = rmfield(atlas, 'anatomy');
+    atlas.dim      = atlas.dim([1 2 3]);
+    atlas.coordsys = 'tal';
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % the following information is from https://afni.nimh.nih.gov/afni/doc/misc/ttatlas_tlrc
@@ -678,10 +680,12 @@ switch fileformat
       
     else
       % the file does not exist
-      ft_warning('cannot locate %s, making fake tissue labels', filename2);
+      ft_warning('cannot locate %s, making default tissue labels', filename2);
+      
       value = [];
       label = {};
       for i=1:max(brick0(:))
+        % this is consistent with FIXSEGMENTATION
         value(i) = i;
         label{i} = sprintf('tissue %d', i);
       end
@@ -1844,10 +1848,10 @@ switch fileformat
     g = gifti(filename);
     
     rgba = [];
-    if isfield(g, 'labels'),
+    if isfield(g, 'labels')
       label = g.labels.name(:);
       key   = g.labels.key(:);
-      if isfield(g.labels, 'rgba'),
+      if isfield(g.labels, 'rgba')
         rgba = g.labels.rgba; % I'm not sure whether this always exists
       end
     else
@@ -1926,7 +1930,7 @@ switch fileformat
     load(filename);
     [p,f,e]      = fileparts(filename);
     mrifilename  = fullfile(p,[strrep(f, '_MPM',''),'.img']);
-    atlas        = ft_read_mri(mrifilename, 'format', 'analyze_img');
+    atlas        = ft_read_mri(mrifilename, 'dataformat', 'analyze_img');
     tissue       = round(atlas.anatomy); % I don't know why the values are non-integer
     atlas        = rmfield(atlas, 'anatomy');
     label        = {MAP.name}';
@@ -1949,6 +1953,16 @@ switch fileformat
     clear tissue newtissue;
     
   case 'fsl'
+    map = ft_getopt(varargin, 'map', 'maxprob');
+    switch map
+      case 'prob'
+        imagefile = 'imagefile';
+      case 'maxprob'
+        imagefile = 'summaryimagefile';
+      otherwise
+        error('unknown map requested');
+    end
+    
     ft_hastoolbox('gifti', 1);
     hdr = xmltree(filename);
     hdr = convert(hdr);
@@ -1956,16 +1970,43 @@ switch fileformat
     % get the full path
     [p, f , x]  = fileparts(filename);
     
-    % this uses the thresholded image
-    mrifilename = fullfile(p, [hdr.header.images{1}.summaryimagefile,'.nii.gz']);
-    atlas       = ft_read_mri(mrifilename);
-    tissue      = atlas.anatomy;
-    atlas       = rmfield(atlas, 'anatomy');
-    label       = hdr.data.label(:);
+    mrifilename = sprintf('%s.nii.gz', hdr.header.images{1}.(imagefile));
+    if isequal(mrifilename(1), '/')
+      mrifilename = mrifilename(2:end); % remove first backslash to avoid error if no full path was given
+    end
     
-    atlas.tissue      = tissue;
-    atlas.tissuelabel = label;
-    atlas.coordsys    = 'mni';
+    % this uses the thresholded image
+    switch map
+      case 'maxprob'
+        atlas        = ft_read_mri(fullfile(p, mrifilename));
+        atlas.tissue = atlas.anatomy;
+        atlas        = rmfield(atlas, 'anatomy');
+        atlas.tissuelabel = hdr.data.label(:);
+        atlas.coordsys    = 'mni';
+      case 'prob'
+        tmp   = ft_read_mri(fullfile(p, mrifilename));
+        atlas = removefields(tmp, 'anatomy');
+        for m = 1:numel(hdr.data.label)
+          fn = strrep(hdr.data.label{m}, ' ' , '_');
+          fn = strrep(fn, '-', '_');
+          fn = strrep(fn, '(', '');
+          fn = strrep(fn, ')', '');
+          
+          atlas.(fn) = tmp.anatomy(:,:,:,m);
+          if ~isa(atlas.(fn), 'double') && ~isa(atlas.(fn), 'single')
+            % ensure that the probabilistic values are either double or
+            % single precision, do single precision to save memory
+            atlas.(fn) = single(atlas.(fn));
+          end
+          if any(atlas.(fn)(:)>1) & all(atlas.(fn)(:)<=100)
+            % convert to probability values, assuming 100 to be max
+            atlas.(fn) = atlas.(fn)./100;
+          end
+        end
+        atlas.coordsys = 'mni';
+        atlas.dim      = atlas.dim(1:3);
+    end
+    
     
   case 'mat'
     tmp = load(filename);
@@ -2005,7 +2046,7 @@ switch fileformat
     
   case 'yeo7'
     % this uses Yeo2011_7Networks_MNI152_FreeSurferConformed1mm_LiberalMask_colin27.nii, which is
-    % the 7 network parcelation from https://surfer.nmr.mgh.harvard.edu/fswiki/CorticalParcellation_Yeo2011 
+    % the 7 network parcellation from https://surfer.nmr.mgh.harvard.edu/fswiki/CorticalParcellation_Yeo2011 
     % aligned to the colin27 template (skull-stripped version of single_subj_T1_1mm.nii) 
     % using AFNI's 3dQwarp and 3dNwarpApply
     atlas = ft_read_mri(filename);

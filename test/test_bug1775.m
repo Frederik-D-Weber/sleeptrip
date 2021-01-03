@@ -2,7 +2,6 @@ function test_bug1775
 
 % MEM 2gb
 % WALLTIME 00:10:00
-
 % DEPENDENCY ft_sourceparcellate ft_checkdata ft_datatype_source ft_datatype_volume ft_datatype_parcellation ft_datatype_segmentation
 
 %% create a set of sensors
@@ -36,7 +35,7 @@ vol = ft_datatype_headmodel(vol);
 cfg = [];
 cfg.grad            = grad;
 cfg.headmodel       = vol;
-cfg.sourcemodel.resolution = 2; % cm
+cfg.resolution      = 2; % cm
 cfg.channel         = 'all';
 grid = ft_prepare_leadfield(cfg);
 

@@ -70,7 +70,7 @@ function [freq] = ft_freqanalysis(cfg, data)
 % conventional single taper (e.g. Hanning) or using the multiple tapers based on
 % discrete prolate spheroidal sequences (DPSS), also known as the Slepian
 % sequence.
-%   cfg.taper      = 'dpss', 'hanning' or many others, see WINDOW (default = 'dpss')
+%   cfg.taper      = 'dpss', 'hanning', 'hanning_proportion' or many others, see WINDOW (default = 'dpss')
 %                     For cfg.output='powandcsd', you should specify the channel combinations
 %                     between which to compute the cross-spectra as cfg.channelcmb. Otherwise
 %                     you should specify only the channels in cfg.channel.
@@ -169,6 +169,7 @@ function [freq] = ft_freqanalysis(cfg, data)
 % Copyright (C) 2003-2006, F.C. Donders Centre, Pascal Fries
 % Copyright (C) 2004-2006, F.C. Donders Centre, Markus Siegel
 % Copyright (C) 2007-2012, DCCN, The FieldTrip team
+% Copyright (C) 2019, Frederik D. Weber (mem_eff version)
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -226,7 +227,7 @@ cfg = ft_checkconfig(cfg, 'forbidden',   {'latency'}); % see bug 1376 and 1076
 cfg = ft_checkconfig(cfg, 'renamedval',  {'method', 'wltconvol', 'wavelet'});
 
 % select channels and trials of interest, by default this will select all channels and trials
-tmpcfg = keepfields(cfg, {'trials', 'channel', 'showcallinfo'});
+tmpcfg = keepfields(cfg, {'trials', 'channel', 'tolerance', 'showcallinfo'});
 data = ft_selectdata(tmpcfg, data);
 % restore the provenance information
 [cfg, data] = rollback_provenance(cfg, data);
@@ -250,7 +251,8 @@ switch cfg.method
     end
     % check for foi above Nyquist
     if isfield(cfg, 'foi')
-      if any(cfg.foi > (data.fsample/2))
+      if any(cfg.foi > (data.fsample+100*eps(data.fsample))/2)
+        % add a small number to allow for numeric tolerance issues
         ft_error('frequencies in cfg.foi are above Nyquist')
       end
       if isequal(cfg.taper, 'dpss') && not(isfield(cfg, 'tapsmofrq'))
@@ -289,13 +291,17 @@ switch cfg.method
     end
     
   case 'irasa'
-    ft_warning('the irasa method is under construction')
     cfg.taper       = ft_getopt(cfg, 'taper', 'hanning');
+    cfg.output      = ft_getopt(cfg, 'output', 'pow');
+    cfg.pad         = ft_getopt(cfg, 'pad', 'nextpow2');
     if ~isequal(cfg.taper, 'hanning')
-      ft_error('only hanning tapers are supported');
+      ft_error('the irasa method supports hanning tapers only');
     end
-    if isfield(cfg, 'output') && ~isequal(cfg.output, 'pow')
+    if ~isequal(cfg.output, 'pow')
       ft_error('the irasa method outputs power only');
+    end
+    if ~isequal(cfg.pad, 'nextpow2')
+      ft_warning('consider using cfg.pad=''nextpow2'' for the irasa method');
     end
     % check for foi above Nyquist
     if isfield(cfg, 'foi')
@@ -491,17 +497,18 @@ end
 % this is done on trial basis to save memory
 
 ft_progress('init', cfg.feedback, 'processing trials');
+trlcnt = []; % only some methods need this variable, but it needs to be defined outside the trial loop
 for itrial = 1:ntrials
   
-  %disp(['processing trial ' num2str(itrial) ': ' num2str(size(data.trial{itrial},2)) ' samples']);
   fbopt.i = itrial;
   fbopt.n = ntrials;
   
   dat = data.trial{itrial}; % chansel has already been performed
   time = data.time{itrial};
   
-  % Perform specest call and set some specifics
   clear spectrum % in case of very large trials, this lowers peak mem usage a bit
+  
+  % Perform specest call and set some specifics
   switch cfg.method
     
     case {'mtmconvol', 'mtmconvol_memeff'}

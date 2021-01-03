@@ -132,7 +132,7 @@ while true
     endsample  = hdr.nSamples*hdr.nTrials;
   elseif strcmp(cfg.bufferdata, 'first')
     begsample  = prevSample+1;
-    endsample  = prevSample+blocksize ;
+    endsample  = prevSample+blocksize;
   else
     ft_error('unsupported value for cfg.bufferdata');
   end
@@ -208,7 +208,7 @@ while true
   % shift each of the channels with a given offset
   nchan = size(dat,1);
   for i=1:nchan
-    dat(i,:) = dat(i,:) + (nchan-i-1)*cfg.offset(i);
+    dat(i,:) = dat(i,:) + cfg.offset(i);
   end
   
   % plot the data

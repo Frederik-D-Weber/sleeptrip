@@ -119,9 +119,11 @@ tmpcfg = keepfields(cfg, {'frequency', 'avgoverfreq', 'latency', 'avgovertime', 
 % restore the provenance information
 [cfg, varargin{:}] = rollback_provenance(cfg, varargin{:});
 
+% neighbours are required for clustering with multiple channels
 if strcmp(cfg.correctm, 'cluster') && length(varargin{1}.label)>1
-  % neighbours are required for clustering with multiple channels
-  tmpcfg = keepfields(cfg, {'neighbours', 'neighbourdist', 'channel', 'elec', 'grad', 'opto', 'showcallinfo'});
+  % this is limited to reading neighbours from disk and/or selecting channels
+  % the user should call FT_PREPARE_NEIGHBOURS directly for the actual construction
+  tmpcfg = keepfields(cfg, {'neighbours', 'channel', 'showcallinfo'});
   cfg.neighbours = ft_prepare_neighbours(tmpcfg);
 end
 
@@ -170,7 +172,7 @@ statmethod = ft_getuserfun(cfg.method, 'statistics');
 if isempty(statmethod)
   ft_error('could not find the corresponding function for cfg.method="%s"\n', cfg.method);
 else
-  fprintf('using "%s" for the statistical testing\n', func2str(statmethod));
+  ft_info('using "%s" for the statistical testing\n', func2str(statmethod));
 end
 
 % check that the design completely describes the data

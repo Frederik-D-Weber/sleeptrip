@@ -32,6 +32,9 @@ function [shape] = ft_read_headshape(filename, varargin)
 %   'matlab'       containing FieldTrip or BrainStorm headshapes or cortical meshes
 %   'stl'          STereoLithography file format, for use with CAD and/or generic 3D mesh editing programs
 %   'vtk'          Visualization ToolKit file format, for use with Paraview
+%   'vtk_xml'      Visualization ToolKit file format
+%   'tck'          Mrtrix track file
+%   'trk'          Trackvis trk file
 %   'mne_*'        MNE surface description in ASCII format ('mne_tri') or MNE source grid in ascii format, described as 3D points ('mne_pos')
 %   'obj'          Wavefront .obj file obtained with the structure.io
 %   'off'
@@ -59,7 +62,7 @@ function [shape] = ft_read_headshape(filename, varargin)
 %
 % See also FT_READ_HEADMODEL, FT_READ_SENS, FT_READ_ATLAS, FT_WRITE_HEADSHAPE
 
-% Copyright (C) 2008-2017 Robert Oostenveld
+% Copyright (C) 2008-2019 Robert Oostenveld
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -81,6 +84,7 @@ function [shape] = ft_read_headshape(filename, varargin)
 
 % get the options
 annotationfile = ft_getopt(varargin, 'annotationfile');
+useimage       = ft_getopt(varargin, 'useimage', true); % use image if hasimage
 concatenate    = ft_getopt(varargin, 'concatenate', 'yes');
 coordsys       = ft_getopt(varargin, 'coordsys', 'head');    % for ctf or neuromag_mne coil positions, the alternative is dewar
 fileformat     = ft_getopt(varargin, 'format');
@@ -198,13 +202,19 @@ end % if iscell
 
 % checks if there exists a .jpg file of 'filename'
 [pathstr,name]  = fileparts(filename);
-if exist(fullfile(pathstr,[name,'.jpg']))
-  image    = fullfile(pathstr,[name,'.jpg']);
-  hasimage = true;
+if useimage
+  if exist(fullfile(pathstr,[name,'.jpg']), 'file')
+    image    = fullfile(pathstr,[name,'.jpg']);
+    hasimage = true;
+  elseif exist(fullfile(pathstr,[name,'.png']), 'file')
+    image    = fullfile(pathstr,[name,'.png']);
+    hasimage = true;
+  else
+    hasimage = false;
+  end
 else
   hasimage = false;
 end
-
 
 % optionally get the data from the URL and make a temporary local copy
 filename = fetch_url(filename);
@@ -255,9 +265,9 @@ switch fileformat
     orig = read_ctf_shape(filename);
     shape.pos = orig.pos;
     
-    % The file also contains fiducial information, but those are in MRI voxels and 
+    % The file also contains fiducial information, but those are in MRI voxels and
     % inconsistent with the headshape itself.
-    % 
+    %
     % shape.fid.label = {'NASION', 'LEFT_EAR', 'RIGHT_EAR'};
     % shape.fid.pos = zeros(0,3); % start with an empty array
     % for i = 1:numel(shape.fid.label)
@@ -342,7 +352,7 @@ switch fileformat
     filename    = strrep(filename, '.surf.', '.shape.');
     filename    = strrep(filename, '.topo.', '.shape.');
     filename    = strrep(filename, '.coord.', '.shape.');
-
+    
     [p,f,e]     = fileparts(filename);
     tok         = tokenize(f, '.');
     if length(tok)>2
@@ -380,7 +390,7 @@ switch fileformat
     else
       seltopo = 1;
     end
-      
+    
     % recursively call ft_read_headshape
     tmp1 = ft_read_headshape(coordfiles{selcoord});
     tmp2 = ft_read_headshape(topofiles{seltopo});
@@ -946,31 +956,119 @@ switch fileformat
   case 'obj'
     ft_hastoolbox('wavefront', 1);
     % Only tested for structure.io .obj thus far
-    obj = read_wobj(filename);
-    shape.pos     = obj.vertices(:,1:3);
-    shape.pos     = shape.pos - repmat(sum(shape.pos)/length(shape.pos),[length(shape.pos),1]); %centering vertices
-    shape.tri     = obj.objects(end).data.vertices;
+    [vertex, faces, texture, textureIdx] = read_obj_new(filename);
+    
+    % the rest of the code assumes the texture to be defined on the vertices
+    % and the faces/vertices to be self contained, i.e. not more vertices
+    % than faces
+    if size(texture,1)==size(vertex,1)
+      texture_per_vert = true;
+    else
+      texture_per_vert = false;
+    end
+    
+    % prune the vertices and keep the faces consistent, remove the faces
+    % with 0's first
+    allzeros = sum(faces==0,2)==3;
+    faces(allzeros, :)      = [];
+    textureIdx(allzeros, :) = [];
+    ufacesIdx = unique(faces(:));
+    remove = setdiff((1:size(vertex,1))', ufacesIdx);
+    if ~isempty(remove)
+      [vertex, faces] = remove_vertices(vertex, faces, remove);
+    end
+    
+    %     if fixtexture
+    %       texture_old = texture;
+    %       texture     = zeros(size(vertex,1), size(texture_old,2));
+    %
+    %       % create the vertex-based texture as an average across the faces that
+    %       % contain the vertex
+    %       for k = 1:size(vertex,1)
+    %         sel = textureIdx(faces==k);
+    %         texture(k,:) = mean(texture_old(mode(sel),:));
+    %       end
+    %     end
+    
+    shape.pos   = vertex;
+    shape.pos   = shape.pos - repmat(sum(shape.pos)/length(shape.pos),...
+      [length(shape.pos),1]); %centering vertices
+    shape.tri   = faces; % remove the last row which is zeros
+    
     if hasimage
-      texture = obj.vertices_texture;
-      
-      % Refines the mesh and textures to increase resolution of the colormapping
-      [shape.pos, shape.tri, texture] = refine(shape.pos, shape.tri, 'banks', texture);
-      
-      picture = imread(image);
-      color   = uint8(zeros(length(shape.pos),3));
-      for i=1:length(shape.pos)
-        color(i,1:3) = picture(floor((1-texture(i,2))*length(picture)),1+floor(texture(i,1)*length(picture)),1:3);
+      if texture_per_vert
+        % Refines the mesh and textures to increase resolution of the colormapping
+        [shape.pos, shape.tri, texture] = refine(shape.pos, shape.tri,...
+          'banks', texture);
+        
+        picture = imread(image);
+        color   = (zeros(length(shape.pos),3));
+        for i=1:length(shape.pos)
+          color(i,1:3) = picture(floor((1-texture(i,2))*length(picture)),...
+            1+floor(texture(i,1)*length(picture)),1:3);
+        end
+      else
+        % do the texture to color mapping in a different way, without
+        % additional refinement
+        picture = flip(imread(image),1);
+        [sy, sx, sz] = size(picture);
+        picture = reshape(picture, sy*sx, sz);
+        
+        % make image 3D if grayscale
+        if sz == 1
+          picture = repmat(picture, 1, 3);
+        end
+        [uniq_vert, ix] = unique(shape.tri);
+        texture_ix = textureIdx(ix);
+        
+        % get the indices into the image
+        x   = abs(round(texture(:,1)*(sx-1)))+1;
+        y   = abs(round(texture(:,2)*(sy-1)))+1;
+        xy  = sub2ind([sy sx],y,x);
+        sel = xy(texture_ix);
+        color = double(picture(sel,:))/255;
       end
+      
+      % If color is specified as 0-255 rather than 0-1 correct by dividing
+      % by 255
+      if range(color(:)) > 1
+        color = color./255;
+      end
+      
       shape.color = color;
-    elseif size(obj.vertices,2)==6
+      
+    elseif size(vertex,2)==6
       % the vertices also contain RGB colors
-      shape.color = obj.vertices(:,4:6);
+      
+      color = vertex(:,4:6);
+      % If color is specified as 0-255 rather than 0-1 correct by dividing
+      % by 255
+      if range(color(:)) > 1
+        color = color./255;
+      end
+      
+      shape.color = color;
     end
     
   case 'vtk'
     [pos, tri] = read_vtk(filename);
     shape.pos = pos;
     shape.tri = tri;
+    
+  case 'vtk_xml'
+    data = read_vtk_xml(filename);
+    shape.orig = data;
+    shape.pos  = data.Points;
+    if isfield(data, 'Lines')
+      shape.line = data.Lines;
+    end
+    
+  case 'mrtrix_tck'
+    ft_hastoolbox('mrtrix', 1);
+    shape = read_tck(filename);
+    
+  case 'trackvis_trk'
+    shape = read_trk(filename);
     
   case 'off'
     [pos, plc] = read_off(filename);
@@ -1180,10 +1278,9 @@ switch fileformat
     success = false;
     
     if ~success
-      % try reading it as electrode positions
-      % and treat those as fiducials
+      % try reading it as electrode positions and treat those as fiducials
       try
-        elec = ft_read_sens(filename);
+        elec = ft_read_sens(filename, 'senstype', 'eeg');
         if ~ft_senstype(elec, 'eeg')
           ft_error('headshape information can not be read from MEG gradiometer file');
         else

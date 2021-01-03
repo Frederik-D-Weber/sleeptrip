@@ -46,6 +46,22 @@ function [cfg] = ft_singleplotTFR(cfg, data)
 %                       (default) behavior of this option depends on the dimor
 %                       of the input data (see below).
 %
+% The following options for the scaling of the EEG, EOG, ECG, EMG, MEG and NIRS channels
+% is optional and can be used to bring the absolute numbers of the different
+% channel types in the same range (e.g. fT and uV). The channel types are determined
+% from the input data using FT_CHANNELSELECTION.
+%   cfg.eegscale       = number, scaling to apply to the EEG channels prior to display
+%   cfg.eogscale       = number, scaling to apply to the EOG channels prior to display
+%   cfg.ecgscale       = number, scaling to apply to the ECG channels prior to display
+%   cfg.emgscale       = number, scaling to apply to the EMG channels prior to display
+%   cfg.megscale       = number, scaling to apply to the MEG channels prior to display
+%   cfg.gradscale      = number, scaling to apply to the MEG gradiometer channels prior to display (in addition to the cfg.megscale factor)
+%   cfg.magscale       = number, scaling to apply to the MEG magnetometer channels prior to display (in addition to the cfg.megscale factor)
+%   cfg.nirsscale      = number, scaling to apply to the NIRS channels prior to display
+%   cfg.mychanscale    = number, scaling to apply to the channels specified in cfg.mychan
+%   cfg.mychan         = Nx1 cell-array with selection of channels
+%   cfg.chanscale      = Nx1 vector with scaling factors, one per channel specified in cfg.channel
+%
 % For the plotting of directional connectivity data the cfg.directionality
 % option determines what is plotted. The default value and the supported
 % functionality depend on the dimord of the input data. If the input data
@@ -128,6 +144,7 @@ cfg = ft_checkconfig(cfg, 'renamed',     {'channelindex',   'channel'});
 cfg = ft_checkconfig(cfg, 'renamed',     {'channelname',    'channel'});
 cfg = ft_checkconfig(cfg, 'renamed',     {'cohrefchannel',  'refchannel'});
 cfg = ft_checkconfig(cfg, 'renamed',	   {'zparam',         'parameter'});
+cfg = ft_checkconfig(cfg, 'renamed',     {'newfigure',      'figure'});
 
 % Set the defaults
 cfg.baseline       = ft_getopt(cfg, 'baseline',      'no');
@@ -141,7 +158,6 @@ cfg.colorbar       = ft_getopt(cfg, 'colorbar',      'yes');
 cfg.colorbartext   = ft_getopt(cfg, 'colorbartext',   '');
 cfg.interactive    = ft_getopt(cfg, 'interactive',   'yes');
 cfg.hotkeys        = ft_getopt(cfg, 'hotkeys',       'yes');
-cfg.renderer       = ft_getopt(cfg, 'renderer',       []); % let MATLAB decide on the default
 cfg.maskalpha      = ft_getopt(cfg, 'maskalpha',      1);
 cfg.maskparameter  = ft_getopt(cfg, 'maskparameter',  []);
 cfg.maskstyle      = ft_getopt(cfg, 'maskstyle',     'opacity');
@@ -151,6 +167,7 @@ cfg.masknans       = ft_getopt(cfg, 'masknans',      'yes');
 cfg.directionality = ft_getopt(cfg, 'directionality', []);
 cfg.figurename     = ft_getopt(cfg, 'figurename',     []);
 cfg.parameter      = ft_getopt(cfg, 'parameter',     'powspctrm');
+cfg.renderer       = ft_getopt(cfg, 'renderer',       []); % let MATLAB decide on the default
 
 % this is needed for the figure title
 if isfield(cfg, 'dataname') && ~isempty(cfg.dataname)
@@ -257,10 +274,20 @@ if startsWith(dimord, 'chan_chan_') || startsWith(dimord, 'chancmb_')
   return
 end
 
-% Apply channel-type specific scaling
-tmpcfg = keepfields(cfg, {'parameter', 'chanscale', 'ecgscale', 'eegscale', 'emgscale', 'eogscale', 'gradscale', 'magscale', 'megscale', 'mychan', 'mychanscale'});
-[data] = chanscale_common(tmpcfg, data);
 
+% Apply channel-type specific scaling
+fn = fieldnames(cfg);
+fn = setdiff(fn, {'skipscale', 'showscale', 'gridscale'}); % these are for the layout and plotting, not for CHANSCALE_COMMON
+fn = fn(endsWith(fn, 'scale') | startsWith(fn, 'mychan') | strcmp(fn, 'channel') | strcmp(fn, 'parameter'));
+tmpcfg = keepfields(cfg, fn);
+if ~isempty(tmpcfg)
+  data = chanscale_common(tmpcfg, data);
+  % remove the scaling fields from the configuration, to prevent them from being called again in interactive mode
+  % but keep the parameter and channel field
+  cfg = removefields(cfg, setdiff(fn, {'parameter', 'channel'}));
+else
+  % do nothing
+end
 
 %% Section 3: select the data to be plotted and determine min/max range
 
@@ -348,8 +375,9 @@ end
 
 %% Section 4: do the actual plotting
 
-cla
-hold on
+% open a new figure, or add it to the existing one
+% note that in general adding a TFR to an existing one does not make sense, since they will overlap
+open_figure(keepfields(cfg, {'figure', 'clearfigure', 'position', 'visible', 'renderer', 'figurename', 'title'}));
 
 zval = mean(datamatrix, 1); % over channels
 zval = reshape(zval, size(zval,2), size(zval,3));
@@ -392,19 +420,16 @@ end
 
 % set colormap
 if isfield(cfg, 'colormap')
-  if ~isnumeric(cfg.colormap)
-    cfg.colormap = colormap(cfg.colormap);
+  if ischar(cfg.colormap)
+    cfg.colormap = ft_colormap(cfg.colormap);
+  elseif iscell(cfg.colormap)
+    cfg.colormap = ft_colormap(cfg.colormap{:});
   end
   if size(cfg.colormap,2)~=3
     ft_error('colormap must be a Nx3 matrix');
   else
     set(gcf, 'colormap', cfg.colormap);
   end
-end
-
-% Set renderer if specified
-if ~isempty(cfg.renderer)
-  set(gcf, 'renderer', cfg.renderer)
 end
 
 axis xy
@@ -452,7 +477,6 @@ if isempty(get(gcf, 'Name'))
 end
 
 axis tight
-hold off
 
 % Make the figure interactive
 if strcmp(cfg.interactive, 'yes')

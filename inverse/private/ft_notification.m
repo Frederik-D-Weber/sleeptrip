@@ -1,8 +1,8 @@
 function [varargout] = ft_notification(varargin)
 
 % FT_NOTIFICATION works mostly like the WARNING and ERROR commands in MATLAB and
-% is called by FT_ERROR, FT_WARNING, FT_NOTICE, FT_INFO, FT_DEBUG. Note that you
-% should not call this function directly.
+% is called by FT_ERROR, FT_WARNING, FT_NOTICE, FT_INFO and FT_DEBUG. Please note
+% that you should not call this function directly.
 %
 % Some examples:
 %  ft_info on
@@ -21,7 +21,7 @@ function [varargout] = ft_notification(varargin)
 %  ft_info clear      % clears the status of all notifications
 %  ft_info timeout 10 % sets the timeout (for 'once') to 10 seconds
 %
-% See also DEFAULTID
+% See also DEFAULTID, FT_ERROR, FT_WARNING, FT_NOTICE, FT_INFO, FT_DEBUG, ERROR, WARNING
 
 % Copyright (C) 2012-2017, Robert Oostenveld, J?rn M. Horschig
 %
@@ -325,6 +325,11 @@ switch varargin{1}
     % use an automatically generated default identifier
     if isempty(msgId)
       msgId = defaultId;
+    end
+    
+    if varargin{1}(end) =='\'
+      % a lone trailing backslash, '\' , is not a valid control character
+      varargin{1}(end+1) = '\';
     end
     
     % store the last notification

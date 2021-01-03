@@ -2,7 +2,6 @@ function test_bug1820
 
 % MEM 12gb
 % WALLTIME 04:30:00
-
 % DEPENDENCY ft_prepare_mesh ft_headmodel_simbio ft_prepare_vol_sens ft_compute_leadfield
 
 % See http://bugzilla.fieldtriptoolbox.org/show_bug.cgi?id=1820
@@ -62,7 +61,7 @@ end
 %% create electrodes
 % Create a set of 42 electrodes on the outer surface
 currdir = pwd;
-[~,ftpath] = ft_version();
+[ftver, ftpath] = ft_version;
 cd([ftpath '/test/private/']);
 r = radius1;
 [pnt, tri] = mesh_sphere(42); 

@@ -14,10 +14,11 @@ function [neighbours, cfg] = ft_prepare_neighbours(cfg, data)
 % sensor description.
 %
 % The configuration can contain
+%   cfg.channel       = channels in the data for which neighbours should be determined
 %   cfg.method        = 'distance', 'triangulation' or 'template'
 %   cfg.template      = name of the template file, e.g. CTF275_neighb.mat
-%   cfg.neighbourdist = number, maximum distance between neighbouring sensors (only for 'distance')
-%   cfg.channel       = channels for which neighbours should be found
+%   cfg.neighbourdist = number, maximum distance between neighbouring sensors (only for 'distance', default is 40 mm)
+%   cfg.compress      = 'yes' or 'no', add extra edges by compressing in the x- and y-direction (only for 'triangulation', default is yes)
 %   cfg.feedback      = 'yes' or 'no' (default = 'no')
 %
 % The 3D sensor positions can be present in the data or can be specified as
@@ -41,7 +42,7 @@ function [neighbours, cfg] = ft_prepare_neighbours(cfg, data)
 %
 % See also FT_NEIGHBOURPLOT, FT_PREPARE_LAYOUT, FT_DATATYPE_SENS, FT_READ_SENS
 
-% Copyright (C) 2006-2011, Eric Maris, Jorn M. Horschig, Robert Oostenveld
+% Copyright (C) 2006-2020, Eric Maris, Jorn M. Horschig, Robert Oostenveld
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -82,10 +83,25 @@ end
 % the data can be passed as input arguments or can be read from disk
 hasdata = exist('data', 'var');
 
-if isfield(cfg, 'neighbours') && ischar(cfg.neighbours)
-  cfg.method = 'file'; % FIXME this is not documented
-elseif isfield(cfg, 'neighbours') && isstruct(cfg.neighbours)
-  cfg.method = 'existing'; % FIXME this is not documented
+% these undocumented methods are needed to support some of the high-level FT functions that call this function
+if ~isfield(cfg, 'method')
+  if ~isfield(cfg, 'neighbours')
+    ft_error('cannot figure out how to construct neighbours, please specify cfg.neighbours or cfg.method and call this function directly')
+  else
+    if ischar(cfg.neighbours)
+      ft_notice('reading neighbours from file %s', cfg.neighbours);
+      cfg.neighbours = loadvar(cfg.neighbours);
+    elseif isstruct(cfg.neighbours) && ~isempty(cfg.neighbours)
+      ft_notice('using specified neighbours for the channels');
+    elseif isempty(cfg.neighbours) && ~isfield(cfg, 'neighbourdist')
+      ft_notice('not using neighbours for the channels');
+      % make an empty neighbour structure
+      tmp = struct('label', [], 'neighblabel', []);
+      cfg.neighbours = tmp([]);
+    end
+    % this is a hack to get past the case-statement
+    cfg.method = 'specified';
+  end
 end
 
 % check if the input cfg is valid for this function
@@ -98,6 +114,7 @@ cfg = ft_checkconfig(cfg, 'renamedval',  {'method', 'tri', 'triangulation'});
 % set the defaults
 cfg.feedback = ft_getopt(cfg, 'feedback', 'no');
 cfg.channel  = ft_getopt(cfg, 'channel', 'all');
+cfg.compress = ft_getopt(cfg, 'compress', 'yes');
 
 if hasdata
   % check if the input data is valid for this function
@@ -114,13 +131,12 @@ if hasdata
   end
 end
 
-
 if strcmp(cfg.method, 'distance') || strcmp(cfg.method, 'triangulation')
   % these methods require channel positions in either 3D or in 2D
   
   if isfield(cfg, 'layout') && ~isempty(cfg.layout)
     % get 2D positions from the layout
-    tmpcfg = keepfields(cfg, {'layout', 'rows', 'columns', 'commentpos', 'scalepos', 'elec', 'grad', 'opto', 'showcallinfo'});
+    tmpcfg = keepfields(cfg, {'layout', 'rows', 'columns', 'commentpos', 'skipcomnt', 'scalepos', 'skipscale', 'projection', 'viewpoint', 'rotate', 'width', 'height', 'elec', 'grad', 'opto', 'showcallinfo'});
     tmpcfg.skipscale = 'yes';
     tmpcfg.skipcomnt = 'yes';
     layout = ft_prepare_layout(tmpcfg);
@@ -159,15 +175,9 @@ end % if distance or triangulation
 
 
 switch cfg.method
-  case 'file'
-    % read it from file
-    neighbours = loadvar(cfg.neighbours);
-    cfg = rmfield(cfg, 'method'); % FIXME this is not documented
-    
-  case 'existing'
-    % return an existing one
+  case 'specified'
+    % use the neighbours as specified by the user
     neighbours = cfg.neighbours;
-    cfg = rmfield(cfg, 'method'); % FIXME this is not documented
     
   case 'template'
     fprintf('Trying to load sensor neighbours from a template\n');
@@ -220,8 +230,13 @@ switch cfg.method
   case 'distance'
     % use a smart default for the distance
     if ~isfield(cfg, 'neighbourdist')
-      sens = ft_checkdata(sens, 'hasunit', 'yes');
-      cfg.neighbourdist = 40 * ft_scalingfactor('mm', sens.unit);
+      if exist('sens', 'var')
+        sens = ft_determine_units(sens);
+        cfg.neighbourdist = 40 * ft_scalingfactor('mm', sens.unit);
+      elseif exist('layout', 'var')
+        layout = ft_determine_units(layout);
+        cfg.neighbourdist = 40 * ft_scalingfactor('mm', layout.unit);
+      end
       fprintf('using a distance threshold of %g\n', cfg.neighbourdist);
     end
     neighbours = compneighbstructfrompos(chanpos, label, cfg.neighbourdist);
@@ -236,9 +251,11 @@ switch cfg.method
     end
     % make a 2d delaunay triangulation of the projected points
     tri = delaunay(prj(:,1), prj(:,2));
-    tri_x = delaunay(prj(:,1)./2, prj(:,2));
-    tri_y = delaunay(prj(:,1), prj(:,2)./2);
-    tri = [tri; tri_x; tri_y];
+    if strcmp(cfg.compress, 'yes')
+      tri_x = delaunay(prj(:,1)./2, prj(:,2)); % compress in the x-direction
+      tri_y = delaunay(prj(:,1), prj(:,2)./2); % compress in the y-direction
+      tri = [tri; tri_x; tri_y];
+    end
     neighbours = compneighbstructfromtri(chanpos, label, tri);
     
   otherwise
@@ -246,24 +263,39 @@ switch cfg.method
 end
 
 % only select those channels that are in the data
-neighb_chans = {neighbours(:).label};
 if isfield(cfg, 'channel') && ~isempty(cfg.channel)
   if hasdata
     desired = ft_channelselection(cfg.channel, data.label);
   else
-    desired = ft_channelselection(cfg.channel, neighb_chans);
+    desired = ft_channelselection(cfg.channel, {neighbours(:).label});
   end
 elseif (hasdata)
   desired = data.label;
 else
-  desired = neighb_chans;
+  desired = {neighbours(:).label};
 end
 
 if ~isempty(desired)
-  neighb_idx = ismember(neighb_chans, desired);
-  neighbours = neighbours(neighb_idx);
+  complete = struct;
+  for i=1:numel(desired)
+    complete(i).label = desired{i};
+    sel = find(strcmp({neighbours(:).label}, desired{i}));
+    if numel(sel)==1
+      % take the set of neighbours from the definition
+      complete(i).neighblabel = neighbours(sel).neighblabel;
+    else
+      % there are no neighbours defined for this channel
+      complete(i).neighblabel = {};
+    end
+  end
+  neighbours = complete;
 end
 
+for i=1:length(neighbours)
+  % convert them into row-arrays for a nicer code representation with PRINTRSTRUCT
+  neighbours(i).neighblabel = neighbours(i).neighblabel(:)';
+end
+  
 k = 0;
 for i=1:length(neighbours)
   if isempty(neighbours(i).neighblabel)
@@ -273,14 +305,14 @@ for i=1:length(neighbours)
 end
 
 if k==0
-  ft_warning('No neighbours were found');
+  ft_warning('No neighbouring channels were specified or found');
+else
+  fprintf('there are on average %.1f neighbours per channel\n', k/length(neighbours));
 end
-
-fprintf('there are on average %.1f neighbours per channel\n', k/length(neighbours));
 
 if strcmp(cfg.feedback, 'yes')
   % give some graphical feedback
-  tmpcfg = keepfields(cfg, {'layout', 'rows', 'columns', 'commentpos', 'scalepos', 'elec', 'grad', 'opto', 'showcallinfo'});
+  tmpcfg = keepfields(cfg, {'layout', 'rows', 'columns', 'commentpos', 'skipcomnt', 'scalepos', 'skipscale', 'projection', 'viewpoint', 'rotate', 'width', 'height', 'elec', 'grad', 'opto', 'showcallinfo'});
   tmpcfg.neighbours = neighbours;
   if hasdata
     tmpcfg.senstype = cfg.senstype;
@@ -296,6 +328,7 @@ ft_postamble trackconfig
 ft_postamble previous   data
 ft_postamble provenance neighbours
 ft_postamble history    neighbours
+ft_postamble savevar    neighbours
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -7,7 +7,7 @@ function [montage, cfg] = ft_nirs_prepare_ODtransformation(cfg, data)
 % Use as
 %   [montage] = ft_prepare_ODtransformation(cfg, data)
 %
-% It is neccessary to input the data on which you want to perform the
+% It is necessary to input the data on which you want to perform the
 % inverse computations, since that data generally contain the optode
 % information and information about the channels that should be included in
 % the transformation. The data structure can be either obtained
@@ -16,16 +16,16 @@ function [montage, cfg] = ft_nirs_prepare_ODtransformation(cfg, data)
 % in transformation.
 %
 % The configuration should contain
-%  cfg.channel            = Nx1 cell-array with selection of channels
-%                           (default = 'nirs'), see FT_CHANNELSELECTION for
-%                           more details
+%   cfg.channel            = Nx1 cell-array with selection of channels
+%                            (default = 'nirs'), see FT_CHANNELSELECTION for
+%                            more details
 %
 % Optional configuration settings are
-%  cfg.age                = scalar, age of the subject (necessary to
-%                           automatically select the appropriate DPF, or
-%  cfg.dpf                = scalar, differential path length factor
-%  cfg.dpffile            = string, location to a lookup table for the
-%                           relation between participant age and DPF
+%   cfg.age                = scalar, age of the subject (necessary to
+%                            automatically select the appropriate DPF, or
+%   cfg.dpf                = scalar, differential path length factor
+%   cfg.dpffile            = string, location to a lookup table for the
+%                            relation between participant age and DPF
 %
 % Note that the DPF might be different across channels, and is usually
 % contained in the optode structure contained in the data.
@@ -41,11 +41,9 @@ function [montage, cfg] = ft_nirs_prepare_ODtransformation(cfg, data)
 % options to be implemented:
 %
 % The NIRS positions can be present in the data or can be specified as
-%   cfg.opto          = structure with optode positions, see FT_DATATYPE_SENS
-%
-% cfg.siunits  = ft_getopt(cfg, 'siunits', 'no');   % yes/no, ensure that SI units are used consistently
-%
-% cfg.logarithm           = string, can be 'natural' or 'base10' (default =
+% cfg.opto      = structure with optode positions, see FT_DATATYPE_SENS
+% cfg.siunits   = ft_getopt(cfg, 'siunits', 'no');   % yes/no, ensure that SI units are used consistently
+% cfg.logarithm = string, can be 'natural' or 'base10' (default =
 
 % You are using the FieldTrip NIRS toolbox developed and maintained by
 % Artinis Medical Systems (http://www.artinis.com). For more information
@@ -60,8 +58,8 @@ function [montage, cfg] = ft_nirs_prepare_ODtransformation(cfg, data)
 % -----------------------------------
 % You are free to:
 %
-%     Share � copy and redistribute the material in any medium or format
-%     Adapt � remix, transform, and build upon the material
+%     Share - copy and redistribute the material in any medium or format
+%     Adapt - remix, transform, and build upon the material
 %     for any purpose, even commercially.
 %
 %     The licensor cannot revoke these freedoms as long as you follow the
@@ -69,16 +67,16 @@ function [montage, cfg] = ft_nirs_prepare_ODtransformation(cfg, data)
 %
 % Under the following terms:
 %
-%     Attribution � You must give appropriate credit, provide a link to
+%     Attribution - You must give appropriate credit, provide a link to
 %                    the license, and indicate if changes were made. You
 %                    may do so in any reasonable manner, but not in any way
 %                    that suggests the licensor endorses you or your use.
 %
-%     ShareAlike � If you remix, transform, or build upon the material,
+%     ShareAlike - If you remix, transform, or build upon the material,
 %                   you must distribute your contributions under the same
 %                   license as the original.
 %
-%     No additional restrictions � You may not apply legal terms or
+%     No additional restrictions - You may not apply legal terms or
 %                                   technological measures that legally
 %                                   restrict others from doing anything the
 %                                   license permits.
@@ -90,7 +88,7 @@ function [montage, cfg] = ft_nirs_prepare_ODtransformation(cfg, data)
 % Copyright (c) 2015-2016 by Artinis Medical Systems.
 % Contact: askforinfo@artinis.com
 %
-% Main programmer: J�rn M. Horschig
+% Main programmer: Jörn M. Horschig
 % $Id$
 
 revision = '$Id$';
@@ -159,8 +157,7 @@ illegalidx = cellfun(@isempty, typeidx);
 cfg.channel(illegalidx) = [];
 
 if isempty(cfg.channel)
-  warning('no valid NIRS channels found')
-  return;
+  ft_error('no valid NIRS channels found')
 end
 
 % channel indices wrt optode structure
@@ -187,14 +184,14 @@ chromophoreName = {'O2Hb' 'HHb'};
 fid = fopen(fullfile(fileparts(mfilename('fullpath')), 'private', 'Cope_ext_coeff_table.txt'));
 coefs = cell2mat(textscan(fid, '%f %f %f %f %f'));
 
-% extract all transceivers that are relevant here
-transceivers   = sens.transceiver(chanidx, :);
-transmitteridx = transceivers>0;
-receiveridx    = transceivers<0;
-fiberidx       = transmitteridx | receiveridx;
+% extract all optode combinations that are relevant here
+tratra         = sens.tra(chanidx, :)';
+transmitteridx = tratra>0;
+receiveridx    = tratra<0;
+optodeidx      = (transmitteridx | receiveridx)'; % transpose to get back to tra order
 
 % extract the wavelengths
-wavelengths  = sens.wavelength(transceivers(transmitteridx));
+wavelengths  = sens.wavelength(tratra(transmitteridx));
 wlidx = bsxfun(@minus, coefs(:, 1), wavelengths);
 
 % find the relevant channel combinations
@@ -206,9 +203,9 @@ for c=1:numel(chanidx)
     continue;
   end
   % compute the channel combinations
-  tupletidx = sum(bsxfun(@minus, fiberidx, fiberidx(c, :))~=0, 2)==0;
+  tupletidx = sum(bsxfun(@minus, optodeidx, optodeidx(c, :))~=0, 2)==0;
   chanUsed = chanUsed|tupletidx;
-  chancmb(:, end+1) = tupletidx;
+  chancmb(:, end+1) = tupletidx;  
 end
 
 % do the transformation
@@ -216,18 +213,20 @@ tra      = zeros(size(chancmb, 2)*numel(chromophoreIdx), size(cfg.channel, 1));
 labelnew = cell(1, size(chancmb, 2)*numel(chromophoreIdx));
 
 % transformation has to be done per channel combination
-chanidx = []; % we will use this variable here
+chanidx = []; % we will use this variable here for indexing channels (Rx-Tx cmbs)
+optoidx = []; % we will use this variable here for indexing optodes (individual Rx and Tx)
 for c=1:size(chancmb, 2)
 
-  % find all other channels of the same transmitter / receiver pair
+  % find all other channels of the exact same transmitter / receiver pair
   chanidx = chancmb(:, c);
 
   % extract coefficient idx of these channels
   [coefidx, colidx] = find(wlidx(:, chanidx)==0);
 
   % compute the transmitter/receiver distance in cm
-  dist = sqrt(sum(diff(sens.fiberpos(fiberidx(c, :), :)).^2));
-
+  optoidx = find(chanidx, 1, 'first'); % we can take 'first' because the transmitter-optodes have to be physically in the exact same spot to form "one" channel
+  dist = sqrt(sum(diff(sens.optopos(optodeidx(optoidx, :), :)).^2));
+    
   % select dpf
   dpf = mean(dpfs(chanidx));
 
