@@ -1,5 +1,3 @@
-
-
 function [dat] = ft_read_data(filename, varargin)
 
 % FT_READ_DATA reads data from a variety of EEG, MEG and other time series data files

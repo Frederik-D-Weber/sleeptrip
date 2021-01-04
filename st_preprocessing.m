@@ -403,7 +403,7 @@ else
   % read the header 
   hdr = ft_read_header(cfg.headerfile, 'headerformat', cfg.headerformat,...
     'coordsys', cfg.coordsys, 'coilaccuracy', cfg.coilaccuracy,...
-    'checkmaxfilter', istrue(cfg.checkmaxfilter), 'chantype', cfg.chantype, 'chanindx', chanindx);
+    'checkmaxfilter', cfg.checkmaxfilter, 'chantype', cfg.chantype, 'chanindx', chanindx);
   
   
 %    % ST BEGIN

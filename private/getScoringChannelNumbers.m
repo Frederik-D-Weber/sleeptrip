@@ -36,6 +36,8 @@ eeg_occipital_channel = ft_channelselection('*O2*',datachannel);
 eog_channel = ft_channelselection('*EOG*',datachannel);
 emg_channel = ft_channelselection('*EMG*',datachannel);
 ecg_channel = ft_channelselection('*ECG*',datachannel);
+ppg_channel = ft_channelselection({'OXY_IR_AC','*PPG*'},datachannel);
+
 
 if ~isempty(eeg_channel)
     numberEEG = find(strcmp(eeg_channel(1),datachannel));
@@ -86,6 +88,11 @@ else
     ecg_channel = ft_channelselection('*EKG*',datachannel);
     if ~isempty(ecg_channel)
         numberECG = find(strcmp(ecg_channel(1),datachannel));
+    else
+        % take the PPG channel instead
+        if ~isempty(ppg_channel)
+        	numberECG = find(strcmp(ppg_channel(1),datachannel));
+        end
     end
 end
 

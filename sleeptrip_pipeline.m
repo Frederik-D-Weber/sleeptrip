@@ -101,12 +101,10 @@ cfg = [];
 montage_zmax = st_read_montage(cfg,montage_filepath);
 
 %% read a data grammer
-
 cfg = [];
-datagrammer = st_read_datagrammer(cfg, 'datagrammer/datagrammer.txt');
+datagrammer = st_read_datagrammer(cfg, 'datagrammer.txt');
 
 %% prepare the subject data, e.g. zmax data in a compressed format
-
 
 % here you can prepare everyting you would need later on again
 subject = [];
@@ -142,22 +140,22 @@ save('subject-1','subject');
 
 %% alternative subject brainvision
 
-subject = [];
-subject.name               = 'example_brainvision';
-subject.dataset            = 'test_lindev_sleep_score_preprocout_datanum_1.eeg';
-subject.scoringfile        = 'test_lindev_sleep_score_preprocout_datanum_1.txt';
-subject.scoringformat      = 'spisop'; % e.g. 'zmax' or 'spisop'
-subject.standard           = 'rk'; % 'aasm' or 'rk'
-% does the scoring start 
-%   at the beginning of data (=0) or 
-%   before (<0) or
-%   after (>0)
-subject.scoring_dataoffset = 0; % in seconds
-% at which time in seconds was the lights off
-% with respect to the beginning of scoring,
-% only relevant for
-subject.lightsoff          = 108.922;
-subject.eegchannels        = {'C3:A2', 'C4:A1'};
+% subject = [];
+% subject.name               = 'example_brainvision';
+% subject.dataset            = 'test_lindev_sleep_score_preprocout_datanum_1.eeg';
+% subject.scoringfile        = 'test_lindev_sleep_score_preprocout_datanum_1.txt';
+% subject.scoringformat      = 'spisop'; % e.g. 'zmax' or 'spisop'
+% subject.standard           = 'rk'; % 'aasm' or 'rk'
+% % does the scoring start 
+% %   at the beginning of data (=0) or 
+% %   before (<0) or
+% %   after (>0)
+% subject.scoring_dataoffset = 0; % in seconds
+% % at which time in seconds was the lights off
+% % with respect to the beginning of scoring,
+% % only relevant for
+% subject.lightsoff          = 108.922;
+% subject.eegchannels        = {'C3:A2', 'C4:A1'};
 % 
 % save('subject-2','subject');
 %
@@ -206,20 +204,19 @@ scoring.lightsoff = subject.lightsoff;
 %% write out the scoring again and re-read it in.
 cfg = [];
 cfg.filename = 'scoring_test';
-cfg.dataformat = 'numbersincolumns';% 'sleeptrip' 'numbersincolumns'
+cfg.datatype = 'spisop';% 'sleeptrip' 'numbersincolumns'
 %cfg.to = 'rk'
 scoring_filepath = st_write_scoring(cfg, scoring);
 
-%%% note that writing in numbersincolumns corresponds to cfg.scoringformat = 'spisop'
+%%% note that writing in cfg.scoringformat = 'numbersincolumns' is the same
+%%% as to cfg.scoringformat = 'spisop', just the file endings and delimiters might differ
 cfg = [];
 cfg.scoringfile = scoring_filepath;
-cfg.scoringformat = 'spisop'; %'sleeptrip' 'spisop'
+cfg.scoringformat = 'spisop'; %'sleeptrip' 'spisop' 'numbersincolumns'
 %cfg.to = 'rk'
 scoring_reread = st_read_scoring(cfg);
 
-
 %% check when is sleep onset/offset
-
 cfg = [];
 cfg.sleeponsetdef  = 'AASM'; % also try 'AASM' and many more
 [onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage] = st_sleeponset(cfg,scoring);
@@ -350,20 +347,25 @@ end
 
 data_with_montage = st_preprocessing(cfg);
 
-%% extract the date from zmax data header
-
+%% extract the date from zmax/edf data header. 
+% this will not work for other data formats than edf
 hdr = ft_read_header(subject.dataset);
 hdr = data.hdr;
 
-year = hdr.orig.T0(1);
-month = hdr.orig.T0(2);
-day = hdr.orig.T0(3);
-hour = hdr.orig.T0(4);
-minute = hdr.orig.T0(5);
-second = hdr.orig.T0(6);
+try
+    year = hdr.orig.T0(1);
+    month = hdr.orig.T0(2);
+    day = hdr.orig.T0(3);
+    hour = hdr.orig.T0(4);
+    minute = hdr.orig.T0(5);
+    second = hdr.orig.T0(6);
+    
+    dt = datetime(year,month,day,hour,minute,second);
+    dt
+catch e
+end
 
-dt = datetime(year,month,day,hour,minute,second);
-dt
+
 
 %% resample the data, e.g. before exporting/convert it to your hard drive
 % not necessary as for many analysis the data 
@@ -417,13 +419,11 @@ cfg.order = 'alphabetical';
 data_reord = st_reoderdata(cfg, data);
 
 %% applying grammer to data
-
 cfg = [];
 %cfg.grammer = 'hp 0.3 lp 35';
 cfg.grammer = '( ( bp 12 14 mult 4 ) + ( hp 0.5 lp 2 ) ) + ( bp 6 8 mult 2 )';
 cfg.channel = 1;
 data_new = st_datagrammer(cfg, data);
-
 
 %% looking at the data in the "score" browser STILL ALPHA version
 cfg = [];
@@ -465,7 +465,6 @@ cfg.viewmode      = 'vertical'; % 'vertical' or 'butterfly'
 cfg.artifactalpha = 0.7;
 cfg.renderer      = 'opengl'; % 'painters' or 'opengl' or 'zbuffer'
 ft_databrowser(cfg, data);
-
 
 %% calculate power density
 

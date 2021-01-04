@@ -1,0 +1,9 @@
+*EMG*,hp 10
+*EOG*,hp 0.3 lp 35
+F3:A2,hp 0.3 lp 35
+F4:A1,hp 0.3 lp 35
+C3:A2,hp 0.3 lp 35
+C4:A1,hp 0.3 lp 35
+O1:A2,hp 0.3 lp 35
+O2:A1,hp 0.3 lp 35
+*ECG*,hp 0.5

@@ -90,7 +90,7 @@ hdr.nTrials = 1;
 % chose a file name (without extension)
 [pathstr, name, ext] = fileparts(cfg.filename);
 
-file_name = [pathstr filesep name];
+file_name = [pathstr name];
 
 
 filepaths = '';

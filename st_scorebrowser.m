@@ -597,8 +597,8 @@ cfg.chanscale = ones(1,length(data.label));
         cfg.score_channel_emg_number = numberEMG;
         
         cfg.score_channel_eeg_color           = [1 1 0.8];
-        cfg.score_channel_eeg_frontal_color   = [1 1 0.8];
-        cfg.score_channel_eeg_occipital_color = [1 1 0.8];
+        cfg.score_channel_eeg_frontal_color   = [1 0.9 1];
+        cfg.score_channel_eeg_occipital_color = [1 0.88 0.72];
         cfg.score_channel_eog_color           = [0.8 1 1];
         cfg.score_channel_emg_color           = [1 0.8 0.8];
         
@@ -1492,10 +1492,10 @@ if ~strcmp(cfg.doSleepScoring,'yes')
     uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '-', 'position', [0.17, temp_lower_line_y , 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'shift+leftarrow')
     uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '+', 'position', [0.17, temp_lower_line_y , 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'shift+rightarrow')
 else
-    uicontrol('tag', 'scindlabelSOperc', 'parent', h, 'units', 'normalized', 'style', 'text', 'string','SO%: ?','Fontsize',8,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[1 0 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y+0.08/3+0.08/3 , 0.15, 0.08/3],'backgroundcolor',[0 0 0])
-    %uicontrol('tag', 'scindlabelSOnum', 'parent', h, 'units', 'normalized', 'style', 'text', 'string', '#SO: ?','Fontsize',8,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[1 0 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y+0.04 , 0.15, 0.02],'backgroundcolor',[0 0 0])
-    uicontrol('tag', 'scindlabelSpnum', 'parent', h, 'units', 'normalized', 'style', 'text', 'string', '#Sp: ?','Fontsize',8,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[0 1 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y+0.08/3 , 0.15, 0.08/3],'backgroundcolor',[0 0 0])
-    uicontrol('tag', 'scindlabelMarkperc', 'parent', h, 'units', 'normalized', 'style', 'text', 'string', 'Mark%: ?','Fontsize',8,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[1 0 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y , 0.15, 0.08/3],'backgroundcolor',[0 0 0])
+    uicontrol('tag', 'scindlabelSOperc', 'parent', h, 'units', 'normalized', 'style', 'text', 'string','SO%: ?','Fontsize',10,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[1 0 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y+0.08/3+0.08/3 , 0.15, 0.08/3],'backgroundcolor',[0 0 0])
+    %uicontrol('tag', 'scindlabelSOnum', 'parent', h, 'units', 'normalized', 'style', 'text', 'string', '#SO: ?','Fontsize',10,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[1 0 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y+0.04 , 0.15, 0.02],'backgroundcolor',[0 0 0])
+    uicontrol('tag', 'scindlabelSpnum', 'parent', h, 'units', 'normalized', 'style', 'text', 'string', '#Sp: ?','Fontsize',10,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[0 1 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y+0.08/3 , 0.15, 0.08/3],'backgroundcolor',[0 0 0])
+    uicontrol('tag', 'scindlabelMarkperc', 'parent', h, 'units', 'normalized', 'style', 'text', 'string', 'Mark%: ?','Fontsize',10,'FontUnits','normalized','FontWeight','bold', 'ForegroundColor',[1 0 0],'HorizontalAlignment','left','position', [0.2, temp_lower_line_y , 0.15, 0.08/3],'backgroundcolor',[0 0 0])
 end
 
 if strcmp(cfg.doSleepScoring,'yes')
@@ -1516,14 +1516,14 @@ if strcmp(cfg.doSleepScoring,'yes')
     uicontrol('tag', 'scoptbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '?(7/D)','position', [0.52, temp_lower_line_y2 , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'd')
     uicontrol('tag', 'scoptbuttons_nextunk', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '[>]','position', [0.52, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'u')
 
-    uicontrol('tag', 'scoptbuttons_SOdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '(+)_.·\_.·\_.·','Fontsize',5,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'k')
-    uicontrol('tag', 'scoptbuttons_SOdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(_.·\)--','Fontsize',5,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'o')
-    uicontrol('tag', 'scoptbuttons_SPdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--~~-~~--','Fontsize',5,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'j')
-    uicontrol('tag', 'scoptbuttons_SPdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(~~~)--','Fontsize',5,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'n')
+    uicontrol('tag', 'scoptbuttons_SOdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '(+)_.·\_.·\_.·','Fontsize',6,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'k')
+    uicontrol('tag', 'scoptbuttons_SOdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(_.·\)--','Fontsize',6,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'o')
+    uicontrol('tag', 'scoptbuttons_SPdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--~~-~~--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'j')
+    uicontrol('tag', 'scoptbuttons_SPdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(~~~)--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'n')
     if cfg.has_ECG
-        uicontrol('tag', 'scoptbuttons_HRdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<3 <3 <3','Fontsize',5,'FontUnits','normalized', 'position', [0.56, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'b')
+        uicontrol('tag', 'scoptbuttons_HRdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<3 <3 <3','Fontsize',6,'FontUnits','normalized', 'position', [0.56, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'b')
     end
-    uicontrol('tag', 'scoptbuttons_ALdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--wWwWw--','Fontsize',5,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'a')
+    uicontrol('tag', 'scoptbuttons_ALdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--wWwWw--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'a')
     
     uicontrol('tag', 'scoptbuttons_pow', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'pow','position',  [0.675, temp_lower_line_y+0.08/3+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'p')
     uicontrol('tag', 'scoptbuttons_tfr', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'tfr','position', [0.675, temp_lower_line_y+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'f')
@@ -5155,7 +5155,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                 temp_col = jet(4);
                 for iHypMult = 1:numel(opt.curr_stage_mult)
                     
-                    h_curr_stage = ft_plot_text(tim(floor(end/2)), 0, opt.curr_stage_mult{iHypMult}, 'tag', 'curr_stage', 'Color', temp_col(iHypMult,:), 'FontSize', 64-iHypMult*12, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
+                    h_curr_stage = ft_plot_text(tim(floor(end/2)), 0, opt.curr_stage_mult{iHypMult}, 'tag', 'curr_stage', 'Color', temp_col(iHypMult,:), 'FontSize', 0.15-iHypMult*0.02, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
                         'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none', 'axis', temp_ax);
                     temp_ax = h_curr_stage;
                     
@@ -5187,7 +5187,7 @@ if strcmp(cfg.doSleepScoring,'yes')
         
         %temp_curr_channels_displayed = numel(opt.laytime.label);
         
-        h_curr_stage = ft_plot_text(tim(floor(end/2)), 0, opt.curr_stage, 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg , 'FontSize', 64, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
+        h_curr_stage = ft_plot_text(tim(floor(end/2)), 0, opt.curr_stage, 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg , 'FontSize', 0.15, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
             'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none', 'axis', temp_ax);
         temp_ax = h_curr_stage;
         
@@ -5205,7 +5205,7 @@ if strcmp(cfg.doSleepScoring,'yes')
             temp_next_stages = [[repmat(' ',1,6-length(temp_next_stages))] temp_next_stages];
         end
         
-        h_prev_stage = ft_plot_text(tim(floor(end/2)), 0, [temp_prev_stages '                     ' temp_next_stages], 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg, 'FontSize', 24, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
+        h_prev_stage = ft_plot_text(tim(floor(end/2)), 0, [temp_prev_stages '                     ' temp_next_stages], 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg, 'FontSize', 0.05, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
             'hpos', opt.laytime.pos(temp_iChanDisplayed,1), 'vpos', opt.laytime.pos(temp_iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(temp_iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none', 'axis', temp_ax);
         temp_ax = h_prev_stage;
         
@@ -5494,7 +5494,7 @@ end
 temp_ylim = get(gca, 'ylim');
 temp_xlim = get(gca, 'xlim');
 delete(findobj(h,'tag', 'title_time'));
-text(temp_xlim(end)-0.01*range(temp_xlim),temp_ylim(end)-0.005*range(temp_ylim),str,'HorizontalAlignment','right','VerticalAlignment','top','color',cfg.color_text_on_bg,'tag','title_time','FontSize', 12, 'FontUnits',  'points','interpreter','none')
+text(temp_xlim(end)-0.01*range(temp_xlim),temp_ylim(end)-0.005*range(temp_ylim),str,'HorizontalAlignment','right','VerticalAlignment','top','color',cfg.color_text_on_bg,'tag','title_time','FontSize', 12, 'FontUnits',  'points', 'interpreter','none')
 
 
 
@@ -5557,7 +5557,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
             if numel(findobj(h,'tag', 'chanlabel'))<numel(chanindx)
                 if opt.plotLabelFlag == 1 || (opt.plotLabelFlag == 2 && mod(i,10)==0)
 
-                    h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 10, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
+                    h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 0.025, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
                         'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.width, 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none');
                     
 %                     h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 0.9/2/numel(chanindx), 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
@@ -6392,13 +6392,14 @@ axis off % explicitly turn of axis, sometimes an axis system appears
 panel1 = uipanel('Parent',dlg);
 panel2 = uipanel('Parent',panel1);
 set(panel1,'Position',[0 0 0.95 1]);
+%set(panel2,'Position',[0 1-vertical_size_total 1 vertical_size_total]);
 set(panel2,'Position',[0 1-vertical_size_total 1 vertical_size_total]);
 set(gca,'Parent',panel2);
 if vertical_size_total > 1
     slider = uicontrol('Style','Slider','Parent',dlg,...
         'Units','normalized','Position',[0.95 0 0.05 1],...
         'Value',1,'Callback',{@(src,eventdata,nch,vsizech,vsize,panel) slider_callback1(src,eventdata,nch,vsizech,vsize,panel), Nchannels, vertical_size_row_pre, vertical_size_total, panel2});
-    %'Value',1,'Callback',{@(src,eventdata,arg1,arg2) set(arg1,'Position',[0 -get(src,'Value')*Nchannels/(1/vertical_size_row_pre) 1 arg2]), panel2, vertical_size_total});
+       %'Value',1,'Callback',{@(src,eventdata,arg1,arg2) set(arg1,'Position',[0 -get(src,'Value')*Nchannels/(1/vertical_size_row_pre) 1 arg2]), panel2, vertical_size_total});
     
 end
 indices_selected = indices_selected(:)';     % ensure that it is a row array
@@ -6743,7 +6744,9 @@ end
 function slider_callback1(src,eventdata,nch,vsizech,vsize,panel)
 val = get(src,'Value');
 %set(arg1,'Position',[0 -val 1 arg2])
-set(panel,'Position',[0 -val*nch/(1/vsizech) 1 vsize]);
+%set(panel,'Position',[0 -val*nch/(1/vsizech) 1 vsize]);
+change_range = vsize-1;
+set(panel,'Position',[0 (1-vsize)+(1-val)*change_range 1 vsize]);
 end
 
 function opt = changeDataChannelOrder(channel_order,opt)

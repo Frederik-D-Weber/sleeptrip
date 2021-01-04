@@ -111,7 +111,6 @@ if strcmpi(vhdr.DataFormat, 'binary')
   % but that might be on another location than the present working directory
   
   info = dir(dataFile);
-  switch lower(vhdr.BinaryFormat)
  switch lower(vhdr.BinaryFormat)
     case 'int_16';
       NBytes = 2;
