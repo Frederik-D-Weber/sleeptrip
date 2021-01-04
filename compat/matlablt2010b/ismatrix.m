@@ -4,7 +4,6 @@ function [varargout] = ismatrix(varargin)
 % introduced in MATLAB R2010b.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 % try to automatically remove incorrect compat folders from the path, see https://github.com/fieldtrip/fieldtrip/issues/899
 
 if isempty(strfind(mfilename('fullpath'), matlabroot))
