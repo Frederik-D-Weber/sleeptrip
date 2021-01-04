@@ -186,7 +186,7 @@ cfg = [];
 cfg.scoringfile   = subject.scoringfile;
 cfg.scoringformat = subject.scoringformat;
 cfg.standard      = subject.standard; % 'aasm' or 'rk'
-
+% cfg.to = 'aasm' % immediately convert it to a standard format if possible
 scoring = st_read_scoring(cfg);
 
 % do we know the lights-off moment, if yes then add it
@@ -413,6 +413,9 @@ scoring_rk = st_scoringconvert(cfg, scoring);
 % that using custom scorings will be limited, however you can use this to
 % convert your custom format back into 'aasm' or 'rk' which work here.
 
+%% use the aasm scoring as a basis
+scoring = scoring_aasm;
+
 %% reorder channels
 cfg = [];
 cfg.order = 'alphabetical';
@@ -471,8 +474,8 @@ ft_databrowser(cfg, data);
 % power values in some sleep stages, e.g. non-REM
 cfg = [];
 cfg.scoring     = scoring;
-%cfg.stages      = {'N2', 'N3'}; % {'R'};
-cfg.stages      = {'S2', 'S3', 'S4'}; % {'R'};
+cfg.stages      = {'N2', 'N3'}; % {'R'};
+%cfg.stages      = {'S2', 'S3', 'S4'}; % {'R'};
 cfg.channel     = subject.eegchannels;
 % cfg.foilim      = [0.01 30];
 % cfg.bands       = ...
@@ -519,10 +522,13 @@ power_y    = res_power_bin.table.mean_powerDensity_over_segments(indChannel);
 %power_y    = res_power_bins.table.mean_powerDensity_over_segments(indChannel & indFreq);
 % scale the power values on a logarithmic scale, in dB
 % to avoid negative values add 1 to all values to have them >= 1;
+figure;
+plot(freq_x,power_y) % raw
+figure;
 power_y_logscale = 10*log10(power_y+1);
-%plot(freq_x,power_y)
-plot(freq_x,power_y_logscale)
-plot(freq_x,power_y_logscale.*freq_x)
+plot(freq_x,power_y_logscale) % db scaled
+figure;
+plot(freq_x,power_y_logscale.*freq_x) % db scaled, 1/freq corrected
 
 
 % practice: Try different scaling and normalization, how would this change
@@ -535,7 +541,7 @@ cfg = [];
 cfg.peaknum = 1; % either 1 or 2 (default)
 [res_freqpeaks] = st_freqpeak(cfg,res_power_bin);
 
-res_freqpeaks
+res_freqpeaks.table
 
 %practice: find two peaks by default by changing the configuration of the function,
 %would limiting the frequency band help, are there any artifacts (e.g. sharp peaks in the power spectra?)
