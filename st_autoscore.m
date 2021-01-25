@@ -171,7 +171,7 @@ if hasdata
 else
     cfg_int.dataset  = cfg.dataset;
     cfg_int.continuous   = 'yes';
-    if isempty(cfg_int.trl)
+    if isempty(cfg_int.contendsample)
         % read in dummy data
         cfg_int.trl = [1 round(fsample*60) 0];
         data = st_preprocessing(cfg_int);

@@ -432,7 +432,7 @@ else
     cfg_int.dataset  = cfg.dataset;
     [cfg_int] = st_select_scoring(cfg_int);
     cfg_int.continuous   = 'yes';
-    if isempty(cfg_int.trl)
+    if isempty(cfg_int.contendsample)
         hasROIs = false;
         hasROIs_threshold = false;
 

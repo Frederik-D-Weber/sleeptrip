@@ -75,6 +75,9 @@ end
 
 montageTable = readtable(filename,parampairs{:});
 
+%delete empty lines
+montageTable = montageTable([1; find(~cellfun(@isempty,table2cell(montageTable(2:end,1))))+1],:);
+
 montage = [];
 montage.labelold = table2cell(montageTable(1,2:end));
 montage.labelnew  = table2cell(montageTable(2:end,1))';
