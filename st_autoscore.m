@@ -7,7 +7,7 @@ function scoring = st_autoscore(cfg, data)
 %   scoring = st_autoscore(cfg, data)
 %
 % Required configuration parameters are:
-%   cfg.method      = currently only 'z3scoreV1' using EEG and EOG is supported
+%   cfg.method      = currently only 'z3scoreV1' using EEG and EOG  and 'z3scoreV1' using EEG and EOG and EMG is supported
 %   cfg.interactive = either 'yes' or 'no' (default = 'yes')
 %   cfg.confirm     = either 'yes' or 'no' or 'yesifpaid' (default = 'yesifpaid')
 %   cfg.chanorder   = maunal overwrite when not in interactive mode e.g. 
@@ -33,7 +33,7 @@ function scoring = st_autoscore(cfg, data)
 %    'z3scoreV1' and 'z3scoreV2', see https://z3score.com for details on
 %                                 the algorithm
 %        optional parameters are 
-%            cfg.chanorder = a Nx1 cell string ordered in the with N = 4/5 channels in the data for 
+%            cfg.chanorder = a Nx1 cell string ordered with N = 4 or N = 5 channels in the data that stand for the channels 
 %                    C3:A2
 %                    C4:A1
 %                    EOGl:A1/EOGl
