@@ -4,11 +4,12 @@ function [cfg] = st_scorebrowser(cfg, data)
 %
 % Use as
 %   [cfg scoring] = st_scorebrowser(cfg, data)
-%   [cfg scoring] = st_scorebrowser(cfg)
+%   [cfg scoring] = st_scorebrowser(cfg) 
 %       where the configuration structure contains the reference to the dataset
 %       on your hard disk (see below), or use as
 %
-%   [cfg scoring] = st_scorebrowser(cfg, data)
+%   [cfg scoring] = st_scorebrowser()
+%       where you will be asked to manually load the files step by step.
 %
 % where the input data is a structure as obtained from ST_PREPROCESSING or
 % from FT_COMPONENTANALYSIS.
