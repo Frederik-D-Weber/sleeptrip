@@ -57,7 +57,6 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   cfg.skiplinesbefore  = string, lines skipped before line found matching string 
 %   cfg.ignorelines      = Nx1 cell-array with strings that mark filtering/ignoring lines (default = {}, nothing ignored)
 %   cfg.selectlines      = Nx1 cell-array with strings that should be selected (default = {}, not specified, all selected) 
-%   cfg.datatype         = string, time in seconds
 %   cfg.columnnum        = scalar, the column in which the scoring is stored (default = 1)
 %   cfg.exclepochs       = string, if you want to read in a column with excluded epochs indicated either 'yes' or 'no' (default = 'no')
 %   cfg.exclcolumnnum    = scalar, if cfg.exclepochs is 'yes' then this is the column in which the exclusion of epochs is stored (default = 2)
