@@ -6586,10 +6586,10 @@ if ishandle(dlg)
     cfg.score_channel_eeg_number = find(curr_chanIndexOrder == chanNum_focusEEG,1,'first');
     %ft_uilayout(h, 'tag', 'scoptbuttons_focusEEG', 'string', ['Focus EEG: ' opt.hdr.label{cfg.score_channel_eeg_number}]);
     
-    cfg.score_channel_eeg_frontal_number = find(curr_chanIndexOrder == chanNum_focusEEG_occipital,1,'first');
+    cfg.score_channel_eeg_frontal_number = find(curr_chanIndexOrder == chanNum_focusEEG_frontal,1,'first');
     %ft_uilayout(h, 'tag', 'scoptbuttons_focusEEG', 'string', ['Focus EEG: ' opt.hdr.label{cfg.score_channel_eeg_number}]);
     
-    cfg.score_channel_eeg_occipital_number = find(curr_chanIndexOrder == chanNum_focusEEG_frontal,1,'first');
+    cfg.score_channel_eeg_occipital_number = find(curr_chanIndexOrder == chanNum_focusEEG_occipital ,1,'first');
     %ft_uilayout(h, 'tag', 'scoptbuttons_focusEEG', 'string', ['Focus EEG: ' opt.hdr.label{cfg.score_channel_eeg_number}]);
     
     cfg.score_channel_eog_number = find(curr_chanIndexOrder == chanNum_focusEOG,1,'first');
