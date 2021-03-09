@@ -7,7 +7,7 @@ function [cfg filepaths] = st_write_continuous_data(cfg, data)
 %
 % Required configuration parameters are:
 %   cfg.filename  = string with the filename (or full path) to write to, if
-%                   not existent folder will be created
+%                   not existent a folder will be created
 %
 % Optional configuration parameters are:
 %   cfg.format  = string, either 
@@ -90,8 +90,7 @@ hdr.nTrials = 1;
 % chose a file name (without extension)
 [pathstr, name, ext] = fileparts(cfg.filename);
 
-file_name = [pathstr name];
-
+file_name = [pathstr filesep name];
 
 filepaths = '';
 
@@ -127,7 +126,7 @@ switch cfg.format
         data_export_filepath = [file_name file_extension];
         ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
         
-        filepaths = {[data_export_filepath '.eeg'], [data_export_filepath '.vhdr']};
+        filepaths = {[data_export_filepath '.eeg'], [data_export_filepath '.vhdr'], [data_export_filepath '.vmrk']};
         
     otherwise
         ft_error('cfg.format = %s is unknown', cfg.format)
