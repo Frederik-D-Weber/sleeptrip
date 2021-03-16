@@ -29,6 +29,10 @@ function [fh] = st_hypnoplot(cfg, scoring)
 %                                limits in minutes, overwrites all the
 %                                other contraints
 %                                have, e.g. 480 min, will plot tick at least to 480 min (default = display all);
+%   cfg.timeunitdisplay        = string, time unit for display in the x-axis labels
+%                                either 'minutes' or 'secconds' or 'hours' or 'days'
+%                                Note: this will not affect the other parameters like cfg.timerange to be given in minutes
+%                                (default = 'minutes')
 %   cfg.considerdataoffset     = string, 'yes' or 'no' if dataoffset is represented in time axis (default = 'yes');
 %
 %  Events can be plotted using the following options
@@ -119,6 +123,8 @@ cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 
 cfg.eventrangernddec        = ft_getopt(cfg, 'eventrangernddec', 2);
 cfg.timerange               = ft_getopt(cfg, 'timerange', [], true);
+
+cfg.timeunitdisplay         = ft_getopt(cfg, 'timeunitdisplay', 'minutes');
 
 cfg.figureoutputformat      = ft_getopt(cfg, 'figureoutputformat', 'png');
 cfg.figureoutputunit        = ft_getopt(cfg, 'figureoutputunit', 'inches');
@@ -227,33 +233,61 @@ if isempty(lastsleepstagenumber)
     lastsleepstagenumber = nEpochs;
 end
 
-
+hasA = false;
+if any(ismember('A',scoring.epochs))
+    hasA = true;
+end
 
 %%% plot hypnogram figure
 
 switch scoring.standard
     case 'aasm'
-        if istrue(cfg.yaxdisteqi)
-        plot_exclude_offset = -6;
-        yTick      = [2  1        0     -1  -2   -3   -4 ];                
-        else
-                
-        plot_exclude_offset = -5;
-        yTick      = [1.5  1        0     -0.5  -1   -2   -3 ];
-            end
-
-        yTickLabel = {'?' 'A'      'W'    'R'  'N1' 'N2' 'N3'};
-    case 'rk'
+        if hasA
             if istrue(cfg.yaxdisteqi)
-        plot_exclude_offset = -8;
-        yTick      = [3  2   1  0     -1  -2   -3   -4   -5 ];   
+                plot_exclude_offset = -6;
+                yTick      = [2  1        0     -1  -2   -3   -4 ];
             else
-        plot_exclude_offset = -7;
-        yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4 ];
+                
+                plot_exclude_offset = -5;
+                yTick      = [1.5  1        0     -0.5  -1   -2   -3 ];
             end
+            
+            yTickLabel = {'?' 'A'      'W'    'R'  'N1' 'N2' 'N3'};
+        else
+            if istrue(cfg.yaxdisteqi)
+                plot_exclude_offset = -6;
+                yTick      = [1        0     -1  -2   -3   -4 ];
+            else
+                
+                plot_exclude_offset = -5;
+                yTick      = [1        0     -0.5  -1   -2   -3 ];
+            end
+            
+            yTickLabel = {'?'      'W'    'R'  'N1' 'N2' 'N3'};
+        end
+    case 'rk'
+        if hasA
+            if istrue(cfg.yaxdisteqi)
+                plot_exclude_offset = -8;
+                yTick      = [3  2   1  0     -1  -2   -3   -4   -5 ];
+            else
+                plot_exclude_offset = -7;
+                yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4 ];
+            end
+            
+            yTickLabel = {'?' 'A' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
+        else
+            if istrue(cfg.yaxdisteqi)
+                plot_exclude_offset = -8;
+                yTick      = [2   1  0     -1  -2   -3   -4   -5 ];
+            else
+                plot_exclude_offset = -7;
+                yTick      = [ 1   0.5  0     -0.5  -1   -2   -3   -4 ];
+            end
+            
+            yTickLabel = {'?' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
+        end
         
-        yTickLabel = {'?' 'A' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
-
     otherwise
         ft_error('scoring standard ''%s'' not supported for ploting.\n Maybe use ST_SCORINGCONVERT to convert the scoring first.', scoring.standard);
 end
@@ -512,6 +546,21 @@ set(axh, 'yTickLabel', flip(yTickLabel));
 set(axh,'TickDir','out');
 xTick = [0:cfg.timeticksdiff:(max([max(x_time),cfg.timemin,eventTimeMaxSeconds/60]))];
 set(axh, 'xTick', xTick);
+timeunit = 'min';
+switch cfg.timeunitdisplay
+    case {'m' 'min' 'minute' 'minutes'}
+        timeunit = 'min';
+    case {'s' 'sec' 'seconds'}
+        set(axh, 'xTickLabel', arrayfun(@num2str,round(xTick*60),'UniformOutput',false)); 
+        timeunit = 's';
+    case {'h' 'hour' 'hours'}
+        set(axh, 'xTickLabel', arrayfun(@num2str,round(xTick/60,2),'UniformOutput',false)); 
+        timeunit = 'h';
+    case {'d' 'day' 'days'}
+        set(axh, 'xTickLabel', arrayfun(@num2str,round(xTick/(60*24),3),'UniformOutput',false)); 
+        timeunit = 'd';
+end
+    
 set(axh, 'box', 'off')
 
 %     begsample = 0;
@@ -527,7 +576,7 @@ set(axh, 'box', 'off')
 %     line([x_pos_begin x_pos_begin],[plot_exclude_offset temp_max_y],'color',[0.25 0.125 1],'parent',axh);
 
 %titleName = sprintf('Hypnogram_datasetnum_%d_file_%d',iData,iHyp);
-xlabel('Time [min]');
+xlabel(['Time [' timeunit ']']);
 ylabel('Sleep stage');
 
 
