@@ -8,7 +8,7 @@ function [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingen
 % the subject.
 %
 % Use as
-%   [[res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded  scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring1, scoring2, ...)
+%   [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingency_excluded  scoring_consensus contingency_tables contingency_excluded_tables] = st_scoringcomp(cfg, scoring1, scoring2, ...)
 %
 % Optional configuration parameters are:
 %
@@ -121,12 +121,12 @@ for iScoring = 1:nScorings
         nEpochs = size(numbersNorm,2);
         if numel(scoring.epochs) > nEpochs
             missingEpochs =  numel(scoring.epochs) - nEpochs;
-            numbersNorm = [numbersNorm NaN(size(numbersNorm,2),missingEpochs)];
-            excludedNorm = [excludedNorm NaN(size(excludedNorm,2),missingEpochs)];
+            numbersNorm   =  [numbersNorm  NaN(size(numbersNorm,1),  missingEpochs)];
+            excludedNorm  =  [excludedNorm NaN(size(excludedNorm,1), missingEpochs)];
         end
         
         if numel(scoring.epochs) < nEpochs
-            missingEpochs =  nEpochs - numel(scoring.epochs);
+            missingEpochs = nEpochs - numel(scoring.epochs);
             scoring.numbers = [scoring.numbers, NaN(1,missingEpochs)];
             scoring.excluded = [scoring.excluded, NaN(1,missingEpochs)];
         end
