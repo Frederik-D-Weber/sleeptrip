@@ -23,7 +23,11 @@ function [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingen
 %                         see ST_CUTSCORING cfg.start parameter for details
 %   cfg.stat_alpha      = value for statistical alpha level (default is 0.05)
 %   cfg.reference       = which of the scorings should be chosen as reference 
-%                         either 'first' or 'consensus' (default = 'first')
+%                         either 
+%                        'first' (i.e. the first scoring is reference) or 
+%                         'consensus' (i.e. the consensus of all scorings is reference)  or 
+%                         'all' (i.e. include all possible pairwise comparisons)
+%                         (default = 'first')
 %   cfg.agreementthres  = number for the minimal agreement threshold in the range [0 1] 
 %                         to decide if the consensus scoring in an epoch is reached. 
 %                         0.5 means half of the raters needs to agree to
@@ -141,7 +145,7 @@ numbersNorm(isnan(numbersNorm)) = -1;
 
 [k_norm,sek_norm,p_norm,z_norm,ci_norm,kj_norm,sekj_norm,zkj_norm,pkj_norm,...
     consensusModusVoteMatrix_norm,consensusModusCountMatrix_norm,cross_comparisons_norm,chi2_cross_norm,p_cross_norm,...
-    ctbls] = ...
+    ctbls,scoring_num_ref_labels_norm,scoring_num_to_ref_labels_norm] = ...
     multiple_kappa(numbersNorm,cfg.stat_alpha,cfg.reference);
 
 % rename the labels to the ones that fit with the original scoring
@@ -205,7 +209,7 @@ end
 excludedNorm(isnan(excludedNorm)) = -1;
 
 [k_MA,sek_MA,p_MA,z_MA,ci_MA,kj_MA,sekj_MA,zkj_MA,pkj_MA,consensusModusVoteMatrix_MA,consensusModusCountMatrix_MA,cross_comparisons_MA,chi2_cross_MA,p_cross_MA...
-          ctbls_MA] = ...
+          ctbls_MA,scoring_num_ref_labels_MA,scoring_num_to_ref_labels_MA] = ...
     multiple_kappa(excludedNorm,cfg.stat_alpha,cfg.reference);
 
 agreement_epochs_single = all(bsxfun(@eq,numbersNorm,numbersNorm(1,:)));
@@ -246,14 +250,14 @@ res_contingency = [];
 res_contingency.ori = functionname;
 res_contingency.type = 'contingency';
 res_contingency.cfg = cfg;
-res_contingency.table = concatCrossComp(cross_comparisons_norm,chi2_cross_norm,p_cross_norm);
+res_contingency.table = concatCrossComp(scoring_num_ref_labels_norm,scoring_num_to_ref_labels_norm,cross_comparisons_norm,chi2_cross_norm,p_cross_norm);
 
 
 res_contingency_excluded = [];
 res_contingency_excluded.ori = functionname;
 res_contingency_excluded.type = 'contingency_excluded';
 res_contingency_excluded.cfg = cfg;
-res_contingency_excluded.table = concatCrossComp(cross_comparisons_MA,chi2_cross_MA,p_cross_MA);
+res_contingency_excluded.table = concatCrossComp(scoring_num_ref_labels_MA,scoring_num_to_ref_labels_MA,cross_comparisons_MA,chi2_cross_MA,p_cross_MA);
 
 %make a new consensus scoring from ground up and exclude fields
 %that are not crucial
@@ -286,7 +290,7 @@ memtoc(mtic)
 end
 
 
-function cc_all = concatCrossComp(cross_comparisons,chi2_cross,p_cross)
+function cc_all = concatCrossComp(scoring_num_ref_labels,scoring_num_to_ref_labels,cross_comparisons,chi2_cross,p_cross)
 colnames = {};
 for iCrossComp = 1:numel(cross_comparisons)
     colnames = cat(2,colnames,cross_comparisons{iCrossComp}.Properties.VariableNames);
@@ -311,19 +315,23 @@ for iCrossComp = 1:numel(cross_comparisons)
     end
     temp_cc_nrows = size(cross_comparisons{iCrossComp},1);
     
-    temp_scoringnumber_table = array2table(repmat(iCrossComp,temp_cc_nrows,1));
+    temp_scoringnumber_ref_labels = array2table(repmat(scoring_num_ref_labels{iCrossComp},temp_cc_nrows,1));
+    temp_scoringnumber_to_ref_labels = array2table(repmat(scoring_num_to_ref_labels{iCrossComp},temp_cc_nrows,1));
+    %temp_scoringnumber_table = array2table(repmat(iCrossComp,temp_cc_nrows,1));
     temp_stage_code_table = cell2table(cross_comparisons{iCrossComp}.Properties.RowNames);
     temp_chi2_table = array2table(repmat(chi2_cross(iCrossComp),temp_cc_nrows,1));
     temp_chi2_pvalue_table = array2table(repmat(p_cross(iCrossComp),temp_cc_nrows,1));
     
     
-    temp_scoringnumber_table.Properties.VariableNames = {'scoring_num'};
+    %temp_scoringnumber_table.Properties.VariableNames = {'scoring_num'};
+    temp_scoringnumber_ref_labels.Properties.VariableNames = {'scoring_num_ref'};
+    temp_scoringnumber_to_ref_labels.Properties.VariableNames = {'scoring_num_comp'};
     temp_stage_code_table.Properties.VariableNames = {'stage_code_comp_scoring'};
     temp_chi2_table.Properties.VariableNames = {'comp_chi2'};
     temp_chi2_pvalue_table.Properties.VariableNames = {'comp_chi2_pvalue'};
     
     
-    temp_cc = [temp_scoringnumber_table temp_chi2_table temp_chi2_pvalue_table temp_stage_code_table cross_comparisons{iCrossComp}];
+    temp_cc = [temp_scoringnumber_ref_labels temp_scoringnumber_to_ref_labels temp_chi2_table temp_chi2_pvalue_table temp_stage_code_table cross_comparisons{iCrossComp}];
     
     temp_cc.Properties.RowNames =  cellstr(arrayfun(@(x) [num2str(iCrossComp) '_' x], num2str((1:size(temp_cc,1))'),'UniformOutput',false));
     

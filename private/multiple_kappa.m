@@ -1,6 +1,6 @@
 function [f_k,f_sek,f_p,f_z,f_ci,f_kj,f_sekj,f_zkj,f_pkj,...
           consensusModusVoteMatrix,consensusCountMatrix,cross_comparisons,chi2_cross,p_cross, ...
-          ctbls] = mulitple_kappa(alignmentMatrix,alphalevel,referenceOption)
+          ctbls,scoring_num_ref_labels,scoring_num_to_ref_labels] = mulitple_kappa(alignmentMatrix,alphalevel,referenceOption)
 % Copyright (C) 2019-, Frederik D. Weber 
 %               with code from Giuseppe Cardillo
 %               with code from  Cardillo G. (2007) Fleiss'es kappa: compute the Fleiss'es kappa for multiple raters.   
@@ -195,7 +195,7 @@ switch referenceOption
             agreement = sum(all(bsxfun(@eq,pair,pair(1,:))))/size(pair,2);
             
             tbl = array2table([scoring_num_ref_labels(nComparison),scoring_num_to_ref_labels(nComparison),agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
-                'VariableNames',{'scoring_num_ref','scoring_num_test','agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
+                'VariableNames',{'scoring_num_ref','scoring_num_comp','agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
             
             if isempty(ctbls)
                 ctbls = tbl;
@@ -241,6 +241,7 @@ end
 %end
 
 end
+
 
 
 function [k,sek,p,z,ci,kj,sekj,zkj,pkj] = fleiss(varargin)
