@@ -65,7 +65,7 @@ else
 end
 
 % get the key-value pairs that comprise the file name
-entities = split(f, '_');
+entities = strsplit(f, '_');
 
 if isempty(suffix)
   % the suffix, i.e. the part just before the file extension, is the datatype
@@ -128,7 +128,7 @@ filelist = [filelist(endsWith(filelist', 'tsv')) filelist(endsWith(filelist', 'j
 % we are searching for a file with the datatype as suffix and that ends with json
 for i=1:numel(filelist)
   [p, f, x] = fileparts(filelist{i});
-  tmp = split(f, '_');
+  tmp = strsplit(f, '_');
   % check the file extension, the suffix and the entities of each candidate file
   if ismember(x, {'.tsv', '.json'}) && strcmp(tmp{end}, suffix) && all(ismember(tmp(1:end-1), entities))
     ft_info('found matching BIDS sidecar ''%s''', filelist{i})

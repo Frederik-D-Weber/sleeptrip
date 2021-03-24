@@ -434,8 +434,9 @@ switch cfg.plottype
             if ~(~istrue(cfg.plotunknown) && strcmp(epoch,'?'))
                 %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
                 if istrue(cfg.colorblocksconnect) && ~isempty(y_hyp_pos_prev) && (y_hyp_pos_prev ~= y_hyp_pos)
-                    htmp = plot(axh,[x1 x1],[y_hyp_pos+offset_y y_hyp_pos_prev+offset_y],'Color',[0.8 0.8 0.8]);
                     hold(axh,'on');
+                    htmp = plot(axh,[x1 x1],[y_hyp_pos+offset_y y_hyp_pos_prev+offset_y],'Color',[0.8 0.8 0.8]);
+                    %hold(axh,'on');
                 end
                 y_hyp_pos_prev = y_hyp_pos;
                 h = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],epoch_colors(iEpoch,:),'edgecolor','none');
