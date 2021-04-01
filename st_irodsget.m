@@ -107,7 +107,7 @@ end
 
 tempfinaldestinationpaths = {};
 for iirodspaths = 1:numel(cfg.irodspaths)
-irods_pathrequested = icfg.irodspaths{iirodspaths};
+irods_pathrequested = cfg.irodspaths{iirodspaths};
 
 % remove a trailing path separator from irods as iget anyway ignores this!
 if strcmp(irods_pathrequested(end),'/')
