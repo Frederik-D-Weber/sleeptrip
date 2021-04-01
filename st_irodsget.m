@@ -101,7 +101,7 @@ tempfinaldestinationfolder_restartfile = [cfg.tempfolderbase '/' tempuniquesubfo
 
 [status_mkdir, message_mkdir, messageid_mkdir] = mkdir(tempfinaldestinationfolder);
 
-if status_mkdir ~= 0
+if status_mkdir ~= 1
     ft_error('failed to make temporary folder to get files: %s',message_mkdir)
 end
 
