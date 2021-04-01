@@ -85,7 +85,9 @@ end
 
 %create uuid
 tempuuid =  java.util.UUID.randomUUID;
-uuid = tempuuid.toString;
+tempuuid = tempuuid.toString;
+uuid = tempuuid.toCharArray';
+
 
 %create datetime string
 dt = now;
