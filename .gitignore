@@ -35,3 +35,5 @@ realtime/bin/*/test_pthread
 realtime/bin/*/test_waitdat
 
 external/npmk/NPMKverChecker.dat
+
+*.github/*
