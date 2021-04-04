@@ -364,7 +364,7 @@ else
     cfg_int.dataset  = cfg.dataset;
     [cfg_int] = st_select_scoring(cfg_int);
     cfg_int.continuous   = 'yes';
-    if isempty(cfg_int.contendsample)
+    if isempty(cfg_int.trl)
         hasROIs = false;
         hasROIs_threshold = false;
         % read in dummy data

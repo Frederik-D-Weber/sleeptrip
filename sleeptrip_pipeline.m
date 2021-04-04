@@ -561,8 +561,10 @@ cfg.channel          = subject.eegchannels;
 % freqpeak2 for fast spindles
 cfg.centerfrequency  = freqpeak; % e.g. 12 for a frontal channel 13.3 for central channel
 
-% this saves RAM, but is slower, especially with zmax data that is
-% compressed (e.g. in a .zip file)
+% this saves RAM, but is slower, especially with zmax data because it is
+% compressed (e.g. in a .zip file).
+% thus better use this option only when the EEG files are not compressed,
+% otherwise might be slow.
 % cfg.dataset     = subject.dataset;
 % [res_spindles_channel res_spindles_event res_spindles_filter] = st_spindles(cfg); 
 

@@ -116,17 +116,24 @@ if ~isempty(epochsOfInterst)
 end
 
 
-%cfg.trl = [begins+offsetSamples ends+offsetSamples begins-1+offsetSamples];
+if hasdata
 cfg.contbegsample = begins+offsetSamples;
 cfg.contendsample = ends+offsetSamples;
 
 
 % requested sleep stages are not present in dat
-%if isempty(cfg.trl)
 if isempty(cfg.contbegsample)
     ft_warning('requested sleep stages are not present in the scoring, will return empty trials.');
 end
 
+else
+cfg.trl = [begins+offsetSamples ends+offsetSamples begins-1+offsetSamples];
+% requested sleep stages are not present in dat
+if isempty(cfg.trl)
+    ft_warning('requested sleep stages are not present in the scoring, will result in empty trials.');
+end
+
+end
 ends = [];
 if hasdata
     if nargout > 1
