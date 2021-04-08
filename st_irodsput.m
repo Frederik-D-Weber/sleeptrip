@@ -109,6 +109,7 @@ command = ['iput -K -r -P -N 10 -X ' [filepath '.' 'iput_restartfile.txt'] ' --r
 [status_system, cmdout_system] = system(command);
 
 if status_system ~= 0
+    disp(cmdout_system)
     ft_error('failed to execute %d of %d iget commands: %s',ifilepaths, numel(irodspath), command)
 end
 

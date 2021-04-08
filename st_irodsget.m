@@ -114,6 +114,7 @@ command = ['iget -K -r -P -N 10 -X ' tempfinaldestinationfolder_restartfile ' --
 [status_system, cmdout_system] = system(command);
 
 if status_system ~= 0
+    disp(cmdout_system)
     ft_error('failed to execute %d of %d iget commands: %s',iirodspaths, numel(irodspaths), command)
 end
 
