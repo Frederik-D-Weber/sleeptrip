@@ -15,6 +15,12 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.colorscheme            = srting, indicating the color schemes:
 %                                       'bright' or 'dark' or 'restless'
 %                                       (default = 'dark')
+%   cfg.classiccolor           = a 1x3 color vector with 3 RGB values from
+%                                0 to 1 color for the color of the line of
+%                                the cfg.plottype = 'classic' 
+%                                (default = [0 0 0])
+%   cfg.figurehandle           = overwrite the figure handle
+%   cfg.figureaxishandle       = overwrite the figure axis handle
 %   cfg.colorblocksconnect     = string, either 'yes' or 'no' if lines between colorblocks should be shown
 %                                only has effect for cfg.plottype = 'colorblocks'(default = 'no')
 %   cfg.plotlegend             = string, if the legend should be plotted either 'yes' or 'no' (default = 'yes')
@@ -145,6 +151,7 @@ cfg.plotlightson            = ft_getopt(cfg, 'plotlightson', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+cfg.classiccolor            = ft_getopt(cfg, 'classiccolor', [0 0 0]);
 cfg.colorscheme             = ft_getopt(cfg, 'colorscheme', 'dark');
 cfg.colorblocksconnect      = ft_getopt(cfg, 'colorblocksconnect', 'no');
 
@@ -161,6 +168,8 @@ cfg.figureoutputresolution  = ft_getopt(cfg, 'figureoutputresolution', 300);
 cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
 cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
+
+
 
 
 if istrue(cfg.colorblocksconnect) && istrue(cfg.plotlegend) && strcmp(cfg.plottype,'colorblocks')
@@ -381,9 +390,24 @@ if ~istrue(cfg.plotunknown)
     yTick(tempremind) = [];
 end
 
+if isfield(cfg, 'figurehandle')
+    hhyp = cfg.figurehandle;
+    if ~isfield(cfg, 'figureaxishandle')
+        axh = axes('Parent',hhyp);
+    else
+        axh = cfg.figureaxishandle;
+    end
+else
+    hhyp = figure;
+    if isfield(cfg, 'figureaxishandle')
+        axh = cfg.figureaxishandle;
+    else
+        axh = gca;
+    end
+end
 
-hhyp = figure;
-axh = gca;
+%   cfg.
+
 set(hhyp,'color',[1 1 1]);
 set(axh,'FontUnits',cfg.figureoutputunit)
 set(axh,'Fontsize',cfg.figureoutputfontsize);
@@ -395,7 +419,7 @@ switch cfg.plottype
         x_time = x_time + offsetseconds;
         x_time = x_time/60; % minutes
         x_time_hyp = x_time(1:length(hypn_plot_interpol));
-        plot(axh,x_time_hyp,hypn_plot_interpol,'Color',[0 0 0])
+        plot(axh,x_time_hyp,hypn_plot_interpol,'Color',cfg.classiccolor)
         hold(axh,'on');
         
     case {'colorblocks', 'colorbar'}
