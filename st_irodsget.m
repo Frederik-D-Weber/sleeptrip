@@ -91,7 +91,7 @@ timestampstring = [datestr(dt,'yyyy-mm-dd-HH-MM-SS-FFF')];
 %here the files will be parked 
 tempuniquesubfolder = [timestampstring '-' uuid];
 
-tempfinaldestinationfolder = [cfg.tempfolderbase '/' tempun iquesubfolder];
+tempfinaldestinationfolder = [cfg.tempfolderbase '/' tempuniquesubfolder];
 tempfinaldestinationfolder_restartfile = [cfg.tempfolderbase '/' tempuniquesubfolder 'iget_restartfile.txt'];
 
 [status_mkdir, message_mkdir, messageid_mkdir] = mkdir(tempfinaldestinationfolder);
