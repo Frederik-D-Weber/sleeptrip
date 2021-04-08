@@ -1,12 +1,12 @@
-function [fh] = st_hypnoplot(cfg, scoring)
+function [fh axh] = st_hypnoplot(cfg, scoring)
 
 % ST_HYPNOPLOT plots a hypnogram from the scoring
 %
 % Use as
-%   [fh] = st_hypnoplot(cfg,scoring)
+%   [fh axh] = st_hypnoplot(cfg,scoring)
 %
 %   scoring is a structure provided by ST_READ_SCORING
-%   it returns the figure handle
+%   it returns the figure handle (fh) and the axis handle (axh
 %
 %   config file can be empty, e.g. cfg = []
 %
