@@ -28,6 +28,9 @@ function [res_freqpeaks] = st_freqpeak(cfg, res)
 %                      either 'yes' or 'no' (default = 'no')
 %   cfg.prepeak    =  frequency surminus to highlight next to peak (default = 1)
 %   cfg.postpeak   =  frequency surplus to highlight next to peak (default = 1)
+%   cfg.title      =  string or a Nx1 cellstr, overwrite the title naming
+%                      with a fixed title string
+%                      or one per resnum (N unique) in the res.table.resnum
 %
 % See also ST_POWER
 
@@ -68,8 +71,13 @@ cfg.minpeakdist   = ft_getopt(cfg, 'minpeakdist', 1);
 cfg.powlawnorm    = ft_getopt(cfg, 'powlawnorm', 'no');
 cfg.pownorm       = ft_getopt(cfg, 'pownorm', 'no');
 cfg.prepeak       = ft_getopt(cfg, 'prepeak', 1);
-cfg.postpeak       = ft_getopt(cfg, 'postpeak', 1);
+cfg.postpeak      = ft_getopt(cfg, 'postpeak', 1);
 
+%cfg.title = '' 
+overwritetitle = false;
+if ~isfield(cfg, 'title')
+    overwritetitle = true;
+end
 
 
 MinFreqStepPadding = 1;
@@ -242,7 +250,16 @@ while ~tempAllAccepted
     iData = resnums(conseciData);
     tempIndex = find(resnums == iData);
     if any(outputFreqPeaks(tempIndex,1:cfg.peaknum) < 0)
-        outputFreqPeaks(tempIndex,1:cfg.peaknum) = spd_peakdet_gui_new(par_pFreq{conseciData},par_pPower{conseciData},par_pPowerChan{conseciData},par_pPowerChanLabels{conseciData},par_candSignalFreqPeaks{conseciData},par_candSignalPowerPeaks{conseciData},par_tempiDataString{conseciData},'',iData,cfg.prepeak,cfg.postpeak);
+        if overwritetitle
+            if iscellstr(cfg.title)
+                resulttitle = cfg.title{conseciData};
+            else
+                resulttitle = cfg.title;
+            end
+        else
+            resulttitle = par_tempiDataString{conseciData};
+        end
+        outputFreqPeaks(tempIndex,1:cfg.peaknum) = spd_peakdet_gui_new(par_pFreq{conseciData},par_pPower{conseciData},par_pPowerChan{conseciData},par_pPowerChanLabels{conseciData},par_candSignalFreqPeaks{conseciData},par_candSignalPowerPeaks{conseciData},resulttitle,'',iData,cfg.prepeak,cfg.postpeak);
     end
     tempAllAccepted = ~any(any(outputFreqPeaks(:,1:cfg.peaknum) < 0));
     conseciData = conseciData + 1;

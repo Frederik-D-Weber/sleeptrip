@@ -1,19 +1,13 @@
-function [tempfinaldestinationpaths tempfinaldestinationfolder] = st_irodsget(cfg, irodspaths)
+function [irodsfinaldestinationpaths irodsfinaldestinationfolder] = st_irodsput(cfg, filepaths, irodspath)
 
-% ST_IRODSGET gets files (via iget command) from an irods server evironment into a local
-% temporary folder for local useage
+% ST_IRODSGET puts files (via iput command) to an irods server evironment from a local
+% file or folder 
 %
 % Use as
-%   [tempfinaldestinationpaths tempfinaldestinationfolder] = st_irodsget(cfg, irodspaths)
+%   [irodsfinaldestinationpaths irodsfinaldestinationfolder] = st_irodsput(cfg, filepaths, irodspath)
 %
-% irodspaths = a string (single path) or a cellstr (multiple paths) with the paths as they apear on
+%   irodspath = a string (single path) to a folder as it apears on
 %                    the irods file system 
-%
-% Optional configuration parameters are:
-%   cfg.tempfolderbase  = string with a folder base, only change if you want 
-%                         to manually clean up later without defaults of ST_IRODSCLEANUP 
-%                         (default = '~/st_irodsget')
-%
 %
 % See also ST_IRODSCLEANUP, ST_WAIT_EXISTS
 
@@ -69,63 +63,66 @@ cfg.tempfolderbase = ft_getopt(cfg, 'tempfolderbase', ['~/' functionname ]);
 
 fprintf([functionname ' function initialized\n']);
 
-if isempty(irodspaths)
-    ft_error('irodspaths needs to be not empty.')
+
+if isempty(irodspath)
+    ft_error('irodspath needs to be not empty.')
 end
 
-if ~iscellstr(irodspaths)
-    irodspaths = {irodspaths};
+if ~iscellstr(filepaths)
+    filepaths = {filepaths};
 end
 
+% remove a trailing path separator from irods as iput anyway ignores this!
+if strcmp(irodspath(end),'/')
+    irodspath = irodspath(1:(end-1));
+end
 
-%create uuid
-tempuuid =  java.util.UUID.randomUUID;
-tempuuid = tempuuid.toString;
-uuid = tempuuid.toCharArray';
+% %create uuid
+% tempuuid =  java.util.UUID.randomUUID;
+% tempuuid = tempuuid.toString;
+% uuid = tempuuid.toCharArray';
 
 
 %create datetime string
-dt = now;
-timestampstring = [datestr(dt,'yyyy-mm-dd-HH-MM-SS-FFF')];
+% dt = now;
+% timestampstring = [datestr(dt,'yyyy-mm-dd-HH-MM-SS-FFF')];
 
 %here the files will be parked 
-tempuniquesubfolder = [timestampstring '-' uuid];
+% tempuniquesubfolder = [timestampstring '-' uuid];
+% 
+% tempfinaldestinationfolder = [cfg.tempfolderbase '/' tempuniquesubfolder];
+% tempfinaldestinationfolder_restartfile = [cfg.tempfolderbase '/' tempuniquesubfolder 'iget_restartfile.txt'];
 
-tempfinaldestinationfolder = [cfg.tempfolderbase '/' tempun iquesubfolder];
-tempfinaldestinationfolder_restartfile = [cfg.tempfolderbase '/' tempuniquesubfolder 'iget_restartfile.txt'];
+% [status_mkdir, message_mkdir, messageid_mkdir] = mkdir(tempfinaldestinationfolder);
 
-[status_mkdir, message_mkdir, messageid_mkdir] = mkdir(tempfinaldestinationfolder);
+% if status_mkdir ~= 1
+%     ft_error('failed to make temporary folder to get files: %s',message_mkdir)
+% end
+irodsfinaldestinationfolder = irodspath;
 
-if status_mkdir ~= 1
-    ft_error('failed to make temporary folder to get files: %s',message_mkdir)
-end
+irodsfinaldestinationpaths = {};
+for ifilepaths = 1:numel(filepaths)
+filepath = filepaths{ifilepaths};
 
-tempfinaldestinationpaths = {};
-for iirodspaths = 1:numel(irodspaths)
-irods_pathrequested = irodspaths{iirodspaths};
-
-% remove a trailing path separator from irods as iget anyway ignores this!
-if strcmp(irods_pathrequested(end),'/')
-    irods_pathrequested = irods_pathrequested(1:(end-1));
-end
-
-command = ['iget -K -r -P -N 10 -X ' tempfinaldestinationfolder_restartfile ' --retries 10 ' irods_pathrequested ' ' tempfinaldestinationfolder];
+command = ['iput -K -r -P -N 10 -X ' [filepath '.' 'iput_restartfile.txt'] ' --retries 10 ' irodsfinaldestinationfolder ' '  filepath];
 
 [status_system, cmdout_system] = system(command);
 
 if status_system ~= 0
-    ft_error('failed to execute %d of %d iget commands: %s',iirodspaths, numel(irodspaths), command)
+    ft_error('failed to execute %d of %d iget commands: %s',ifilepaths, numel(irodspath), command)
 end
 
-[pathstr, name, ext] = fileparts(irods_pathrequested);
-finaldestinationfile = [tempfinaldestinationfolder '/' name ext];
-tempfinaldestinationpaths = cat(1, tempfinaldestinationpaths, finaldestinationfile);
+[pathstr, name, ext] = fileparts(filepath);
+finaldestinationfile = [irodsfinaldestinationfolder '/' name ext];
+irodsfinaldestinationpaths = cat(1, irodsfinaldestinationpaths, finaldestinationfile);
 
 end
 
-if numel(tempfinaldestinationpaths) == 1
-    tempfinaldestinationpaths = tempfinaldestinationpaths{1};
+if numel(irodsfinaldestinationpaths) == 1
+    irodsfinaldestinationpaths = irodsfinaldestinationpaths{1};
 end
+
+
 %res:
 %tempfinaldestinationpaths
 %tempfinaldestinationfolder
