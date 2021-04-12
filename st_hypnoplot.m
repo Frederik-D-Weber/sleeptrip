@@ -11,7 +11,13 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   config file can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
-%   cfg.plottype               = string, the type of plot 'classic' plots the line graph as typical or 'colorblocks' plots the colorbocks  or 'colorbar' for only one bar of colors (default = 'classic')
+%   cfg.plottype               = string, the type of 
+%                                plot 'classic' plots the line graph as typical 
+%                                or 'colorbar' for only one bar of colors 
+%                                or 'colorblocks' plots the colorbocks
+%                                   (colorbars separated by sleep stage)
+%                                or 'deepcolorblocks' plots like colorbocks but the deeper non-REM sleep states are taller blocks 
+%                               (default = 'classic')
 %   cfg.colorscheme            = srting, indicating the color schemes:
 %                                       'bright' or 'dark' or 'restless'
 %                                       (default = 'dark')
@@ -102,6 +108,8 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.folderstructure        = either 'yes' or 'no' if a folder structure should
 %                                be created with the result origin and type 
 %                                all results will be stored in "/res/..." (default = 'yes')
+%   cfg.legacymode             = either 'yes' or 'no' if the plotting is
+%                                slow and in legacy mode (pre 2021)
 %
 %
 % See also ST_READ_SCORING
@@ -136,6 +144,7 @@ mtic = memtic;
 functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
+legacymode = true;
 
 % set the defaults
 cfg.plottype                = ft_getopt(cfg, 'plottype', 'classic');
@@ -168,18 +177,17 @@ cfg.figureoutputresolution  = ft_getopt(cfg, 'figureoutputresolution', 300);
 cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
 cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
+cfg.legacymode              = ft_getopt(cfg, 'legacymode', 'no');
 
 
-
-
-if istrue(cfg.colorblocksconnect) && istrue(cfg.plotlegend) && strcmp(cfg.plottype,'colorblocks')
-    ft_warning('cfg.colorblocksconnect = ''yes'' currently does not support the legend with cfg.plottype = ''colorblocks'' and thus legend is DISABLED!')
+if istrue(cfg.colorblocksconnect) && istrue(cfg.plotlegend) && (strcmp(cfg.plottype,'colorblocks') || strcmp(cfg.plottype,'deepcolorblocks'))
+    ft_warning('cfg.colorblocksconnect = ''yes'' currently does not support the legend with cfg.plottype = ''colorblocks'' or ''deepcolorblocks'' and thus legend is DISABLED!')
     cfg.plotlegend = 'no';
 end
 if isfield(cfg, 'eventranges'), ft_error('Changed naming convention, use cfg.eventvalueranges instead of cfg.eventvalueranges'); end
 
 
-if strcmp(cfg.plottype,'colorbar') || strcmp(cfg.plottype,'colorblocks')
+if strcmp(cfg.plottype,'colorbar') || strcmp(cfg.plottype,'colorblocks') || strcmp(cfg.plottype,'deepcolorblocks')
     if isfield(cfg,'yaxdisteqi')
         if ~istrue(cfg.yaxdisteqi)
             ft_warning('cfg.yaxdisteqi is set to ''yes'' because of the cfg.plottype = %s',cfg.plottype)
@@ -422,7 +430,7 @@ switch cfg.plottype
         plot(axh,x_time_hyp,hypn_plot_interpol,'Color',cfg.classiccolor)
         hold(axh,'on');
         
-    case {'colorblocks', 'colorbar'}
+    case {'colorblocks', 'colorbar', 'deepcolorblocks'}
         x_time = (0:numel(scoring.epochs)) * scoring.epochlength;
         x_time = x_time + offsetseconds;
         x_time = x_time/60; % minutes
@@ -436,53 +444,159 @@ switch cfg.plottype
         
         incLabel = 1;
         
-        [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs,cfg.colorscheme);
         
         offset_y = -0.5;%(iScoring-0.5);
         height = 1;
+        heightmult = 1;
         y_hyp_pos_prev = [];
-        for iEpoch = 1:numel(scoring.epochs)
-            x1 = x_time(iEpoch);
-            x2 = x_time(iEpoch+1);
-            epoch = scoring.epochs(iEpoch);
+        
+        
+        if istrue(cfg.legacymode)
+            [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs,cfg.colorscheme);
             
-            switch cfg.plottype
-                case 'colorblocks'
-                    y_hyp_pos = yTick(ismember(yTickLabel,epoch));
-                case 'colorbar'
-                    y_hyp_pos = yTick(1);
+            for iEpoch = 1:numel(scoring.epochs)
+                
+                x1 = x_time(iEpoch);
+                x2 = x_time(iEpoch+1);
+                epoch = scoring.epochs(iEpoch);
+                
+                switch cfg.plottype
+                    case 'deepcolorblocks'
+                        heightmult = 1;
+                        tempepoch = epoch;
+                        isdeep = false;
+                        if ismember(tempepoch,{'N2','N3','N4'})
+                                tempepoch = 'N1';
+                                isdeep = true;
+                        end
+                        if ismember(tempepoch,{'S2','S3','S4'})
+                                tempepoch = 'S1';
+                                isdeep = true;
+                        end
+                        y_hyp_pos_S1N1 = yTick(ismember(yTickLabel,tempepoch));
+                        y_hyp_pos = yTick(ismember(yTickLabel,epoch));
+                        if isdeep
+                            heightmult = height*(abs(y_hyp_pos_S1N1-y_hyp_pos)+1);
+                        end
+                    case 'colorblocks'
+                        y_hyp_pos = yTick(ismember(yTickLabel,epoch));
+                    case 'colorbar'
+                        y_hyp_pos = yTick(1);
+                end
+                
+                
+                %if isfield(cfg,'plotunknown')
+                if ~(~istrue(cfg.plotunknown) && strcmp(epoch,'?'))
+                    %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
+                    if istrue(cfg.colorblocksconnect) && ~isempty(y_hyp_pos_prev) && (y_hyp_pos_prev ~= y_hyp_pos)
+                        hold(axh,'on');
+                        htmp = plot(axh,[x1 x1],[y_hyp_pos+offset_y y_hyp_pos_prev+offset_y],'Color',[0.8 0.8 0.8]);
+                        %hold(axh,'on');
+                    end
+                    y_hyp_pos_prev = y_hyp_pos;
+                    h = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height*heightmult y_hyp_pos+offset_y+height*heightmult],epoch_colors(iEpoch,:),'edgecolor','none');
+                    member = find(ismember(labels,epoch),1,'first');
+                    if ~ismember(member,idxUsedLabels)
+                        hp(incLabel) = h;
+                        incLabel = incLabel + 1;
+                        idxUsedLabels = [idxUsedLabels member];
+                    end
+                end
+                %end
+                
+                if isfield(cfg,'plotexcluded')
+                    if istrue(cfg.plotexcluded) && scoring.excluded(iEpoch)
+                        y_hyp_pos = yTick(end);
+                        he = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],[1 0 0],'edgecolor','none');
+                    end
+                end
+                
+                
+            end
+        else
+           	patches_label_x1x2y1y2 = cell(numel(labels),4);
+            patches_label_x1x2y1y2_excluded = cell(1,3);
+            for iEpoch = 1:numel(scoring.epochs)
+                
+                x1 = x_time(iEpoch);
+                x2 = x_time(iEpoch+1);
+                epoch = scoring.epochs(iEpoch);
+                iLabel = find(ismember(labels,epoch),1,'first');
+                
+                switch cfg.plottype
+                    case 'deepcolorblocks'
+                        heightmult = 1;
+                        tempepoch = epoch;
+                        isdeep = false;
+                        if ismember(tempepoch,{'N2','N3','N4'})
+                                tempepoch = 'N1';
+                                isdeep = true;
+                        end
+                        if ismember(tempepoch,{'S2','S3','S4'})
+                                tempepoch = 'S1';
+                                isdeep = true;
+                        end
+                        y_hyp_pos_S1N1 = yTick(ismember(yTickLabel,tempepoch));
+                        y_hyp_pos = yTick(ismember(yTickLabel,epoch));
+                        if isdeep
+                            heightmult = height*(abs(y_hyp_pos_S1N1-y_hyp_pos)+1);
+                        end
+                    case 'colorblocks'
+                        y_hyp_pos = yTick(ismember(yTickLabel,epoch));
+                    case 'colorbar'
+                        y_hyp_pos = yTick(1);
+                end
+                
+                
+                %if isfield(cfg,'plotunknown')
+                if ~(~istrue(cfg.plotunknown) && strcmp(epoch,'?'))
+                    %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
+                    if istrue(cfg.colorblocksconnect) && ~isempty(y_hyp_pos_prev) && (y_hyp_pos_prev ~= y_hyp_pos)
+                        hold(axh,'on');
+                        htmp = plot(axh,[x1 x1],[y_hyp_pos+offset_y y_hyp_pos_prev+offset_y],'Color',[0.8 0.8 0.8]);
+                        %hold(axh,'on');
+                    end
+                    y_hyp_pos_prev = y_hyp_pos;
+                    patches_label_x1x2y1y2{iLabel,1} = cat(2,patches_label_x1x2y1y2{iLabel,1},x1);
+                    patches_label_x1x2y1y2{iLabel,2} = cat(2,patches_label_x1x2y1y2{iLabel,2},x2);
+                    patches_label_x1x2y1y2{iLabel,3} = cat(2,patches_label_x1x2y1y2{iLabel,3},y_hyp_pos+offset_y);
+                    patches_label_x1x2y1y2{iLabel,4} = cat(2,patches_label_x1x2y1y2{iLabel,4},y_hyp_pos+offset_y+height*heightmult);
+                end
+                %end
+                
+                if isfield(cfg,'plotexcluded')
+                    if istrue(cfg.plotexcluded) && scoring.excluded(iEpoch)
+                        y_hyp_pos = yTick(end);
+                        patches_label_x1x2y1y2_excluded{1,1} = cat(2,patches_label_x1x2y1y2_excluded{1,1},x1);
+                        patches_label_x1x2y1y2_excluded{1,2} = cat(2,patches_label_x1x2y1y2_excluded{1,2},x2);
+                        patches_label_x1x2y1y2_excluded{1,3} = cat(2,patches_label_x1x2y1y2_excluded{1,3},y_hyp_pos+offset_y);
+                    end
+                end
+                
+                
             end
             
-            
-            %if isfield(cfg,'plotunknown')
-            if ~(~istrue(cfg.plotunknown) && strcmp(epoch,'?'))
-                %h = ft_plot_patch([x1 x2 x2 x1], [offset_y offset_y offset_y+height offset_y+height], 'facecolor',epoch_colors(iEpoch,:));
-                if istrue(cfg.colorblocksconnect) && ~isempty(y_hyp_pos_prev) && (y_hyp_pos_prev ~= y_hyp_pos)
-                    hold(axh,'on');
-                    htmp = plot(axh,[x1 x1],[y_hyp_pos+offset_y y_hyp_pos_prev+offset_y],'Color',[0.8 0.8 0.8]);
-                    %hold(axh,'on');
-                end
-                y_hyp_pos_prev = y_hyp_pos;
-                h = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],epoch_colors(iEpoch,:),'edgecolor','none');
-                member = find(ismember(labels,epoch),1,'first');
-                if ~ismember(member,idxUsedLabels)
-                    hp(incLabel) = h;
-                    incLabel = incLabel + 1;
-                    idxUsedLabels = [idxUsedLabels member];
+            for iLabel = 1:numel(labels)
+                if ~isempty(patches_label_x1x2y1y2{iLabel,1})
+                    h = patch([patches_label_x1x2y1y2{iLabel,1}' patches_label_x1x2y1y2{iLabel,2}' patches_label_x1x2y1y2{iLabel,2}' patches_label_x1x2y1y2{iLabel,1}']', ...
+                        [patches_label_x1x2y1y2{iLabel,3}' patches_label_x1x2y1y2{iLabel,3}' patches_label_x1x2y1y2{iLabel,4}' patches_label_x1x2y1y2{iLabel,4}']',...
+                        lables_colors_topdown(iLabel,:),'edgecolor','none');
+                    if ~ismember(iLabel,idxUsedLabels)
+                        hp(incLabel) = h;
+                        incLabel = incLabel + 1;
+                        idxUsedLabels = [idxUsedLabels iLabel];
+                    end
                 end
             end
-            %end
             
             if isfield(cfg,'plotexcluded')
-                if istrue(cfg.plotexcluded) && scoring.excluded(iEpoch)
-                    y_hyp_pos = yTick(end);
-                    he = patch([x1 x2 x2 x1], [y_hyp_pos+offset_y y_hyp_pos+offset_y y_hyp_pos+offset_y+height y_hyp_pos+offset_y+height],[1 0 0],'edgecolor','none');
+                if istrue(cfg.plotexcluded)
+                    hex = patch([patches_label_x1x2y1y2_excluded{1,1}' patches_label_x1x2y1y2_excluded{1,2}' patches_label_x1x2y1y2_excluded{1,2}' patches_label_x1x2y1y2_excluded{1,1}']', ...
+                        [patches_label_x1x2y1y2_excluded{1,3}' patches_label_x1x2y1y2_excluded{1,3}' patches_label_x1x2y1y2_excluded{1,3}'+height patches_label_x1x2y1y2_excluded{1,3}'+height]',...
+                        [1 0 0],'edgecolor','none');
                 end
             end
-            
-
         end
-        
         
         collabels = labels;
         for iLabel = 1:numel(labels)
@@ -495,7 +609,7 @@ switch cfg.plottype
         end
         hold(axh,'on');
     otherwise
-       ft_error('cfg.plottype = %s is unknown, please see the help for available options.', cfg.plottype)
+        ft_error('cfg.plottype = %s is unknown, please see the help for available options.', cfg.plottype)
 end
 
 
@@ -506,11 +620,9 @@ if strcmp(cfg.plotlightsoff, 'yes')
             case 'classic'
                 onset_y_coord_offset = 0.2;
                 onset_y_coord = 0+onset_y_coord_offset;
-                
-            case 'colorblocks'
+            case {'colorblocks', 'deepcolorblocks'}
                 onset_y_coord_offset = 0.5;
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
-                
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
@@ -527,11 +639,9 @@ if strcmp(cfg.plotlightson, 'yes')
             case 'classic'
                 onset_y_coord_offset = 0.2;
                 onset_y_coord = 0+onset_y_coord_offset;
-                
-            case 'colorblocks'
+            case {'colorblocks', 'deepcolorblocks'}
                 onset_y_coord_offset = 0.5;
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
-                
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
@@ -548,11 +658,9 @@ if strcmp(cfg.plotsleeponset, 'yes')
             case 'classic'
                 onset_y_coord_offset = 0.2;
                 onset_y_coord = hypn_plot_interpol(find(x_time >=onset_time,1,'first'))+onset_y_coord_offset;
-                
-            case 'colorblocks'
+            case {'colorblocks', 'deepcolorblocks'}
                 onset_y_coord_offset = 0.5;
                 onset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{onsetCandidateIndex}))+onset_y_coord_offset;
-                
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
@@ -571,7 +679,7 @@ if strcmp(cfg.plotsleepoffset, 'yes')
             case 'classic'
                 offset_y_coord_offset = 0.2;
                 offset_y_coord = hypn_plot_interpol(find(x_time <=offset_time,1,'last'))+offset_y_coord_offset;
-            case 'colorblocks'
+            case {'colorblocks', 'deepcolorblocks'}
                 onset_y_coord_offset = 0.5;
                 offset_y_coord =  yTick(ismember(yTickLabel,scoring.epochs{lastsleepstagenumber}))+onset_y_coord_offset;
             case 'colorbar'
@@ -593,7 +701,7 @@ eventHeight = 0.4;
 offset_event_y = max(yTick);
 
 switch cfg.plottype
-    case {'colorbar', 'colorblocks'}
+    case {'colorbar', 'colorblocks','deepcolorblocks'}
         offset_event_y = offset_event_y - offset_y;
 end
 
@@ -676,7 +784,7 @@ switch cfg.plottype
         else
             temp_min_y = min(yTick) - 1;
         end
-    case {'colorblocks', 'colorbar'}
+    case {'colorbar', 'colorblocks', 'deepcolorblocks'}
         temp_max_y = max(yTick)+0.5;
         temp_min_y = min(yTick)-0.5;
         
