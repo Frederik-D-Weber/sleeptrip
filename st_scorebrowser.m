@@ -238,6 +238,25 @@ if istrue(cfg.datainteractive)
                 hasdata = true;
                 
                 if ~isempty(cfg_dhms.datagrammerfile)
+                    
+                    prompt = {'Resample at sampling rate (Hz) before data grammer'};
+                    title = 'Update sampling rate before data grammer?';
+                    dims = [1 35];
+                    definput = cellstr(num2str([data.fsample]))';
+                    updated_samplerate = inputdlg(prompt,title,dims,definput);
+                    
+                    if ~isempty(updated_samplerate)
+                        updated_samplerate = str2num(updated_samplerate{1});
+                        
+                        if updated_samplerate ~= data.fsample
+                            
+                            cfg_rs = [];
+                            cfg_rs.resamplefs = updated_samplerate;%frequency at which the data will be resampled (default = 256 Hz)
+                            cfg_rs.detrend = 'no';
+                            data = ft_resampledata(cfg_rs,data);
+                        end
+                    end
+                    
                     cfg_rdg = [];
                     cfg.datagrammer = st_read_datagrammer(cfg_rdg, cfg_dhms.datagrammerfile);
                     %cfg_adg = [];
@@ -276,12 +295,14 @@ if istrue(cfg.datainteractive)
             
             if asks >= 5
                 ask_again = false;
-                ft_error('could not load any data interactively after ')
+                ft_error('could not load any data interactively after 5 tries.')
                 return
             end
-            answer_read = questdlg('FAILED to load data or setup. TRY AGAIN?', ...
-                'Read in scoring?', ...
-                'Yes','No','No');
+            options.Interpreter = 'tex';
+            options.Default = 'No';
+            answer_read = questdlg(['FAILED to load data or setup. TRY AGAIN?\newlineError message:\newline' err.message], ...
+                'Try again?', ...
+                'Yes','No','No',options);
     
             if ~istrue(answer_read)
                 return
@@ -290,6 +311,11 @@ if istrue(cfg.datainteractive)
     end
 end
 
+
+if ~hasdata && ~istrue(cfg.datainteractive)
+    data = st_preprocessing(cfg);
+    hasdata = true;
+end
 
 cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
 
@@ -321,8 +347,10 @@ cfg.artfctdef.EMG.artifact = [];
 cfg.artfctdef.EOG.artifact = [];
 cfg.selectfeature = 'EEG';
 cfg.selectmode = 'markartifact';
-cfg.channel = 1:length(data.label);
-cfg.chanscale = ones(1,length(data.label));
+if hasdata || istrue(cfg.datainteractive)
+    cfg.channel = 1:length(data.label);
+    cfg.chanscale = ones(1,length(data.label));
+end
     
 %     if strcmp(ApplyScalingSettings,'yes')
 %         fileScalingSettings = listOfScalingSettingsFiles{iData};
@@ -1254,7 +1282,7 @@ set(gca,'TickLength',[0.005 0.01])
 % set(b,  'YColor', [0.3 0.3 0.3], 'XTickLabel', [], 'YTickLabel', [])
 set(gca,'Fontsize',5,'FontUnits','normalized');
 
-if isfield(cfg,'begin_end_events') || isfield(cfg,'begin_end_events')
+if isfield(cfg,'begin_end_events') || isfield(cfg,'begin_end_events2')
     cfg.displayEvents = 'yes';
 else
     cfg.displayEvents = 'no';

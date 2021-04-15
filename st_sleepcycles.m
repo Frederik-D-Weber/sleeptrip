@@ -185,6 +185,12 @@ Rends((end+1):maxCycle) = NaN;
 NRstarts((end+1):maxCycle) = NaN;
 NRends((end+1):maxCycle) = NaN;
 
+for iCycle = 1:numel(startepochs)
+    if isnan(startepochs(iCycle))
+       startepochs(iCycle) = min([NRstarts(iCycle) Rstarts(iCycle)]);
+       endepochs(iCycle) = min([NRends(iCycle) Rends(iCycle)]);
+    end
+end
 
 startepochs = startepochs(:).'';
 endepochs = endepochs(:).'';
@@ -193,12 +199,68 @@ Rends = Rends(:).'';
 NRstarts = NRstarts(:).'';
 NRends = NRends(:).'';
 
+%%% split the NR cycle in descending, deep and ascending part if possible
+minBoutSplitLength = 1;
+boutSplitLength = 2;
+
+NRstarts_descending = NaN(size(NRstarts));
+NRends_descending =  NaN(size(NRends));
+
+NRstarts_deep = NaN(size(NRstarts));
+NRends_deep =  NaN(size(NRends));
+
+NRstarts_ascending = NaN(size(NRstarts));
+NRends_ascending =  NaN(size(NRends));
+
+NRdeepest_state = cellstr(repmat('none',size(NRstarts)));
+NRdeepest_state_min_epochs = NaN(size(NRstarts));
+
+epochs_standardized = cellfun(@sleepStage2str_alt,scoring.epochs,'UniformOutput',0);
+
+for iNR = 1:numel(NRstarts)
+    if ~isnan(NRstarts(iNR)) && ~isnan(NRends(iNR))
+        epochs_standardized_temp = epochs_standardized(NRstarts(iNR):NRends(iNR));
+        deepestStage = 'SWS';
+        [idx_label_first idx_label_last boutSplitLengthfinal] = findIndices(epochs_standardized_temp,'SWS',minBoutSplitLength,boutSplitLength);
+        if isempty(idx_label_first)
+            [idx_label_first idx_label_last boutSplitLengthfinal] = findIndices(epochs_standardized_temp,'N2',minBoutSplitLength,boutSplitLength);
+            switch scoring.standard
+                case 'aasm'
+                    deepestStage = 'N2';
+                case 'rk'
+                    deepestStage = 'S2';
+            end;
+        end
+        
+        if isempty(idx_label_first)
+            [idx_label_first idx_label_last boutSplitLengthfinal] = findIndices(epochs_standardized_temp,'N1',minBoutSplitLength,boutSplitLength);
+            switch scoring.standard
+                case 'aasm'
+                    deepestStage = 'N1';
+                case 'rk'
+                    deepestStage = 'S1';
+            end;
+        end
+        
+        if ~isempty(idx_label_first)
+            NRstarts_descending(iNR) = NRstarts(iNR);
+            NRstarts_deep(iNR) = NRstarts(iNR)+idx_label_first-1;
+            NRends_descending(iNR) =  max(NRstarts(iNR),NRstarts_deep(iNR)-1);
+            NRends_deep(iNR) =  NRstarts(iNR)+idx_label_last-1;
+            NRstarts_ascending(iNR) =  min(NRends(iNR),NRends_deep(iNR)+1);
+            NRends_ascending(iNR) = NRends(iNR);
+            NRdeepest_state{iNR} = deepestStage;
+            NRdeepest_state_min_epochs(iNR) = boutSplitLengthfinal;
+        end
+    end
+end
+
 res_cycle = [];
 res_cycle.ori = functionname;
 res_cycle.type = 'cycle';
 res_cycle.cfg = cfg;
 res_cycle.table = table(...
-    (1:maxCycle)', startepochs(:), endepochs, NRstarts, NRends, Rstarts, Rends,...
+    (1:maxCycle)', startepochs(:), endepochs(:), NRstarts(:), NRends(:), Rstarts(:), Rends(:),...
     'VariableNames',{...
     'cycle', 'startepoch', 'endepoch', 'NRstartepoch', 'NRendepoch', 'Rstartepoch', 'Rendepoch'}...
     );
@@ -207,8 +269,35 @@ res_cycle.table.durationepochs = res_cycle.table.endepoch - res_cycle.table.star
 res_cycle.table.durationNRepochs = res_cycle.table.NRendepoch - res_cycle.table.NRstartepoch + 1;
 res_cycle.table.durationRepochs = res_cycle.table.Rendepoch - res_cycle.table.Rstartepoch + 1;
 
+res_cycle.table.NRstarts_descending = NRstarts_descending;
+res_cycle.table.NRends_descending = NRends_descending;
+
+res_cycle.table.NRstarts_deep = NRstarts_deep;
+res_cycle.table.NRends_deep = NRends_deep;
+
+res_cycle.table.NRstarts_ascending = NRstarts_ascending;
+res_cycle.table.NRends_ascending = NRends_ascending;
+
+res_cycle.table.NRdeepest_state_min_epochs = NRdeepest_state_min_epochs;
+res_cycle.table.NRdeepest_state = NRdeepest_state;
+
+res_cycle.table.NRdeepest_state_min_epochs(res_cycle.table.durationNRepochs == 0) = NaN;
+res_cycle.table.NRdeepest_state(res_cycle.table.durationNRepochs == 0) = repmat('none',size(res_cycle.table.NRdeepest_state(res_cycle.table.durationNRepochs == 0)));
+
 res_cycle.table.NRstartepoch(res_cycle.table.durationNRepochs == 0) = NaN;
 res_cycle.table.NRendepoch(res_cycle.table.durationNRepochs == 0) = NaN;
+
+res_cycle.table.NRstarts_descending(res_cycle.table.durationNRepochs == 0) = NaN;
+res_cycle.table.NRends_descending(res_cycle.table.durationNRepochs == 0) = NaN;
+
+res_cycle.table.NRstarts_deep(res_cycle.table.durationNRepochs == 0) = NaN;
+res_cycle.table.NRends_deep(res_cycle.table.durationNRepochs == 0) = NaN;
+
+res_cycle.table.NRstarts_ascending(res_cycle.table.durationNRepochs == 0) = NaN;
+res_cycle.table.NRends_ascending(res_cycle.table.durationNRepochs == 0) = NaN;
+
+
+
 
 if ~hasSleep
     ft_warning('There was no sleep for sleep cycles to be detected, result has an empty table now.')
@@ -263,6 +352,29 @@ end
 
 end
 
+function [idx_label_first idx_label_last boutSplitLength] = findIndices(stages,label,minBoutSplitLength,boutSplitLength)
+
+[consecBegins, consecEnds] = getBeginsAndCorrespondingEndsIndicesAboveThreshold([0 ismember(stages,{label}) 0],0.5);
+
+idx_label_first = [];
+idx_label_last = [];
+
+consecBegins = consecBegins - 1;
+consecEnds = consecEnds - 1;
+SWSboutLengths = consecEnds-consecBegins+1;
+while (boutSplitLength >= minBoutSplitLength) && isempty(idx_label_first)
+    
+    idx_SWS_long = SWSboutLengths >= boutSplitLength;
+    idx_bout_first = find(idx_SWS_long,1,'first');
+    idx_bout_last = find(idx_SWS_long,1,'last');
+    if ~isempty(idx_bout_first)
+        idx_label_first = max(1,consecBegins(idx_bout_first));
+        idx_label_last = min(numel(stages),consecEnds(idx_bout_last));
+        break
+    end
+    boutSplitLength = boutSplitLength - 1;
+end
+end
 
 % function [starts, ends] = startStop(stages,label)
 % starts = [];

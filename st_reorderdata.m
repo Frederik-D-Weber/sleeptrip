@@ -1,9 +1,9 @@
-function [data] = st_reoderdata(cfg, data)
+function [data] = st_reorderdata(cfg, data)
 
 % ST_REORDERDATA applies filter strategy to the data.
 %
 % Use as
-%   [data] = st_reoderdata(cfg, data)
+%   [data] = st_reorderdata(cfg, data)
 %
 % Available configuration parameters are:
 %   cfg.order  = either number vector Nx1 or string like

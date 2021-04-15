@@ -194,8 +194,14 @@ switch referenceOption
             pair = cat(1,reference,test);
             agreement = sum(all(bsxfun(@eq,pair,pair(1,:))))/size(pair,2);
             
-            tbl = array2table([scoring_num_ref_labels(nComparison),scoring_num_to_ref_labels(nComparison),agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
-                'VariableNames',{'scoring_num_ref','scoring_num_comp','agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
+            tbl_first = table(scoring_num_ref_labels(nComparison),scoring_num_to_ref_labels(nComparison),...
+                'VariableNames',{'scoring_num_ref','scoring_num_comp'});
+            
+            
+            tbl_second = array2table([agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
+                'VariableNames',{'agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});
+            
+            tbl = cat(2,tbl_first,tbl_second);
             
             if isempty(ctbls)
                 ctbls = tbl;
@@ -221,7 +227,7 @@ switch referenceOption
                 
                 
                 tbl_first = table(scoring_num_ref_labels(nComparison),scoring_num_to_ref_labels(nComparison),...
-                    'VariableNames',{'scoring_num_ref','scoring_num_test'});
+                    'VariableNames',{'scoring_num_ref','scoring_num_comp'});
                 
                 tbl_second = array2table([agreement,c_k,c_sek,c_p,c_z,c_ci(1),c_ci(2),c_kmax,c_kratiomax,c_po,c_pe,c_po_minus_pe,c_one_minus_pe,c_alpha,c_vari],...
                     'VariableNames',{'agreement','Cohens_kappa','Cohens_kappa_SEM','Cohens_kappa_pvalue','Cohens_kappa_zvalue','Cohens_kappa_CI_lower','Cohens_kappa_CI_higher','Cohens_kappa_max_possible','Cohens_kappa_ratio_of_max_possible','agreement_observed','agreement_expected','agreement_percentage_due_to_true_concordance','agreement_percentage_residual_not_random','alpha_level','Cohens_kappa_variance'});

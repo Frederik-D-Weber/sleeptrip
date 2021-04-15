@@ -315,8 +315,8 @@ for iCrossComp = 1:numel(cross_comparisons)
     end
     temp_cc_nrows = size(cross_comparisons{iCrossComp},1);
     
-    temp_scoringnumber_ref_labels = array2table(repmat(scoring_num_ref_labels{iCrossComp},temp_cc_nrows,1));
-    temp_scoringnumber_to_ref_labels = array2table(repmat(scoring_num_to_ref_labels{iCrossComp},temp_cc_nrows,1));
+    temp_scoringnumber_ref_labels = cell2table(cellstr(repmat(scoring_num_ref_labels{iCrossComp},temp_cc_nrows,1)));
+    temp_scoringnumber_to_ref_labels = cell2table(cellstr(repmat(scoring_num_to_ref_labels{iCrossComp},temp_cc_nrows,1)));
     %temp_scoringnumber_table = array2table(repmat(iCrossComp,temp_cc_nrows,1));
     temp_stage_code_table = cell2table(cross_comparisons{iCrossComp}.Properties.RowNames);
     temp_chi2_table = array2table(repmat(chi2_cross(iCrossComp),temp_cc_nrows,1));

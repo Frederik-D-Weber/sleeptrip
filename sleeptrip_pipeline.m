@@ -419,7 +419,7 @@ scoring = scoring_aasm;
 %% reorder channels
 cfg = [];
 cfg.order = 'alphabetical';
-data_reord = st_reoderdata(cfg, data);
+data_reord = st_reorderdata(cfg, data);
 
 %% applying grammer to data
 cfg = [];
