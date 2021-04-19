@@ -82,8 +82,12 @@ cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 hasLightsOff = false;
 lightsOffMoment = 0;
 if isfield(scoring, 'lightsoff')
-    hasLightsOff = true;
-    lightsOffMoment = scoring.lightsoff;
+    if ~isnan(scoring.lightsoff)
+        hasLightsOff = true;
+        lightsOffMoment = scoring.lightsoff;
+    else
+        ft_warning('The lights off moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
+    end
 else
     ft_warning('The lights off moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
 end
@@ -246,10 +250,13 @@ for iScoringCycle = 1:numel(scoring_cycles)
     lightsOnMoment = lastsleepstagenumber*scoring.epochlength;
     lightsOnToLightsOff = NaN;
     if isfield(scoring, 'lightson')
-        hasLightsOn = true;
-        lightsOnMoment = scoring.lightson;
-        lightsOnToLightsOff = (lightsOnMoment-lightsOffMoment);
-        
+        if ~isnan(scoring.lightson)
+            hasLightsOn = true;
+            lightsOnMoment = scoring.lightson;
+            lightsOnToLightsOff = (lightsOnMoment-lightsOffMoment);
+        else
+            ft_warning('The lights on moment was NaN in the scoring structure.\n The end of sleep is thus assumed as lights on.');
+        end
     else
         ft_warning('The lights on moment was not provided in the scoring structure.\n The end of sleep is thus assumed as lights on.');
     end
@@ -276,8 +283,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
     end
     if ~isempty(SWSind)
         SWSonsetTime = (min(SWSind(SWSind >= onsetnumber)) - onsetnumber)*scoring.epochlength;
-        if isempty(SWSind)
-            SWSind = NaN;
+        if isempty(SWSonsetTime)
+            SWSonsetTime = NaN;
         end
     end
     if ~isempty(S4ind)
