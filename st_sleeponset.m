@@ -169,7 +169,11 @@ if isempty(lastsleepstagenumber);
     lastsleepstagenumber = numel(scoring.epochs);
 end
 
+if lastsleepstagenumber > 0
 lastsleepstage = scoring.epochs{lastsleepstagenumber};
+else
+  lastsleepstage = '';  
+end
 
 if onsetnumber == -1;
     ft_warning('could not identify a sleep onset with the current sleep onset definitions.\nAssume that sleep did not occur.')
