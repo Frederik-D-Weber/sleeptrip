@@ -214,6 +214,19 @@ switch  cfg.scoringformat
         cfg.columndelimimter = '';
         cfg.exclcolumnstr = {'1' '2' '3' '4' '5' '6' '7' '8' '9' '10'};
         readoption = 'load';
+    case {'fasst'}
+        scoremap = [];
+        scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '7'};
+        switch cfg.standard
+            case 'aasm'
+                scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?'};
+            case 'rk'
+                scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
+        end
+        scoremap.unknown   = '?';
+        
+        cfg.scoremap         = scoremap;
+        cfg.columnnum        = 1;
     case {'sleeptrip'}
     	readoption = 'loadmat';
     otherwise
