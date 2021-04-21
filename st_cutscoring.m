@@ -1,6 +1,6 @@
 function [scorings] = st_cutscoring(cfg, scoring)
 
-% ST_CUTSCORING cuts a scoring into overlapping of non overlaping pieces
+% ST_CUTSCORING cuts a scoring into overlapping or non overlaping pieces
 % of a specific length relative to sleeponset or other references or just
 % cut out one specific part
 %
@@ -19,9 +19,9 @@ function [scorings] = st_cutscoring(cfg, scoring)
 %                       addition to cfg.length. 
 %                       if cf.length is not provided it is inferred by
 %                       cfg.start and cfg.end
-%   cfg.start         = either single number or a Nx1 Nx1 vector at which epoch(s) to start (in
+%   cfg.start         = either single number or a Nx1 vector at which epoch(s) to start (in
 %                       epochs) OR 'sleeponset' or 'lightsoff' (default = 'sleeponset')
-%   cfg.end           = single number number or a Nx1 Nx1 vector at which epoch(s) to end (in epochs)
+%   cfg.end           = single number number or a Nx1 vector at which epoch(s) to end (in epochs)
 %                       use Inf if you want to use always until the end of the
 %                       available epochs (default = Inf)
 %

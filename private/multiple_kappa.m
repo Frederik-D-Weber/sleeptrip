@@ -117,6 +117,8 @@ switch referenceOption
             row_lab = cellfun(@(s) strrep(s,'-1','unscored'), row_lab,'UniformOutput',false);
             col_lab = cellfun(@(s) strrep(s,'-1','unscored'), col_lab,'UniformOutput',false);
             
+%             row_lab = cellfun(@(s) strrep(s,'-2','unassigned'), row_lab,'UniformOutput',false);
+%             col_lab = cellfun(@(s) strrep(s,'-2','unassigned'), col_lab,'UniformOutput',false);
             
             cross_comparisons{nComparison} = array2table(tbl,'RowNames',cellfun(@(s) ['comp_' s], row_lab,'UniformOutput',false),'VariableNames',cellfun(@(s) ['ref_' s], col_lab,'UniformOutput',false));
             chi2_cross(nComparison) = chi2_cross_temp;
@@ -145,6 +147,9 @@ switch referenceOption
                 
                 row_lab = cellfun(@(s) strrep(s,'-1','unscored'), row_lab,'UniformOutput',false);
                 col_lab = cellfun(@(s) strrep(s,'-1','unscored'), col_lab,'UniformOutput',false);
+                
+%                 row_lab = cellfun(@(s) strrep(s,'-2','unassigned'), row_lab,'UniformOutput',false);
+%                 col_lab = cellfun(@(s) strrep(s,'-2','unassigned'), col_lab,'UniformOutput',false);
                 
                 cross_comparisons{nComparison} = array2table(tbl,'RowNames',cellfun(@(s) ['comp_' s], row_lab,'UniformOutput',false),'VariableNames',cellfun(@(s) ['ref_' s], col_lab,'UniformOutput',false));
                 chi2_cross(nComparison) = chi2_cross_temp;

@@ -21,6 +21,14 @@ function [res_comp_fleiss_stat res_comp_cohen_stat res_contingency res_contingen
 %                         'sleeponset' or 'lighsoff' or 'no'
 %                         or a single epoch number (default = 'no')
 %                         see ST_CUTSCORING cfg.start parameter for details
+%   cfg.prune           = if to cut all scorings (with non-empty epochs) to the
+%                         minimal scoring length before starting the
+%                         comparisons. It is either 'yes' or 'no' 
+%                         or a number of the maximal length or 
+%                         a 1x2 vector of numbers defining the start and 
+%                         end of the epochs to cut. This assures that accross muliple
+%                         scoring of variable lengths the comparisons the
+%                         agreement is 0 against empty scorings (default = 'no')
 %   cfg.stat_alpha      = value for statistical alpha level (default is 0.05)
 %   cfg.reference       = which of the scorings should be chosen as reference 
 %                         either 
@@ -73,6 +81,7 @@ fprintf([functionname ' function started\n']);
 % set defaults
 %cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
 cfg.align          = ft_getopt(cfg, 'align', 'no');
+cfg.prune          = ft_getopt(cfg, 'prune', 'no');
 cfg.stat_alpha     = ft_getopt(cfg, 'stat_alpha', 0.05);
 cfg.reference      = ft_getopt(cfg, 'reference', 'first');
 cfg.agreementthres = ft_getopt(cfg, 'agreementthres', 0.5);
@@ -102,6 +111,54 @@ for iScoring = 2:nScorings
     end
 end
 
+
+if isnumeric(cfg.prune)
+    for iScoring = 1:nScorings
+        scoring = scorings{iScoring};
+        if isempty(scoring.epochs)
+            continue
+        end 
+        cfg_cs = [];
+        if numel(cfg.prune) == 1
+            cfg_cs.start = 1;
+            cfg_cs.end = min(cfg.prune(1),numel(scoring.epochs));
+        elseif numel(cfg.prune) == 2
+            cfg_cs.start = cfg.prune(1);
+            cfg_cs.end = min(cfg.prune(2),numel(scoring.epochs));
+        else
+            ft_error('cfg.prune should be a one or two number vector if not being a string of either ''yes'' or ''no''.')
+        end
+        temp_scorings = st_cutscoring(cfg_cs,scoring);
+        scorings{iScoring} = temp_scorings{1};
+    end
+else
+if istrue(cfg.prune)
+    shortest_epoch_length = Inf;
+    for iScoring = 1:nScorings
+        scoring = scorings{iScoring};
+        if isempty(scoring.epochs)
+            continue
+        end
+        scoring_epoch_length = numel(scoring.epochs);
+        shortest_epoch_length = min(shortest_epoch_length,scoring_epoch_length);
+    end
+    
+    if ~isinf(shortest_epoch_length)
+    for iScoring = 1:nScorings
+        scoring = scorings{iScoring};
+        if isempty(scoring.epochs)
+            continue
+        end
+        shortest_epoch_length 
+        cfg_cs = [];
+        cfg_cs.start = 1;
+        cfg_cs.end = shortest_epoch_length;
+        temp_scorings = st_cutscoring(cfg_cs,scoring);
+        scorings{iScoring} = temp_scorings{1};
+    end
+    end
+end
+end
 
 numbersNorm = [];
 excludedNorm = [];
@@ -134,10 +191,17 @@ for iScoring = 1:nScorings
             scoring.numbers = [scoring.numbers, NaN(1,missingEpochs)];
             scoring.excluded = [scoring.excluded, NaN(1,missingEpochs)];
         end
+        numbersNorm(iScoring,:) = scoring.numbers;
+        excludedNorm(iScoring,:) = scoring.excluded;
+    else % iScoring == 1
+        if isempty(scoring.epochs)
+            numbersNorm = NaN(1,1);
+            excludedNorm = NaN(1,1);
+        else
+        	numbersNorm(iScoring,:) = scoring.numbers;
+            excludedNorm(iScoring,:) = scoring.excluded;
+        end
     end
-    numbersNorm(iScoring,:) = scoring.numbers;
-    excludedNorm(iScoring,:) = scoring.excluded;
-    
 end
 
 
