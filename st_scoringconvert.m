@@ -15,6 +15,14 @@ function [scoring] = st_scoringconvert(cfg, scoring)
 % 
 % in case cfg.to = 'custom' the following parameter also needs to be present
 %   cfg.scoremap  = a structure must be provided (see below) 
+% 
+% in case cfg.to IS NOT 'custom' but the scoring.standard = 'custom' then
+% either cfg.scoremap or if not also scoring.scoremap needs to be defined
+%   then the optional parameter 
+%    cfg.forceundefinedto = string, as a sleep stage to force the sleep stages to be converted into that are not part of the cfg.to 
+%                           non-custom scoring (e.g. 'aasm' or 'rk' or 'numbers') 
+%                           e.g. '?' or 'U'
+%                           
 %
 %   Example scoremap sturcture, all three fields are required
 %   scoremap = [];
@@ -75,7 +83,12 @@ switch scoring.standard
         scoremap.labelold  = {'0', '1', '2', '3', '4', '5', '-1', '8'};
     case 'custom'
         if ~isfield(cfg,'scoremap')
-            ft_error('the scoring was a ''custom'' label and thus it requires also a cfg.scoremap as parameter in the configuration.');
+            if ~isfield(scoring,'scoremap')
+                ft_error('the scoring was a ''custom'' label and thus it requires also a cfg.scoremap as parameter in the configuration.');
+            else
+                ft_warning('the scoring was a ''custom'' label and and the scoremap was taken from scoring.scoremap');
+                cfg.scoremap = scoring.scoremap;
+            end
         end
         scoremap.labelold  = cfg.scoremap.labelold;
         iscustom = true;
@@ -99,22 +112,49 @@ switch cfg.to
         scoremap.unknown   = '-1';
         tononcustom = true;
     case 'custom'
+    	if ~isfield(cfg,'scoremap')
+            if ~isfield(scoring,'scoremap')
+                ft_error('the scoring will be converted to a ''custom'' scoring and thus requires also a cfg.scoremap as parameter in the configuration.');
+            else
+                ft_warning('the scoring was a ''custom'' label and and the scoremap was taken from scoring.scoremap');
+                cfg.scoremap = scoring.scoremap;
+            end
+        end
         scoremap.labelnew  = cfg.scoremap.labelnew;
+        scoremap.unknown = cfg.scoremap.unknown;
         scoring.standard = 'custom';
     otherwise 
         ft_error(['the cfg.to option ' cfg.to ' is not known, please see the help of this function.']);
 end
 
+forceundefinedto = '';
+if isfield(cfg,'forceundefinedto')
+    forceundefinedto = cfg.forceundefinedto;
+end
 
 if iscustom && tononcustom
+    iold_scoremap = ismember(cfg.scoremap.labelnew,scoremap.labelnew);
+    if any(~iold_scoremap) && isempty(forceundefinedto)
+        ft_error('The following scoring labels ''%s'' in the custom cfg.scoremap are not part of the standard in cfg.to = ''%s'' defined by the labels %s . Maybe you want to set cfg.forceundefinedto option to force a sleep stage (BUT THAT IS NOT RECOMMENDED).',strjoin(cfg.scoremap.labelnew(~iold_scoremap)),cfg.to,strjoin(unique(scoremap.labelnew)))
+    end
+    undefined_stages = {};
+    if any(~iold_scoremap) && ~isempty(forceundefinedto)
+        undefined_stages = cfg.scoremap.labelnew(~iold_scoremap);
+        [iold inew] = ismember(scoring.epochs, undefined_stages);
+        scoring.epochs(iold) = {forceundefinedto};
+    end
     label = scoremap.labelnew';
-    [iold inew] = ismember(scoring.epochs, scoremap.labelnew);
+    [iold inew] = ismember(scoring.epochs, cat(2,scoremap.labelnew, {forceundefinedto}));
     scoring.epochs(~iold) = {scoremap.unknown};
 else
     epochs = repmat({scoremap.unknown},size(scoring.epochs));
     label = scoring.label;
     [labelold ia iItems] = unique(scoremap.labelold,'stable');
     usedItems = [];
+    
+    match_cum = zeros(numel(scoring.epochs),1);
+  
+    
     for iLabel = 1:numel(scoremap.labelold)
         if ismember(iItems(iLabel),usedItems)
             continue
@@ -123,10 +163,16 @@ else
         new = scoremap.labelnew{iLabel};
         match = cellfun(@(x) strcmp(x, old), scoring.epochs, 'UniformOutput', 1);
         epochs(match) = {new};
+        match_cum = match_cum | match;
         match = cellfun(@(x) strcmp(x, old), scoring.label, 'UniformOutput', 1);
         label(match) = {new};
         usedItems = [usedItems iItems(iLabel)];
     end
+    
+    if any(~match_cum)
+        ft_warning('The sleep stages''%s'' in the original scoring were not covered in the scoremap and have thus been set to ''%s''',strjoin(unique(scoring.epochs(~match_cum))),scoremap.unknown)
+    end
+    
     scoring.epochs = epochs;
 end
 [scoring.label,ia,ic] = unique(label);

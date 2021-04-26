@@ -78,3 +78,5 @@ ft_default = [];
 mcc -mv sleeptrip_scorebrowser_standalone.m
 
 delete mccExcludedFiles.log
+delete requiredMCRProducts.txt
+delete readme.txt

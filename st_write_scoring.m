@@ -19,6 +19,8 @@ function filename = st_write_scoring(cfg, scoring)
 %                          fopen for InEncoding, (default = '', try system specific)
 %   cfg.to               = string, if it is set it will convert to a known standard
 %                          see ST_SCORINGCONVERT for details
+%   cfg.scoremap          = a scoremap in case scoring standard is 'custom'
+%                          see ST_SCORINGCONVERT for details
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET
 
@@ -70,10 +72,23 @@ end
 if isfield(cfg,'to')
     cfg_sc = [];
     cfg_sc.to = cfg.to;
-    if strcmp(cfg.standard,'custom')
+    if strcmp(scoring.standard,'custom')
+        if ~isfield(cfg,'scoremap')
+            ft_error('conversion with custom scoring standard requires cfg.scoremap to be defined. see ST_SCORINGCONVERT for details')
+        end
         cfg_sc.scoremap = cfg.scoremap;
     end
     scoring = st_scoringconvert(cfg_sc, scoring);
+end
+
+
+switch cfg.datatype
+    case 'sleeptrip'
+        
+    case {'numbersincolumns' 'spisop'}
+        if strcmp(scoring.standard,'custom')
+            ft_error('writing custom scoring standard to cfg.datatype = ''%s'' is not supported. Chose another data type or use the cfg.to option to convert to a non-custom scoring standard.',cfg.datatype)
+        end
 end
 
 if ~hasFilename
@@ -151,6 +166,7 @@ else
             ft_error('cfg.datatype = %s is not supported',cfg.datatype)
     end
 end
+
 
 
 switch cfg.datatype

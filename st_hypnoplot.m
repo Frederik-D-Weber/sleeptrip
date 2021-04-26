@@ -34,7 +34,6 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotsleepoffset        = string, plot an indicator of sleep offset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
 %   cfg.plotexcluded           = string, plot excluded epochs 'yes' or 'no' (default = 'yes')
-%   cfg.yaxdisteqi             = string, plot the y-axis ticks in equal distanve from each other 'yes' or 'no' (default = 'no')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
 %                                'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
 %                                'N2' or 'N3' or 'SWS' or 'S4' or 'R',
@@ -74,6 +73,17 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %                                             []; ...
 %                                    [0, 0, 0, 1]}
 %   cfg.eventlabels            = Nx1 cellstr with the labels to the events corresponding to the rows in cfg.eventstimes
+%   cfg.eventheight            = one number or Nx1 vector of numbers with N corresponding
+%                                to the rows in cfg.eventstimes (i.e. the
+%                                event types) to set the height taken by
+%                                the plot for each event type. 
+%                                (default = 0.4)
+%   cfg.eventminscale          = one number or Nx1 vector of numbers with N corresponding
+%                                to the rows in cfg.eventstimes (i.e. the
+%                                event types) to set the minimum event scaling of the height taken by
+%                                the plot for each event type. 
+%                               (default = 0.1) i.e. at least plotted 10%
+%                                of the height of the maximal even range
 %   cfg.eventvalues            = a Nx1 cell containing 1x? vectors of event
 %                                values (e.g. amplitude)
 %                                 {[20.3, 23.2, 45.6]; ...
@@ -84,10 +94,43 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %                                 {[20 40]; ...
 %                                  [18, 36]; ...
 %                                  [39, 80.0]}
-%   cfg.eventvaluerangesrnddec       = round event ranges to that amount of decimal (default = 2)
-%   cfg.eventcolors           = a Nx3 color matrix with 3 RGB values from 0 to 1 color for each of
-%                               the N event types, (default = lines(N))
-%
+%   cfg.eventvaluerangesrnddec = round event ranges to that amount of decimal (default = 2)
+%   cfg.eventcolors            = a Nx3 color matrix with 3 RGB values from 0 to 1 color for each of
+%                                 the N event types, (default = lines(N))
+%   cfg.eventcolorsbystagecolor = string, if even colors should follow the sleep state 
+%                                 that they are in or start in, either 'yes' or 'no'. 
+%                                 if 'yes' cfg.eventcolors will be ignored 
+%                                  (default = 'no')
+%    cfg.eventalign             = string, either align event to the
+%                                 'center', 'bottom' or 'top' or 'stack' or a cellstring of dimension Nx1
+%                                 with such a string for every of the N event types defined in cfg.eventlabels (default = 'center')
+%    cfg.eventsmoothing         = string, if events should be smoothed either 'yes' or 'no'  
+%                                 or a cellstr of dimension Nx1 with the N event types defined 
+%                                 in cfg.eventlabels (default = 'no')
+%    cfg.eventsmoothing_windowseconds = one number or Nx1 vector of numbers with N corresponding
+%                                to the rows in cfg.eventstimes (i.e. the
+%                                event types) to set the time window for smooting in seconds. 
+%                               (default = scoring.epochlength) 
+%    cfg.eventsmoothing_timestepseconds = one number or Nx1 vector of numbers with N corresponding
+%                                to the rows in cfg.eventstimes (i.e. the
+%                                event types) to set the time step in seconds for each window to slide 
+%                                for smoothing of events. (default = scoring.epochlength) 
+%    cfg.eventsmoothing_choose  = string, which values to plot from the smoothing the actual 
+%                                'value' or the 'count' of events in the time windows or a cellstr 
+%                                 of dimension Nx1 with the N event types defined in cfg.eventlabels 
+%                                (default = 'value')
+%    cfg.eventsmoothing_starttimeseconds = one number or Nx1 vector of numbers with N corresponding
+%                                to the rows in cfg.eventstimes (i.e. the
+%                                event types) to set the start time in
+%                                seconds when smoothing should start
+%                                relative to dataoffset (if dataoffset is considered)
+%                                (default = scoring.dataoffset or 0 if cfg.considerdataoffset is 'no') 
+%    cfg.eventsmoothing_endtimeseconds = one number or Nx1 vector of numbers with N corresponding
+%                                to the rows in cfg.eventstimes (i.e. the
+%                                event types) to set the start time in
+%                                seconds when smoothing should end
+%                                relative to dataoffset (if dataoffset is considered)
+%                                (default = time point the last epoch in the scoring ends in the hypnogram) 
 %
 % If you wish to export the figure then define also the following
 %   cfg.figureoutputfile       = string, file to export the figure
@@ -179,6 +222,23 @@ cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
 cfg.legacymode              = ft_getopt(cfg, 'legacymode', 'no');
 
+cfg.eventcolorsbystagecolor = ft_getopt(cfg, 'eventcolorsbystagecolor', 'no');
+cfg.eventheight             = ft_getopt(cfg, 'eventheight', 0.4);
+cfg.eventalign              = ft_getopt(cfg, 'eventalign', 'center');
+cfg.eventminscale           = ft_getopt(cfg, 'eventminscale', 0.1);
+cfg.eventsmoothing          = ft_getopt(cfg, 'eventsmoothing', 'no');
+
+if strcmp(cfg.considerdataoffset, 'yes')
+    offsetseconds = scoring.dataoffset;
+else
+    offsetseconds = 0;
+end
+
+cfg.eventsmoothing_windowseconds = ft_getopt(cfg, 'eventsmoothing_windowseconds', scoring.epochlength);
+cfg.eventsmoothing_timestepseconds = ft_getopt(cfg, 'eventsmoothing_timestepseconds', scoring.epochlength);
+cfg.eventsmoothing_choose = ft_getopt(cfg, 'eventsmoothing_choose', 'value');
+cfg.eventsmoothing_starttimeseconds = ft_getopt(cfg, 'eventsmoothing_starttime', offsetseconds);
+cfg.eventsmoothing_endtimeseconds = ft_getopt(cfg, 'eventsmoothing_starttime', scoring.epochlength*numel(scoring.epochs)+offsetseconds);
 
 if istrue(cfg.colorblocksconnect) && istrue(cfg.plotlegend) && (strcmp(cfg.plottype,'colorblocks') || strcmp(cfg.plottype,'deepcolorblocks'))
     ft_warning('cfg.colorblocksconnect = ''yes'' currently does not support the legend with cfg.plottype = ''colorblocks'' or ''deepcolorblocks'' and thus legend is DISABLED!')
@@ -187,36 +247,110 @@ end
 if isfield(cfg, 'eventranges'), ft_error('Changed naming convention, use cfg.eventvalueranges instead of cfg.eventvalueranges'); end
 
 
-if strcmp(cfg.plottype,'colorbar') || strcmp(cfg.plottype,'colorblocks') || strcmp(cfg.plottype,'deepcolorblocks')
-    if isfield(cfg,'yaxdisteqi')
-        if ~istrue(cfg.yaxdisteqi)
-            ft_warning('cfg.yaxdisteqi is set to ''yes'' because of the cfg.plottype = %s',cfg.plottype)
-            cfg.yaxdisteqi = 'yes';
-        end
-    else
-         cfg.yaxdisteqi = 'yes';
-    end
-else
-    cfg.yaxdisteqi = ft_getopt(cfg, 'yaxdisteqi', 'no');
-end
+% if strcmp(cfg.plottype,'colorbar') || strcmp(cfg.plottype,'colorblocks') || strcmp(cfg.plottype,'deepcolorblocks')
+%     if isfield(cfg,'yaxdisteqi')
+%         if ~istrue(cfg.yaxdisteqi)
+%             ft_warning('cfg.yaxdisteqi is set to ''yes'' because of the cfg.plottype = %s',cfg.plottype)
+%             cfg.yaxdisteqi = 'yes';
+%         end
+%     else
+%          cfg.yaxdisteqi = 'yes';
+%     end
+% else
+%     cfg.yaxdisteqi = ft_getopt(cfg, 'yaxdisteqi', 'no');
+% end
 
+hasEvents = false;
+if isfield(cfg, 'eventtimes')
+    hasEvents = true;
+end
 
 if (isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventlabels')) || (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
     ft_error('both cfg.eventtimes and cfg.eventlabels have to be defined togehter.');
 end
 
 if isfield(cfg, 'eventtimes')
+    nEventTypes = size(cfg.eventtimes,1);
     if size(cfg.eventtimes,1) ~=  numel(cfg.eventlabels)
         ft_error('dimensions of cfg.eventtimes and cfg.eventlabels do not match.');
     end
+    if numel(cfg.eventheight)  > 1
+        if numel(cfg.eventheight) ~=  numel(cfg.eventlabels)
+            ft_error('dimensions of cfg.eventheight and cfg.eventlabels do not match.');
+        end
+    end
+    if numel(cfg.eventminscale)  > 1
+        if numel(cfg.eventminscale) ~=  numel(cfg.eventlabels)
+            ft_error('dimensions of cfg.eventminscale and cfg.eventlabels do not match.');
+        end
+    end
+
+    if iscell(cfg.eventalign)
+        if numel(cfg.eventalign) ~=  numel(cfg.eventlabels)
+        	ft_error('dimensions of cfg.eventalign and cfg.eventlabels do not match.');
+        end
+    else
+        eventalign = repmat({cfg.eventalign},nEventTypes,1);
+    end
+    
+    if iscell(cfg.eventsmoothing)
+        if numel(cfg.eventsmoothing) ~=  numel(cfg.eventlabels)
+            ft_error('dimensions of cfg.eventsmoothing and cfg.eventlabels do not match.');
+        end
+    else
+        eventsmoothing = repmat({cfg.eventsmoothing},nEventTypes,1);
+    end
+    
+    
+    if numel(cfg.eventsmoothing_windowseconds)  > 1
+        if numel(cfg.eventsmoothing_windowseconds) ~=  numel(cfg.eventlabels)
+            ft_error('dimensions of cfg.eventsmoothing_windowseconds and cfg.eventlabels do not match.');
+        end
+    else
+        eventsmoothing_windowseconds = repmat(cfg.eventsmoothing_windowseconds,nEventTypes,1);
+    end
+    
+    if numel(cfg.eventsmoothing_timestepseconds)  > 1
+        if numel(cfg.eventsmoothing_timestepseconds) ~=  numel(cfg.eventlabels)
+            ft_error('dimensions of cfg.eventsmoothing_timestepseconds and cfg.eventlabels do not match.');
+        end
+    else
+        eventsmoothing_timestepseconds = repmat(cfg.eventsmoothing_timestepseconds,nEventTypes,1);
+    end
+    
+    if numel(cfg.eventsmoothing_starttimeseconds)  > 1
+        if numel(cfg.eventsmoothing_starttimeseconds) ~=  nEventTypes
+            ft_error('dimensions of cfg.eventsmoothing_starttimeseconds and cfg.eventlabels do not match.');
+        end
+    else
+        eventsmoothing_starttimeseconds = repmat(cfg.eventsmoothing_starttimeseconds,nEventTypes,1);
+    end
+    
+    if numel(cfg.eventsmoothing_endtimeseconds)  > 1
+        if numel(cfg.eventsmoothing_endtimeseconds) ~=  nEventTypes
+            ft_error('dimensions of cfg.eventsmoothing_endtimeseconds and cfg.eventlabels do not match.');
+        end
+    else
+        eventsmoothing_endtimeseconds = repmat(cfg.eventsmoothing_endtimeseconds,nEventTypes,1);
+    end
+    
+    if iscell(cfg.eventsmoothing_choose)
+        if numel(cfg.eventsmoothing_choose) ~=  nEventTypes
+            ft_error('dimensions of cfg.eventsmoothing_choose and cfg.eventlabels do not match.');
+        end
+    else
+        eventsmoothing_choose = repmat({cfg.eventsmoothing_choose},nEventTypes,1);
+    end
+    
+
 end
 
 if (isfield(cfg, 'eventvalues') && ~isfield(cfg, 'eventtimes')) 
     ft_error('both cfg.eventvalues needs a cfg.eventtimes to be defined.');
 end
 
-if (isfield(cfg, 'eventvalues') && ~isfield(cfg, 'eventvalueranges')) || (~isfield(cfg, 'eventvalues') && isfield(cfg, 'eventvalueranges'))  
-    ft_error('both cfg.eventvalues and cfg.eventvalueranges have to be defined togehter.');
+if (~isfield(cfg, 'eventvalues') && isfield(cfg, 'eventvalueranges'))  
+    ft_error('cfg.eventvalues needs to be defined when cfg.eventvalueranges is defined.');
 end
 
 if isfield(cfg, 'eventvalues')
@@ -254,23 +388,69 @@ if isfield(cfg, 'eventvalueranges')
     end
 end
 
+
+if isfield(cfg, 'eventcolors') && istrue(cfg.eventcolorsbystagecolor)
+    ft_warning('cfg.eventcolors will be ignored because cfg.eventcolorsbystagecolor = ''yes''.')
+end
+
+
 if isfield(cfg, 'eventtimes')
-    nEvents = numel(cfg.eventtimes);
-    if isfield(cfg, 'eventcolors')
-        nEventColors = size(cfg.eventcolors,1);
-        if(nEventColors ~= nEvents)
-        	ft_error('number of rows in cfg.eventcolors %d does not match with number of event types %d.',nEvents,nEventColors);
+    nEventsTypes = numel(cfg.eventtimes);
+    if ~istrue(cfg.eventcolorsbystagecolor)
+        if isfield(cfg, 'eventcolors')
+            nEventColors = size(cfg.eventcolors,1);
+            if(nEventColors ~= nEventsTypes)
+                ft_error('number of rows in cfg.eventcolors %d does not match with number of event types %d.',nEventsTypes,nEventColors);
+            end
+        else %set default colors
+            cfg.eventcolors = lines(nEventsTypes);
         end
-    else %set default colors
-        cfg.eventcolors = lines(nEvents);
     end
 end
 
-if strcmp(cfg.considerdataoffset, 'yes')
-    offsetseconds = scoring.dataoffset;
-else
-    offsetseconds = 0;
+
+if hasEvents
+    if any(ismember(eventsmoothing,{'yes'}))
+        if ~isfield(cfg,'eventtimes')
+            ft_error('Need to define cfg.eventtimes for cfg.eventsmoothing = ''ýes''')
+        end
+        
+        nEvents = numel(cfg.eventtimes);
+        
+        for iEventTypes = 1:nEvents
+            if istrue(eventsmoothing{iEventTypes})
+                if ~isfield(cfg,'eventvalues')
+                    if ~strcmp(eventsmoothing_choose{iEventTypes},'count')
+                        ft_error('if no cfg.eventvalues are defined and cfg.eventsmoothing = ''ýes'' this will only work for cfg.eventsmoothing_choose = ''count''')
+                    else
+                        ft_warning('No cfg.eventvalues defined for cfg.eventsmoothing = ''ýes'' but with cfg.eventsmoothing_choose = ''count'' will not need them')
+                        
+                    end
+                end
+                
+                if ~isempty(cfg.eventtimes{iEventTypes})
+                    if ~isfield(cfg,'eventdurations') || isempty(cfg.eventdurations{iEventTypes})
+                        switch eventsmoothing_choose{iEventTypes}
+                            case 'value'
+                                evv = cfg.eventvalues{iEventTypes};
+                            case 'count'
+                                evv = cfg.eventtimes{iEventTypes}; %% dummy values for the count only
+                        end
+                        [times, windowEventsCount, property] = eventSmoother(cfg.eventtimes{iEventTypes},evv,eventsmoothing_windowseconds(iEventTypes),eventsmoothing_timestepseconds(iEventTypes),eventsmoothing_starttimeseconds(iEventTypes),eventsmoothing_endtimeseconds(iEventTypes));
+                        cfg.eventtimes{iEventTypes} = times;
+                        switch eventsmoothing_choose{iEventTypes}
+                            case 'value'
+                                cfg.eventvalues{iEventTypes} = property;
+                            case 'count'
+                                cfg.eventvalues{iEventTypes} = windowEventsCount;
+                        end
+                    end
+                end
+            end
+        end
+    end
 end
+
 
 saveFigure   = false;
 if isfield(cfg, 'figureoutputfile')
@@ -300,8 +480,9 @@ nEpochs = numel(scoring.epochs);
 % end
 
 %convert the sleep stages to hypnogram numbers
-hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),istrue(cfg.yaxdisteqi)),scoring.epochs','UniformOutput',1) ...
-    scoring.excluded'];
+%hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),istrue(cfg.yaxdisteqi)),scoring.epochs','UniformOutput',1) scoring.excluded'];
+hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),true),scoring.epochs','UniformOutput',1) scoring.excluded'];
+
 
 
 hypnStages = [cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0) ...
@@ -321,71 +502,86 @@ if isempty(lastsleepstagenumber)
     lastsleepstagenumber = nEpochs;
 end
 
-hasA = false;
-if any(ismember('A',scoring.epochs))
-    hasA = true;
-end
+% hasA = false;
+% if any(ismember('A',scoring.epochs))
+%     hasA = true;
+% end
 
 %%% plot hypnogram figure
 
 switch scoring.standard
     case 'aasm'
-        if hasA
-            if istrue(cfg.yaxdisteqi)
-                plot_exclude_offset = -6;
-                yTick      = [2  1        0     -1  -2   -3   -4 ];
-            else
-                
-                plot_exclude_offset = -5;
-                yTick      = [1.5  1        0     -0.5  -1   -2   -3 ];
-            end
-            
-            yTickLabel = {'?' 'A'      'W'    'R'  'N1' 'N2' 'N3'};
-        else
-            if istrue(cfg.yaxdisteqi)
-                plot_exclude_offset = -6;
+%         if hasA
+%             if istrue(cfg.yaxdisteqi)
+%                 plot_exclude_offset = -6;
+%                 yTick      = [2  1        0     -1  -2   -3   -4 ];
+%             else
+%                 
+%                 plot_exclude_offset = -5;
+%                 yTick      = [1.5  1        0     -0.5  -1   -2   -3 ];
+%             end
+%             
+%             yTickLabel = {'?' 'A'      'W'    'R'  'N1' 'N2' 'N3'};
+%         else
+%             if istrue(cfg.yaxdisteqi)
+                %plot_exclude_offset = -6;
                 yTick      = [1        0     -1  -2   -3   -4 ];
-            else
-                
-                plot_exclude_offset = -5;
-                yTick      = [1        0     -0.5  -1   -2   -3 ];
-            end
+%             else
+%                 
+%                 plot_exclude_offset = -5;
+%                 yTick      = [1        0     -0.5  -1   -2   -3 ];
+%             end
             
             yTickLabel = {'?'      'W'    'R'  'N1' 'N2' 'N3'};
-        end
+%         end
     case 'rk'
-        if hasA
-            if istrue(cfg.yaxdisteqi)
-                plot_exclude_offset = -8;
-                yTick      = [3  2   1  0     -1  -2   -3   -4   -5 ];
-            else
-                plot_exclude_offset = -7;
-                yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4 ];
-            end
-            
-            yTickLabel = {'?' 'A' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
-        else
-            if istrue(cfg.yaxdisteqi)
-                plot_exclude_offset = -8;
+%         if hasA
+%             if istrue(cfg.yaxdisteqi)
+%                 plot_exclude_offset = -8;
+%                 yTick      = [3  2   1  0     -1  -2   -3   -4   -5 ];
+%             else
+%                 plot_exclude_offset = -7;
+%                 yTick      = [1.5  1   0.5  0     -0.5  -1   -2   -3   -4 ];
+%             end
+%             
+%             yTickLabel = {'?' 'A' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
+%         else
+%             if istrue(cfg.yaxdisteqi)
+                %plot_exclude_offset = -8;
                 yTick      = [2   1  0     -1  -2   -3   -4   -5 ];
-            else
-                plot_exclude_offset = -7;
-                yTick      = [ 1   0.5  0     -0.5  -1   -2   -3   -4 ];
-            end
-            
+%             else
+%                 plot_exclude_offset = -7;
+%                 yTick      = [ 1   0.5  0     -0.5  -1   -2   -3   -4 ];
+%             end
             yTickLabel = {'?' 'MT' 'W' 'R' 'S1' 'S2' 'S3' 'S4'};
-        end
+            
+%         end
         
     otherwise
         ft_error('scoring standard ''%s'' not supported for ploting.\n Maybe use ST_SCORINGCONVERT to convert the scoring first.', scoring.standard);
 end
 
+
+
+
 switch cfg.plottype
     case 'colorbar'
-        plot_exclude_offset = 1;
+        %plot_exclude_offset = 1;
         yTick = [3];
         yTickLabel = {'Stage'};
+    otherwise
+        if isfield(cfg,'relabel')
+            if numel(cfg.relabel)==numel(yTickLabel)
+                yTickLabel = cfg.relabel;
+            else
+                ft_error('the relabels ''%s'' need to match the size and order of ''%s''',strjoin(cfg.relabel),strjoin(yTickLabel))
+            end
+        end
 end
+
+
+
+plot_exclude_offset = min(yTick) -2;
 
 if istrue(cfg.plotexcluded)
     yTickLabel{end+1} = 'Excl';
@@ -422,7 +618,9 @@ set(axh,'Fontsize',cfg.figureoutputfontsize);
 
 switch cfg.plottype
     case 'classic'
-        [hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset,istrue(cfg.yaxdisteqi));
+        %[hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset,istrue(cfg.yaxdisteqi));
+        [hypn_plot_interpol hypn_plot_interpol_exclude] = interpolate_hypn_for_plot(hypn,epochLengthSamples,plot_exclude_offset,true);
+
         x_time = (1:length(hypn_plot_interpol))/(dummySampleRate)  - 1/dummySampleRate;
         x_time = x_time + offsetseconds;
         x_time = x_time/60; % minutes
@@ -439,6 +637,7 @@ switch cfg.plottype
         hp = [];
         
         labels = scoring.label;
+        
         [lables_colors_topdown labels_ordered] = st_epoch_colors(labels,cfg.colorscheme);
         idxUsedLabels = [];
         
@@ -696,8 +895,9 @@ end
 
 
 eventTimeMaxSeconds = cfg.timemin*60;
-offset_step = 0.5;
-eventHeight = 0.4;
+% eventHeight = cfg.eventheight;
+% offset_step = eventHeight*1.25; %0.5
+offset_step_prev = 0.5;
 offset_event_y = max(yTick);
 
 switch cfg.plottype
@@ -725,10 +925,19 @@ if isfield(cfg, 'eventtimes')
 end
 max_temp_x_all = max_temp_x_all/60;
 
+
+plotYMinorTicks = false;
+eventYMinorTicks = [];
 if isfield(cfg, 'eventtimes')
     
     nEvents = numel(cfg.eventtimes);
-    tempcolors = cfg.eventcolors;
+    if istrue(cfg.eventcolorsbystagecolor)
+        [epoch_colors_unknown labels_ordered] = st_epoch_colors({'?'},cfg.colorscheme); 
+        [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs,cfg.colorscheme); 
+    else
+        tempcolors = cfg.eventcolors;  
+    end
+
     for iEventTypes = 1:nEvents
         currEvents = cfg.eventtimes{iEventTypes};
         currEventsDurations = [];
@@ -736,43 +945,126 @@ if isfield(cfg, 'eventtimes')
             currEventsDurations = cfg.eventdurations{iEventTypes};
         end
         if ~isempty(currEvents)
-            offset_event_y = offset_event_y + offset_step;
+            plotYMinorTicks = true;
+            if numel(cfg.eventheight) > 1
+            	eventHeight = cfg.eventheight(iEventTypes);
+            else
+            	eventHeight = cfg.eventheight;
+            end
+            
+            if numel(cfg.eventminscale) > 1
+            	eventminscale = cfg.eventminscale(iEventTypes);
+            else
+            	eventminscale = cfg.eventminscale;
+            end   
+            
+            if istrue(eventsmoothing{iEventTypes})
+                if strcmp(eventsmoothing_choose{iEventTypes},'count')
+                    eventminscale = 0;
+                end
+            end
+            
+            offset_step = eventHeight*1.25; %0.5
+            
+            
+            offset_event_y = offset_event_y + offset_step_prev + offset_step;
+            upper_Yboundary = offset_event_y + eventHeight/2;
+            lower_Yboundary = offset_event_y - eventHeight/2;
+            eventYMinorTicks = cat(2, eventYMinorTicks, [lower_Yboundary upper_Yboundary]);
+            
+            offset_step_prev = offset_step;
             currEventLabel = cfg.eventlabels{iEventTypes};
             
             yTick = [offset_event_y yTick];
             yTickLabel = {currEventLabel yTickLabel{:}};
             
-            color = tempcolors(iEventTypes,:);
             eventTimeMaxSeconds = max([eventTimeMaxSeconds currEvents]);
             temp_x1 = (currEvents/60)';
             if ~isempty(currEventsDurations)
                 temp_x2 = ((currEvents+currEventsDurations)/60)';
+            else
+                temp_x2 = temp_x1;
             end
             temp_y = repmat(offset_event_y,numel(currEvents),1);
             if isfield(cfg, 'eventvalues')
                 currEventValues = cfg.eventvalues{iEventTypes};
-                currEventValueRanges = cfg.eventvalueranges{iEventTypes};
+                if isfield(cfg,'eventvalueranges')
+                	currEventValueRanges = cfg.eventvalueranges{iEventTypes};
+                    if isempty(currEventValueRanges)
+                    	currEventValueRanges = [min(currEventValues) max(currEventValues)];
+                    end
+                else
+                    currEventValueRanges = [min(currEventValues) max(currEventValues)];
+                end
                 currEventValueRanges = round(currEventValueRanges,cfg.eventvaluerangesrnddec);
-                event_scale = fw_normalize(currEventValues, min(currEventValueRanges),  max(currEventValueRanges), 0.1, 1)';
+                event_scale = fw_normalize(currEventValues, min(currEventValueRanges),  max(currEventValueRanges), eventminscale, 1)';
+                event_scale_null = fw_normalize(currEventValues, min(currEventValueRanges),  max(currEventValueRanges), 0, 1)';
                 text(max_temp_x_all+1,temp_y(1),['[' num2str(min(currEventValueRanges)) ' ' num2str(max(currEventValueRanges)) ']']);
             else
-                event_scale = 1;
+                event_scale = ones(1,nEvents);
             end
-            if ~isempty(currEventsDurations)
-                temp_plot_y = [temp_y-(eventHeight*event_scale)/2 temp_y+(eventHeight*event_scale)/2];
-                %plot(axh,[temp_x1 temp_x2]',temp_plot_y,'Color',color)
+            
+            if istrue(cfg.eventcolorsbystagecolor)
+                iEpochs = floor(((currEvents-offsetseconds)/scoring.epochlength))+1;
+                [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs,cfg.colorscheme);
                 
-%                 for iDurEv = 1:numel(temp_x1)
-%                     hev = patch([temp_x1(iDurEv) temp_x2(iDurEv) temp_x2(iDurEv) temp_x1(iDurEv)], [temp_plot_y(1,iDurEv) temp_plot_y(1,iDurEv) temp_plot_y(2,iDurEv) temp_plot_y(2,iDurEv)],color,'edgecolor','none');
-%                 end
-                 hev = patch([temp_x1 temp_x2 temp_x2 temp_x1]', [temp_plot_y(:,1) temp_plot_y(:,1) temp_plot_y(:,2) temp_plot_y(:,2)]',color,'edgecolor','none');
+                colorevs = repmat(epoch_colors_unknown,numel(iEpochs),1);
+                remprepind = (iEpochs>=1) & (iEpochs<=numel(scoring.epochs));
+                colorevs(remprepind,:) = epoch_colors(iEpochs(remprepind),:);
+                
+                for iEv = 1:numel(temp_x1)
+                    colorev = colorevs(iEv,:);
+                    switch eventalign{iEventTypes}
+                        case 'center'
+                            temp_plot_y = [temp_y(iEv)-(eventHeight.*event_scale(iEv))/2 temp_y(iEv)+(eventHeight.*event_scale(iEv))/2];
+                        case 'bottom'
+                            temp_plot_y = [temp_y(iEv)-eventHeight/2 temp_y(iEv)-eventHeight/2+(eventHeight.*event_scale(iEv))];
+                        case 'top'
+                            temp_plot_y = [temp_y(iEv)+eventHeight/2 temp_y(iEv)+eventHeight/2-(eventHeight.*event_scale(iEv))];
+                        case 'stack'
+                            temp_plot_y = [temp_y(iEv)-eventHeight/2+(eventHeight.*event_scale_null(iEv))-0.1 temp_y(iEv)-eventHeight/2+(eventHeight.*event_scale_null(iEv))+0.1];
+                    end
+                    if ~isempty(currEventsDurations)
+                        %plot(axh,[temp_x1 temp_x2]',temp_plot_y,'Color',color)
+                        
+                        %                 for iDurEv = 1:numel(temp_x1)
+                        %                     hev = patch([temp_x1(iDurEv) temp_x2(iDurEv) temp_x2(iDurEv) temp_x1(iDurEv)], [temp_plot_y(1,iDurEv) temp_plot_y(1,iDurEv) temp_plot_y(2,iDurEv) temp_plot_y(2,iDurEv)],color,'edgecolor','none');
+                        %                 end
+                        hev = patch([temp_x1(iEv) temp_x2(iEv) temp_x2(iEv) temp_x1(iEv)]', [temp_plot_y(:,1) temp_plot_y(:,1) temp_plot_y(:,2) temp_plot_y(:,2)]',colorev,'edgecolor','none');
+                    else
+                        plot(axh,[temp_x1(iEv) temp_x2(iEv)]',temp_plot_y,'Color',colorev)
+                        %scatter([temp_x1(iEv) temp_x1(iEv)]',temp_plot_y,25,'MarkerEdgeColor','none','MarkerFaceColor',colorev,'Parent',axh)
+                    end
+                end
+                
             else
-                temp_plot_y = [temp_y-(eventHeight*event_scale)/2 temp_y+(eventHeight*event_scale)/2]';
-                plot(axh,[temp_x1 temp_x1]',temp_plot_y,'Color',color)
+                color = tempcolors(iEventTypes,:);
+                
+                switch eventalign{iEventTypes}
+                    case 'center'
+                        temp_plot_y = [temp_y-(eventHeight.*event_scale)/2 temp_y+(eventHeight.*event_scale)/2];
+                    case 'bottom'
+                        temp_plot_y = [temp_y-eventHeight/2 temp_y-eventHeight/2+(eventHeight.*event_scale)];
+                    case 'top'
+                        temp_plot_y = [temp_y+eventHeight/2 temp_y+eventHeight/2-(eventHeight.*event_scale)];
+                    case 'stack'
+                        temp_plot_y = [temp_y-eventHeight/2+(eventHeight.*event_scale)-0.1 temp_y-eventHeight/2+(eventHeight.*event_scale)+0.1];
+                end
+                if ~isempty(currEventsDurations)
+                    %plot(axh,[temp_x1 temp_x2]',temp_plot_y,'Color',color)
+                    
+                    %                 for iDurEv = 1:numel(temp_x1)
+                    %                     hev = patch([temp_x1(iDurEv) temp_x2(iDurEv) temp_x2(iDurEv) temp_x1(iDurEv)], [temp_plot_y(1,iDurEv) temp_plot_y(1,iDurEv) temp_plot_y(2,iDurEv) temp_plot_y(2,iDurEv)],color,'edgecolor','none');
+                    %                 end
+                    hev = patch([temp_x1 temp_x2 temp_x2 temp_x1]', [temp_plot_y(:,1) temp_plot_y(:,1) temp_plot_y(:,2) temp_plot_y(:,2)]',color,'edgecolor','none');
+                else
+                    plot(axh,[temp_x1 temp_x1]',temp_plot_y,'Color',color)
+                end
             end
         end
     end
 end
+
 
 
 switch cfg.plottype
@@ -836,6 +1128,11 @@ switch cfg.timeunitdisplay
 end
     
 set(axh, 'box', 'off')
+
+if plotYMinorTicks
+    axh.YAxis.MinorTick = 'on';
+    axh.YAxis.MinorTickValues = eventYMinorTicks;
+end
 
 %     begsample = 0;
 %     endsample = 0;
