@@ -401,12 +401,12 @@ if processTableStucture
     
     scoring.epochs = cell(1,numel(scoring.ori.epochs));
     scoring.epochs(:) = {scoremap.unknown};
-    match_cum = zeros(numel(scoring.ori.epochs),1);
+    match_cum = logical(zeros(numel(scoring.ori.epochs),1));
     for iLabel = 1:numel(scoremap.labelold)
         old = scoremap.labelold{iLabel};
         new = scoremap.labelnew{iLabel};
         match = cellfun(@(x) strcmp(x, old), scoring.ori.epochs, 'UniformOutput', 1);
-        match_cum = match_cum | match;
+        match_cum = match_cum | logical(match(:));
         scoring.epochs(match) = {new};
     end
     

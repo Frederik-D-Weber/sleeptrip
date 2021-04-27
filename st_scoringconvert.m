@@ -152,7 +152,7 @@ else
     [labelold ia iItems] = unique(scoremap.labelold,'stable');
     usedItems = [];
     
-    match_cum = zeros(numel(scoring.epochs),1);
+    match_cum = logical(zeros(numel(scoring.epochs),1));
   
     
     for iLabel = 1:numel(scoremap.labelold)
@@ -163,7 +163,7 @@ else
         new = scoremap.labelnew{iLabel};
         match = cellfun(@(x) strcmp(x, old), scoring.epochs, 'UniformOutput', 1);
         epochs(match) = {new};
-        match_cum = match_cum | match;
+        match_cum = match_cum | logical(match(:));
         match = cellfun(@(x) strcmp(x, old), scoring.label, 'UniformOutput', 1);
         label(match) = {new};
         usedItems = [usedItems iItems(iLabel)];
