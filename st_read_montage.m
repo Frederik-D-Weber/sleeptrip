@@ -13,7 +13,6 @@ function montage = st_read_montage(cfg, filename)
 %                          (default 'columns')
 %   cfg.columndelimimter = string, of the column delimiter, must be either
 %                          ',', ' ', '|' or '\t' (a tab) (default = ',')
-%   cfg.skiplines        = scalar, number of lines to skip in file (default = 0)%
 %   cfg.fileencoding     = string, with encoding e.g. 'UTF-8', see matlab help of
 %                          READTABLE for FileEncoding, (default = '', try system specific)
 %
@@ -50,7 +49,7 @@ fprintf([functionname ' function started\n']);
 
 cfg.datatype           = ft_getopt(cfg, 'datatype', 'columns');
 cfg.columndelimimter   = ft_getopt(cfg, 'columndelimimter', ',');
-cfg.skiplines          = ft_getopt(cfg, 'skiplines', 0);
+%cfg.skiplines          = ft_getopt(cfg, 'skiplines', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
 
 
@@ -62,8 +61,8 @@ end
 
 
 parampairs = {};
-parampairs = [parampairs, {'ReadVariableNames',false}];
-parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
+parampairs = [parampairs, {'ReadVariableNames',true}];
+%parampairs = [parampairs, {'numHeaderLines',cfg.skiplines}];
 
 if ~isempty(cfg.columndelimimter)
     parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
@@ -80,14 +79,16 @@ montageTable = montageTable([1; find(~cellfun(@isempty,table2cell(montageTable(2
 montmat = montageTable(2:end,2:end);
 
 montage = [];
-montage.labelold = table2cell(montageTable(1,2:end));
+montage.labelold = montageTable.Properties.VariableNames(2:end);
 montage.labelnew  = table2cell(montageTable(2:end,1))';
-if isnumeric(montmat(1,1))
-    montage.tra = double(montmat);
+montage.tra = [];
+if ~isempty(montmat)
+if isnumeric(montmat{1,1})
+    montage.tra = double(table2array(montmat));
 else
     montage.tra = double(cellfun(@str2num,table2cell(montmat)));
 end
-
+end
 fprintf([functionname ' function finished\n']);
 toc(ttic)
 memtoc(mtic)
