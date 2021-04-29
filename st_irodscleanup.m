@@ -88,7 +88,7 @@ if status ~= 0
 end
 
 % do the general cleanup and bookkeeping at the end of the function
-ft_postamble debug
+%ft_postamble debug
 %ft_postamble trackconfig
 % ft_postamble previous data
 % data = datanew
