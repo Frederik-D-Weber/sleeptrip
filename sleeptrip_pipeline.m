@@ -494,6 +494,10 @@ cfg.channel     = subject.eegchannels;
 % cfg.dataset     = subject.dataset;
 % [res_power_bins, res_power_bands] = st_power(cfg); 
 
+% cfg.quick = 'yes'; % if you want to do quick and dirty determination
+% cfg.windowproportion = 1/scoring.epochlength;
+% cfg.segmentlength = scoring.epochlength;
+% cfg.segmentoverlap = 0;
 [res_power_bin, res_power_band] = st_power(cfg, data);
 
 %let us take a look
@@ -523,13 +527,13 @@ power_y    = res_power_bin.table.mean_powerDensity_over_segments(indChannel);
 % scale the power values on a logarithmic scale, in dB
 % to avoid negative values add 1 to all values to have them >= 1;
 figure;
+%power_y = sqrt(power_y)
 plot(freq_x,power_y) % raw
 figure;
 power_y_logscale = 10*log10(power_y+1);
 plot(freq_x,power_y_logscale) % db scaled
 figure;
 plot(freq_x,power_y_logscale.*freq_x) % db scaled, 1/freq corrected
-
 
 % practice: Try different scaling and normalization, how would this change
 % the results? Can you plot muliple channels at the same time.

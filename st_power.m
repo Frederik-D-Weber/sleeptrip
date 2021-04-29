@@ -20,6 +20,13 @@ function [res_power_bin, res_power_band] = st_power(cfg, data)
 %   cfg.dataset  = string with the filename
 %
 % Optional configuration parameters are:
+%   cfg.quick        = string, either 'yes' or 'no' (default = 'no'). if yes this
+%                       will speed up calcualtion considerably by using matlab spectrogram function and 
+%                       force cfg.windowproportion = 1/scoring.epochlength
+%                       (thus 0.5 seconds of power per sleep stage are lost
+%                       at the tails of each sleep stage) and force
+%                       as well cfg.segmentlength = scoring.epochlength 
+%                       and no overlap of segments cfg.segmentoverlap = 0
 %
 %   cfg.segmentlength  = scalar, segment length in seconds,
 %                        should be lower than the epoch length (default = 10)
@@ -122,7 +129,9 @@ cfg.bands    = ft_getopt(cfg, 'bands', ...
 cfg.windowproportion = ft_getopt(cfg, 'windowproportion', 0.2);
 cfg.segmentlength    = ft_getopt(cfg, 'segmentlength', 10);
 cfg.segmentoverlap   = ft_getopt(cfg, 'segmentoverlap', 0.1);    
-cfg.downsamplefs     = ft_getopt(cfg, 'downsamplefs', 100);                                      
+cfg.downsamplefs     = ft_getopt(cfg, 'downsamplefs', 100); 
+cfg.quick            = ft_getopt(cfg, 'quick', 'no');                                      
+
 
 
 if (cfg.windowproportion/2) ~= cfg.segmentoverlap
@@ -345,11 +354,20 @@ fprintf('power: preprocess and pre filter data\n');
 cfg_int.stages   = cfg.stages;
 cfg_int.scoring  = cfg.scoring;
 
+
+
+
+
+
+
+
 hasROIs = true;
 
 if hasdata
     data_t = st_preprocessing(cfg_int, data);
+    if ~istrue(cfg.quick)
     data_t = st_select_scoring(cfg_int, data_t);
+    end
     if isempty(data_t.trial)
         hasROIs = false;
         % read in dummy data
@@ -364,7 +382,9 @@ if hasdata
     end
 else
     cfg_int.dataset  = cfg.dataset;
+    if ~istrue(cfg.quick)
     [cfg_int] = st_select_scoring(cfg_int);
+    end
     cfg_int.continuous   = 'yes';
     if isempty(cfg_int.trl) 
         hasROIs = false;
@@ -403,6 +423,96 @@ end
 fsample = data.fsample;
 
 trlSampleLengths = cellfun(@numel, data.time)';
+
+
+if istrue(cfg.quick)
+    
+scoring = cfg.scoring;
+cfg.windowproportion = 1/scoring.epochlength;
+cfg.segmentlength = scoring.epochlength;
+cfg.segmentoverlap = 0;
+
+cfg_tfr = [];
+cfg_tfr.approach = 'spectrogram';
+cfg_tfr.length  = cfg.segmentlength;
+cfg_tfr.overlap  = cfg.segmentoverlap;
+cfg_tfr.transform  = 'none';
+%cfg_tfr.taper  = 'dpss';
+cfg_tfr.taper  = 'hanning_proportion';
+cfg_tfr.windowproportion = cfg.windowproportion;
+cfg_tfr.foi = min(cfg.foilim):(1/scoring.epochlength):max(cfg.foilim);
+%cfg_tfr.channel = cfg.channel_eog;
+tfa = st_tfr_continuous(cfg_tfr, data);
+
+%chan_freq_time
+
+pFreq = tfa.freq;
+pPower = tfa.powspctrm;
+
+nEpochsData = size(pPower,3);
+
+if numel(scoring.epochs) > nEpochsData
+    scoring.epochs = scoring.epochs(1:nEpochsData);
+    scoring.excluded = scoring.excluded(1:nEpochsData);
+end
+if numel(scoring.epochs) < nEpochsData
+pPower(:,:,(numel(scoring.epochs)+1):end) = [];
+end
+idxValidStages = ~scoring.excluded' & ismember(scoring.epochs,cfg.stages)';
+pPower(:,:,find(~idxValidStages)) = [];
+
+%chan_freq_time  to %time_chan_freq
+pPower = permute(pPower,[3 1 2]);
+
+NSegments = sum(idxValidStages);
+
+if hasROIs
+    NSamplesPerSegment = round(cfg.segmentlength*fsample);
+    NconsecutiveROIs = 0;
+else
+    NSegments = 0;
+    NSamplesPerSegment = round(cfg.segmentlength*data.fsample);
+    NconsecutiveROIs = 0;
+    trlSampleLengths = 0;
+end
+sampleLengthsAcrossROIs = sum(trlSampleLengths);
+lengthsAcrossROIsSeconds = sampleLengthsAcrossROIs/fsample; % in seconds
+guaranteedROIsegmentCoverage = lengthsAcrossROIsSeconds - ((cfg.segmentlength * (1 - cfg.segmentoverlap)) * NconsecutiveROIs);
+freqResolutionCalculation = (fsample/NSamplesPerSegment);
+ENBW = NaN;
+if strcmp(ft_power_cfg_taper,'hanning')
+    %ENBW = NENBW.hanning * freqResolutionCalculation;
+    %     elseif strcmp(ft_power_cfg_taper,'hamming')
+    %        ENBW = NENBW.hamming * freqResolutionCalculation;
+    %ft_power_cfg_taper = 'hamming'
+    
+    windowFunction = ft_power_cfg_taper;
+    %windowFunctionValues =  window(windowFunction, NSamplesPerSegment);
+    %plot(windowFunctionValues);
+    %windowFunctionValues = windowFunctionValues ./ norm(windowFunctionValues);
+    
+    
+    temp_windowFunctionValues = window(windowFunction, floor(cfg.windowproportion*NSamplesPerSegment));
+    %plot(temp_windowFunctionValues);
+    
+    windowFunctionValuesLeft = temp_windowFunctionValues(1:floor(end/2));
+    windowFunctionValuesRight = temp_windowFunctionValues(floor(end/2)+1:end);
+    windowFunctionValues = ones(NSamplesPerSegment,1);
+    windowFunctionValues(1:length(windowFunctionValuesLeft)) = windowFunctionValuesLeft;
+    windowFunctionValues(end-length(windowFunctionValuesRight)+1:end) = windowFunctionValuesRight;
+    
+    %plot(windowFunctionValues);
+    S1 = sum(windowFunctionValues);
+    S2 = sum(windowFunctionValues.^2);
+    
+    NENBW = NSamplesPerSegment*(S2/(S1^2));
+    ENBW = NENBW * freqResolutionCalculation;
+    
+end
+    
+else
+
+
 
 %if hasROIs
     cfg_int = [];
@@ -455,7 +565,6 @@ if strcmp(ft_power_cfg_taper,'hanning')
     
     NENBW = NSamplesPerSegment*(S2/(S1^2));
     ENBW = NENBW * freqResolutionCalculation;
-    
 end
 
 
@@ -485,6 +594,8 @@ fprintf('power: filter %i to %i Hz\n',minBandFreq,maxBandFreq);
 tfa = ft_freqanalysis(cfg_int,data);
 pFreq = tfa.freq;
 pPower = tfa.powspctrm;
+end
+
 
 if ~hasROIs
     pPower(:) = 0;

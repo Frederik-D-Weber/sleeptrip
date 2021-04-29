@@ -59,35 +59,28 @@ ft_defaults
 % check if some are empty
 
 
-empty_res = [];
+scorings = {};
 iE = 0;
 for iArg = 1:nargin
-    if isempty(varargin{iArg})
+    if ~isempty(varargin{iArg})
         iE = iE + 1;
-        empty_res(iE) = iArg;
-        ft_warning('Result number %d is empty and is thus ignored. Continous numbering is also ignoring this result',iArg)
+        scorings{iE} = varargin{iArg};
+    else
+        ft_warning('scoring number %d is empty and is thus ignored. Continous numbering is also ignoring this scoring',iArg)
     end
 end
 
-if ~isempty(empty_res)
-    varargin(empty_res) = [];
+if isempty(scorings)
+    ft_error('no scorings for appending')
 end
 
 
-nRes = numel(varargin);
-
-resIDs = cell(nargin,1);
+nScorings = numel(scorings);
 
 
-s = varargin{1};
-
-allAppended = true;
-anyAppended = false;
-
-
-if iscell(varargin)
-scoring = varargin{1};
-if numel(varargin) > 1
+if iscell(scorings)
+scoring = scorings{1};
+if numel(scorings) > 1
     scoring.oris = {};
     scoring.oris{1} = scoring.ori;
     scoring.cfgs = {};
@@ -97,11 +90,11 @@ if numel(varargin) > 1
         scoring_app = varargin{iScoring};
         
         %check consistency
-        if (scoring.epochlength ~= scoring.epochlength)
+        if (scoring.epochlength ~= scoring_app.epochlength)
             ft_error(['epochlength of scoring number ' num2str(iScoring) ' does not match the previous, will not concatenate.']);
         end
         
-        if ~strcmp(scoring.standard,scoring.standard)
+        if ~strcmp(scoring.standard,scoring_app.standard)
             ft_error(['scoring standard of scoring number ' num2str(iScoring) ' does not match the previous, will not concatenate.']);
         end
         
@@ -116,8 +109,7 @@ if numel(varargin) > 1
     rmfield(scoring,'ori');
     %rmfield(scoring,'cfg');
 end
-else
-    scoring = varargin;
+    
 end
 
 fprintf([functionname ' function finished\n']);

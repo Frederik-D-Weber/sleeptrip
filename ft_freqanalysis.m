@@ -724,7 +724,8 @@ for itrial = 1:ntrials
       switch keeprpt
         
         case 1 % cfg.keeptrials, 'no' &&  cfg.keeptapers, 'no'
-          if exist('trlcnt', 'var')
+          %if exist('trlcnt', 'var')
+          if ~isempty(trlcnt)
             trlcnt(1, ifoi, :) = trlcnt(1, ifoi, :) + shiftdim(double(acttboi(:)'),-1);
           end
           
