@@ -104,7 +104,8 @@ irodsfinaldestinationpaths = {};
 for ifilepaths = 1:numel(filepaths)
 filepath = filepaths{ifilepaths};
 
-command = ['iput -K -r -P -N 10 -X ' [filepath '.' 'iput_restartfile.txt'] ' --retries 10 ' irodsfinaldestinationfolder ' '  filepath];
+%command = ['iput -K -P -r -N 10 -X ' [filepath '.' 'iput_restartfile.txt'] ' --retries 10 ' filepath ' '  irodsfinaldestinationfolder];
+command = ['iput -K -P -N 10 -X ' [filepath '.' 'iput_restartfile.txt'] ' --retries 10 ' filepath ' '  irodsfinaldestinationfolder];
 
 [status_system, cmdout_system] = system(command);
 
