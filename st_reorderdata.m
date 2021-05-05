@@ -11,6 +11,10 @@ function [data] = st_reorderdata(cfg, data)
 %                'reverse_alphabetical'
 %                'reverse'
 %                'random'
+%                'natural' ...when 'E10' needs to come after 'E9'
+%                'reverse_natural'
+%                'natural_shortfirst' ...when 'E10' needs to come after 'E9' and before all the 'E10-x' or 'E10.x' or 'E10-' or 'E10.'
+%                'reverse_natural_shortfirst'
 %
 % See also FT_PREPROCESSING, FT_APPLY_MONTAGE
 
@@ -58,17 +62,29 @@ if isnumeric(cfg.order)
     end
 else
     switch cfg.order
-        case 'reverse'
-            curr_chanOrder = numel(data.label):-1:1;
         case 'alphabetical'
             [tempchlab curr_chanOrder] = sort(data.label);
         case 'reverse_alphabetical'
             [tempchlab curr_chanOrder] = sort(data.label);
             curr_chanOrder = flip(curr_chanOrder);
+        case 'reverse'
+            curr_chanOrder = numel(data.label):-1:1;
         case 'random'
             curr_chanOrder = randperm(numel(data.label));
-        case 'scoring'
-            curr_chanOrder = randperm(numel(data.label));
+        case 'natural'
+            [tempchlab curr_chanOrder] = natsort(data.label);
+        case 'reverse_natural'
+            [tempchlab curr_chanOrder] = natsort(data.label);
+            curr_chanOrder = flip(curr_chanOrder);
+        case 'natural_shortfirst'
+            [tempchlab curr_chanOrder] = natsortfiles(data.label);
+        case 'reverse_natural_shortfirst'
+            [tempchlab curr_chanOrder] = natsortfiles(data.label);
+            curr_chanOrder = flip(curr_chanOrder);
+%         case 'scoring'
+%             curr_chanOrder = randperm(numel(data.label));
+        otherwise
+            ft_error('cfg.order = ''%'' is not handled. see help to st_reorderdata', cfg.order)
     end
 end
 

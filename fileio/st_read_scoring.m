@@ -217,6 +217,8 @@ end
 processTableStucture = true;
 
 scoremap = [];
+tableArousal = [];
+tableEvents = [];
 
 switch  cfg.scoringformat
     case 'custom'

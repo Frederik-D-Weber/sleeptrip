@@ -15,6 +15,9 @@ sumREM = 0;
 
 
 temp = floor(result/30);
+
+temp(temp >numel(hip)) = repmat(numel(hip),numel(temp(placeInHip >numel(hip))),1);
+
 begin = temp(1, 1);
 eend = temp(1, 2);
 

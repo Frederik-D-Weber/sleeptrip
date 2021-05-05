@@ -1,11 +1,11 @@
-function [res_channel, res_event, res_summary] = st_rems(cfg, data)
+function [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg, data)
 
 % ST_REMS detects rapid eye movements during sleep and their properties.
 % results are stored it in a result structure
 %
 % Use as
-%   [res_channel, res_event, res_summary] = st_rems(cfg)
-%   [res_channel, res_event, res_summary] = st_rems(cfg, data)
+%   [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg)
+%   [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg, data)
 %
 % Required configuration parameters are:
 %   cfg.scoring         = structure provided by ST_READ_SCORING
@@ -891,17 +891,17 @@ hypnEpochsBeginsSamples = hypnEpochsBeginsSamples*fsample+1;
     nEpochs_REM_withoutMA = sum(scoring.numbers == 5)-sum((scoring.excluded == 1) & (scoring.numbers == 5));
     
     
-res_channel = [];
-res_channel.ori = functionname;
-res_channel.type = 'rems_channel';
-res_channel.cfg = cfg;
+res_rems_channel = [];
+res_rems_channel.ori = functionname;
+res_rems_channel.type = 'rems_channel';
+res_rems_channel.cfg = cfg;
 
 tempvarnames = {'channel',...
             'count','density_per_REM_epoch','density_per_REM_without_MA_epoch',...
             'mean_duration_seconds','mean_speed_uV_per_second', 'mean_rightness_EOGRdeviation_minus_EOGLdeviation',...
             'used_basic_threshold_factor_of_EOG_noise','used_relaxed_threshold_factor_of_basic_threshold','observed_EOG_noise','observed_basic_threshold_of_EOG_noise','observed_relaxed_threshold_of_basic_threshold'};
 if ~hasREM
-    res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+    res_rems_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 %     res_channel.table = table(...
 %         [channel_label_EOG_left '+' channel_label_EOG_right],...
 %         NaN,NaN,NaN,...
@@ -909,7 +909,7 @@ if ~hasREM
 %         cfg.BasicThresholdFactorOfEOGnoise,cfg.RelaxedThresholdFactorOfBasicThreshold,...
 %         'VariableNames',tempvarnames);
 else
-    res_channel.table = table(...
+    res_rems_channel.table = table(...
         {[channel_label_EOG_left '+' channel_label_EOG_right]},...
         nDetected,nDetected/nEpochs_REM,nDetected/nEpochs_REM_withoutMA,...
         mean_detected_seconds_duration,mean_detected_REMSpeed_uV_per_second,mean_rightness_EOGRdeviation_minus_EOGLdeviation,...
@@ -918,10 +918,10 @@ else
 end
     
 
-res_event = [];
-res_event.ori = functionname;
-res_event.type = 'rems_event';
-res_event.cfg = cfg;
+res_rems_event = [];
+res_rems_event.ori = functionname;
+res_rems_event.type = 'rems_event';
+res_rems_event.cfg = cfg;
 tempvarnames = {'channel',...
             'duration_seconds',...
             'speed_uV_per_second_seconds',...
@@ -932,12 +932,12 @@ tempvarnames = {'channel',...
             'stage','stage_alt','stage_alt2'};
         
 if ~hasREM
-    res_event.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+    res_rems_event.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 else
     if isempty(detected)
-        res_event.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+        res_rems_event.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
     else  
-        res_event.table = table(cellstr(repmat([channel_label_EOG_left '+' channel_label_EOG_right],numel(detected.seconds_duration),1)),...
+        res_rems_event.table = table(cellstr(repmat([channel_label_EOG_left '+' channel_label_EOG_right],numel(detected.seconds_duration),1)),...
             detected.seconds_duration(:), ...
             detected.REMSpeed_uV_per_second(:),...
             detected.REMRightness(:),...
@@ -954,41 +954,49 @@ end
     
     % change computed REM density in matlab format into easy readable csv
     % format
-        
-    meanREMSpeed_as_microVolt_per_second_per_epoch = meanREMSpeed./(meanREMWidth./usedFixedSamplingRate);
-    meanREMWidth_as_duration_seconds_per_epoch = meanREMWidth./usedFixedSamplingRate;
-    
-    %path_file_exactlyMarkedREMs = [pathOutputFolder filesep ouputFilesPrefixString 'REMsMaAd_exactlyMarkedREMs_' 'datanum_' num2str(iData) '.mat'];
-    %path_file_standardREMdens = [pathOutputFolder filesep ouputFilesPrefixString 'REMsMaAd_standardREMdens_' 'datanum_' num2str(iData) '.mat'];
-    
-   % save(path_file_exactlyMarkedREMs,'exactlyMarkedREMs');
-   % save(path_file_standardREMdens,'remDens');
-    
-    MarkedREMsSampling = usedFixedSamplingRate;
-    
-    [standardREMdensity1stCycle funName REMepochsNb1stCycle] = ...
-        firstCycleREM_densFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+    failed_summary_calc = false;
 
-    REM3Count1stCycle   = firstCycleMiniEp3WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REM1Count1stCycle =   firstCycleMiniEp1WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    AllREMsCount1stCycle =  firstCycleAllREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    
-    allREMepochsNb =         allNightREMepochs(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REMlatency =                giveREMlatency(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    
-    standardREMdensityAllNight = allNightREM_densFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REM3Count           = allNightMiniEp3WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REM1Count   =         allNightMiniEp1WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    AllREMsCount =                allNightAllREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    
-    REMsCountInBurst =      allNightREMsInMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    burstsNumber =     allNightAllREMsNbOfMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REMsInBurstsPrc =    allNightREMsPrcInMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    
-    REM1CountInBurst =       allNightREM1InMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REM1burstsNumber =     allNightREM1NbOfMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    REM1InBurstsPrc =     allNightREM1PrcInMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
-    
+    if hasREM
+        meanREMSpeed_as_microVolt_per_second_per_epoch = meanREMSpeed./(meanREMWidth./usedFixedSamplingRate);
+        meanREMWidth_as_duration_seconds_per_epoch = meanREMWidth./usedFixedSamplingRate;
+        
+        
+        %path_file_exactlyMarkedREMs = [pathOutputFolder filesep ouputFilesPrefixString 'REMsMaAd_exactlyMarkedREMs_' 'datanum_' num2str(iData) '.mat'];
+        %path_file_standardREMdens = [pathOutputFolder filesep ouputFilesPrefixString 'REMsMaAd_standardREMdens_' 'datanum_' num2str(iData) '.mat'];
+        
+        % save(path_file_exactlyMarkedREMs,'exactlyMarkedREMs');
+        % save(path_file_standardREMdens,'remDens');
+        
+        MarkedREMsSampling = usedFixedSamplingRate;
+        
+        try 
+        [standardREMdensity1stCycle funName REMepochsNb1stCycle] = ...
+            firstCycleREM_densFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        
+        REM3Count1stCycle   = firstCycleMiniEp3WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REM1Count1stCycle =   firstCycleMiniEp1WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        AllREMsCount1stCycle =  firstCycleAllREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        
+        allREMepochsNb =         allNightREMepochs(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REMlatency =                giveREMlatency(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        
+        standardREMdensityAllNight = allNightREM_densFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REM3Count           = allNightMiniEp3WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REM1Count   =         allNightMiniEp1WithREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        AllREMsCount =                allNightAllREMsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        
+        REMsCountInBurst =      allNightREMsInMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        burstsNumber =     allNightAllREMsNbOfMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REMsInBurstsPrc =    allNightREMsPrcInMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        
+        REM1CountInBurst =       allNightREM1InMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REM1burstsNumber =     allNightREM1NbOfMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        REM1InBurstsPrc =     allNightREM1PrcInMidBurstsFromExactVct(scoring.numbers, scoring.epochlength, exactlyMarkedREMs, MarkedREMsSampling);
+        catch e
+            ft_warning('st_rems failed to calcualte the summary due to lower level functions not adapted to the border conditions of the requested analysis.')
+            failed_summary_calc = true;
+        end
+    end
     
 %     fid = fopen([pathOutputFolder filesep ouputFilesPrefixString 'REMsMaAd_' 'datanum_' num2str(iData) '.txt'],'wt');
 %     
@@ -1032,10 +1040,10 @@ end
 %     
 %     fclose(fid);
     
-res_summary = [];
-res_summary.ori = functionname;
-res_summary.type = 'rems_summary';
-res_summary.cfg = cfg;
+res_rems_summary = [];
+res_rems_summary.ori = functionname;
+res_rems_summary.type = 'rems_summary';
+res_rems_summary.cfg = cfg;
 tempvarnames = {...
         'AllREMsCount',...
         'REMsInBurstsPrc','avgREMsInBurst',...
@@ -1045,13 +1053,13 @@ tempvarnames = {...
         'REMlatencyEpNb','REMepochsNb','standardREMdensityAllNight','REMdensityOf1sMiniEpisodeFromAllNight','allREMdensityAllNight', ...
         'allREMactivity3sMiniEpisode','allREMactivity1sMiniEpisode', 'REMactivityInBurst1sMiniEpisode','REMdensityInBurst1sMiniEpisode','burstsNumber1sMiniEpisode','burstsPrc1sMiniEpisode','NbOfREMsinAVGburst1sMiniEpisode'};
         
-if ~hasREM
-    res_summary.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+if ~hasREM || failed_summary_calc
+    res_rems_summary.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 else
     if isempty(detected)
-        res_summary.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+        res_rems_summary.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
     else  
-        res_summary.table = table(...
+        res_rems_summary.table = table(...
             AllREMsCount,...
             REMsInBurstsPrc, REMsCountInBurst/burstsNumber,...
             REMsCountInBurst, REMsCountInBurst/allREMepochsNb, burstsNumber, ...

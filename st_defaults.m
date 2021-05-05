@@ -14,8 +14,10 @@ try
     
     % enhanced rdir
     ft_hastoolbox('external/enhanced_rdir', 1, 1);
-
     
+    % natsort
+    ft_hastoolbox('external/natsortfiles', 1, 1);
+
     % REMs detector by Marek Adamczyk
     ft_hastoolbox('external/REMs_detector/marek_adamczyk/REMdetector', 1, 1);
 

@@ -17,6 +17,8 @@ end
 [result groupsNames] = findSleepCycles(hip, epochLength);
 placeInHip = floor(result/epochLength);
 
+placeInHip(placeInHip >numel(hip)) = repmat(numel(hip),numel(placeInHip(placeInHip >numel(hip))),1);
+
 begin = placeInHip(1, 1);
 eend = placeInHip(1, 2) ;
 
