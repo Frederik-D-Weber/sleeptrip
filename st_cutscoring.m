@@ -138,7 +138,23 @@ for iStart = 1:numel(startEpochs)
         snipIndex = snipStart:(snipStart + snipLength - 1);
         snip.epochs = scoring.epochs(snipIndex);
         snip.excluded = scoring.excluded(snipIndex);
-        snip.dataoffset = scoring.dataoffset + scoring.epochlength * (snipStart - 1);
+        if isfield(scoring,'numbers')
+            snip.numbers = scoring.numbers(snipIndex);
+        end
+        if isfield(scoring,'prob')
+            snip.prob = scoring.prob(:,snipIndex);
+        end
+        
+        time_start = (snipStart-1) * scoring.epochlength + scoring.dataoffset;
+        time_stop = max(snipIndex) * scoring.epochlength + scoring.dataoffset;
+        if isfield(scoring, 'arousals')
+            scoring.arousals = scoring.arousals((scoring.arousals.start >= time_start) & (scoring.arousals.start < time_stop),:);
+        end
+        if isfield(scoring, 'events')
+            scoring.events = scoring.events((scoring.events.start >= time_start) & (scoring.events.start < time_stop),:);
+        end
+
+        snip.dataoffset = time_start;
         if hasLightsOff
             snip.lightsoff = lightsOffMoment - ((snipStart - 1) * scoring.epochlength);
         end

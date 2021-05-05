@@ -42,7 +42,7 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 % See also ST_READ_SCORING, ST_SLEEPONSET, ST_SLEEPCYCLES
 
 % Copyright (C) 2019-, Frederik D. Weber
-%
+% Thanks Roy Cox, Leonore Bovy, Shervin Bukhari for valuable suggestions
 % This file is part of SleepTrip, see http://www.sleeptrip.org
 % for the documentation and details.
 %

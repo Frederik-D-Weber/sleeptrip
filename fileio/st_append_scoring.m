@@ -101,6 +101,23 @@ if numel(scorings) > 1
         scoring.epochs = cat(2,scoring.epochs,scoring_app.epochs);
         scoring.excluded = cat(2,scoring.excluded,scoring_app.excluded);
         
+        if isfield(scoring,'numbers') && isfield(scoring_app,'numbers')
+        	scoring.numbers = cat(2,scoring.numbers,scoring_app.numbers);
+        end
+        
+        if isfield(scoring,'prob') && isfield(scoring_app,'prob')
+        	scoring.prob = cat(2,scoring.prob,scoring_app.prob);
+        end
+        
+        if isfield(scoring,'arousals') && isfield(scoring_app,'arousals')
+        	scoring.arousals = cat(1,scoring.arousals,scoring_app.arousals);
+        end
+        
+        if isfield(scoring,'events') && isfield(scoring_app,'events')
+        	scoring.events = cat(1,scoring.events,scoring_app.events);
+        end
+
+        
         scoring.oris{iScoring} = scoring_app.ori;
         scoring.cfgs{iScoring} = scoring_app.cfg;
         

@@ -26,6 +26,14 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          'u-sleep-30s' for scoring files exported as *.txt
 %                                   from U-sleep in 30-s epochs
 %                          'nin' .mat files from the NIN
+%                          'compumedics_profusion_xml' for Compumedix Profusion software 
+%                                   with .xml exported scorings and scoring
+%                                   events (note that cfg.scoremap can be
+%                                   defined to match the scoring)
+%                          'nautus_remlogic_xml' or 'sleep_cure_solutions_xml' or 'remlogic_xml' or 'embla_xml' 
+%                                   for .xml files exported from Nautus Embla® RemLogic™ PSG Software  with scorings and scoring events
+%                                   (note that cfg.scoremap can be
+%                                   defined to match the scoring)
 %                          'sleeptrip' for scoring files exported SleepTrip as a .mat
 %                                  containing a scoring structure
 %                                  (named 'scoring')
@@ -44,6 +52,11 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          (default = 0)
 %  cfg.fileencoding      = string, with encoding e.g. 'UTF-8', see matlab help of
 %                          READTABLE for FileEncoding, (default = '', try system specific)
+%  cfg.eventsoffset      = string, describing if the
+%                          event times in the original scoring file refer
+%                          either to 'scoringonset' or 'dataonset' (default
+%                          = 'scoringonset'), note that events are then
+%                          adapted with reference for dataonset always, see cfg.dataoffset.
 %
 % Alternatively one can specify a more general data format with datatype
 % with a configuration of only the following necessary options
@@ -54,7 +67,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   cfg.datatype         = string, either 'columns' (e.g. *.tsv, *.csv, *.txt)
 %                          or 'xml' (e.g. *.xml), or 'spisop' for (SpiSOP) like input, or 'fasst' (for FASST toolbox
 %                          export), (default =
-%                          'columns')
+%                          'columns' (or overwritten in case the format is known to be xml))
 %   cfg.columndelimimter = string, of the column delimiter, must be either
 %                          ',', ' ', '|' or '\t' (a tab) (default = '\t')
 %   cfg.skiplines        = scalar, number of lines to skip in file (default = 0)
@@ -98,7 +111,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 % See also ST_PREPROCESSING
 
 % Copyright (C) 2019-, Frederik D. Weber
-%
+% Thanks Roy Cox, Zsófia Zavecz for valuable suggestions and code snippets
 % This file is part of SleepTrip, see http://www.sleeptrip.org
 % for the documentation and details.
 %
@@ -155,12 +168,19 @@ cfg.exclcolumnstr      = ft_getopt(cfg, 'exclcolumnstr', {'1', '2', '3'});
 cfg.epochlength        = ft_getopt(cfg, 'epochlength', 30);
 cfg.dataoffset         = ft_getopt(cfg, 'dataoffset', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
+cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
+
 
 % flag to determine which reading option to take
 readoption = 'readtable'; % either 'readtable' or 'load'
 if nargin > 1
     readoption = 'table';
 end
+
+hasArousals = false;
+hasEvents = false;
+hasLightsOff = false;
+hasLightsOn = false;
 
 if isfield(cfg,'scoremap') && isfield(cfg,'standard')
     if ~strcmp(cfg.standard,'custom')
@@ -183,6 +203,18 @@ end
 if strcmp(cfg.standard,'custom') && ~isfield(cfg,'scoremap')
     ft_error('if the cfg.standard is set to ''custom'' it requires also a cfg.scoremap as parameter in the configuration.');
 end
+
+% optionally get the data from the URL and make a temporary local copy
+if nargin<2
+    filename = fetch_url(cfg.scoringfile);
+    if ~exist(filename, 'file')
+        ft_error('The scoring file "%s" file was not found, cannot read in scoring information. No scoring created.', filename);
+    end
+else
+    cfg.scoringfile = [];
+end
+
+processTableStucture = true;
 
 scoremap = [];
 
@@ -283,6 +315,7 @@ switch  cfg.scoringformat
                 ft_warning('the u-sleep data format (.txt) is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
         end
+        scoremap.unknown   = '?';
         
         %cfg.scoremap         = scoremap;
         load(cfg.scoringfile,'sleepscore')
@@ -290,34 +323,288 @@ switch  cfg.scoringformat
         tableScoring = table(rawScores_NB);
         %cfg.to = 'aasm';
         readoption = 'table';
+    case {'compumedics_profusion_xml'} % of Compumedix from the Profusion xml export
+        if ~isfield(cfg, 'scoremap')
+            scoremap = [];
+            scoremap.labelold  = {'0', '1', '2', '3', '4', '5', '-1'};
+            switch cfg.standard
+                case 'aasm'
+                    scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?'};
+                case 'rk'
+                    ft_warning('the compumedics_profusion_xml data format (.xml) is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                    scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
+            end
+            scoremap.unknown   = '?';
+        else
+            scoremap = cfg.scoremap;
+        end
+        
+       
+      
+        import javax.xml.xpath.*
+        
+        doc = xmlread(filename);
+        factory = XPathFactory.newInstance;
+        
+        xpath = factory.newXPath;
+        
+        % <SleepStages>
+        % <SleepStage>0</SleepStage>
+        % <SleepStage>0</SleepStage>
+        % <SleepStage>0</SleepStage>
+                
+        %eventtypes
+        expression = xpath.compile('//SleepStages/SleepStage/text()');
+        %expression = xpath.compile('//ScoredEvents/ScoredEvent[./Name/text()='Arousal (ASDA)']');
+
+        eventStageValue = getValuesByExpression(doc,expression);
+        
+        expression = xpath.compile('//EpochLength/text()');
+        eventEpochLengthValue = getValuesByExpression(doc,expression);
+        if ~isempty(eventEpochLengthValue)
+            epochlength = str2num(eventEpochLengthValue{1});
+            if epochlength ~= cfg.epochlength
+                ft_error('The requested cfg.epochlength = ''%d'' does not match the epoch length defined in the scoring file with %d seconds. Change cfg.epochlength accordingly.',cfg.epochlength, epochlength)
+            end
+        end
+            
+        tableScoring = table(eventStageValue,'VariableNames',{'stage'});
+        
+
+        % <Name>SpO2 artifact</Name>
+        % <Start>17.3</Start>
+        % <Duration>39.1</Duration>
+        
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Name/text()');
+        eventNames = getValuesByExpression(doc,expression);
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Start/text()');
+        eventStarts = getValuesByExpression(doc,expression);
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Duration/text()');
+        eventDurations = getValuesByExpression(doc,expression);
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Input/text()');
+        eventInputs = getValuesByExpression(doc,expression);
+        
+        if ~isempty(eventNames)
+            tableArousal = table(eventNames','VariableNames',{'arousal'});
+            tableArousal = cat(2,tableArousal,table(cellfun(@str2num,eventStarts,'UniformOutput',true)',cellfun(@str2num,eventStarts,'UniformOutput',true)'+cellfun(@str2num,eventDurations,'UniformOutput',true)',cellfun(@str2num,eventDurations,'UniformOutput',true)','VariableNames',{'start','stop','duration'}));
+            tableArousal = cat(2,tableArousal,table(eventInputs','VariableNames',{'channel'}));
+        end
+        
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Name/text()');
+        eventNames = getValuesByExpression(doc,expression);
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Start/text()');
+        eventStarts = getValuesByExpression(doc,expression);
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Duration/text()');
+        eventDurations = getValuesByExpression(doc,expression);
+        expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Input/text()');
+        eventInputs = getValuesByExpression(doc,expression);
+        
+        if ~isempty(eventNames)
+            tableEvents = table(eventNames','VariableNames',{'arousal'});
+            tableEvents = cat(2,tableEvents,table(cellfun(@str2num,eventStarts,'UniformOutput',true)',cellfun(@str2num,eventStarts,'UniformOutput',true)'+cellfun(@str2num,eventDurations,'UniformOutput',true)',cellfun(@str2num,eventDurations,'UniformOutput',true)','VariableNames',{'start','stop','duration'}));
+            tableEvents = cat(2,tableEvents,table(eventInputs','VariableNames',{'channel'}));
+        end
+        
+        tableScoring = tableScoring;
+        
+        if ~isempty(tableArousal)
+            tableArousal = tableArousal;
+            hasArousals = true;
+        end
+%         if ~isempty(tableLightsOff)
+%         	lightsoff_from_scoring_offset = tableLightsOff.start(end);
+%             hasLightsOff = true;
+%         end
+%         if ~isempty(tableLightsOff)
+%             lightson_from_scoring_offset = tableLightsOn.start(1);
+%             hasLightsOn = true;
+%         end
+        if ~isempty(tableEvents)
+            tableEvents = tableEvents;
+            hasEvents = true;
+        end
+        
+        cfg.columnnum        = 1;
+        %cfg.exclepochs       = 'no';
+        %cfg.exclcolumnnum    = 2;
+        processTableStucture = true;
+        
+        readoption = 'xml';
+        
+    case {'nautus_remlogic_xml', 'sleep_cure_solutions_xml', 'remlogic_xml', 'embla_xml'} % of Nautus, Embla® RemLogic™ PSG Software
+        if ~isfield(cfg, 'scoremap')
+            scoremap = [];
+            scoremap.labelold  = {'SLEEP-S0', 'SLEEP-S1', 'SLEEP-S2', 'SLEEP-S3', 'SLEEP-S4', 'SLEEP-REM', 'SLEEP-UNSCORED'};
+            switch cfg.standard
+                case 'aasm'
+                    scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'N3', 'R', '?'};
+                case 'rk'
+                    ft_warning('the nautus_remlogic_xml data format (.xml) is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                    scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
+            end
+            scoremap.unknown   = '?';
+        else
+            scoremap = cfg.scoremap;
+        end
+        
+        
+        dtformat = 'yyyy-MM-dd''T''HH:mm:ss.SSSSSSS';
+        %datetimeDiffToOffsetInSeconds(offsetdts,dts,dtformat)
+        %offsetdts = '2021-03-10T00:04:00.773124';
+        %dts = '2021-03-10T00:05:01.884235';
+      
+        import javax.xml.xpath.*
+        
+        doc = xmlread(filename);
+        factory = XPathFactory.newInstance;
+        
+        xpath = factory.newXPath;
+        
+        % <Events>
+        % <Event>
+        % <Type dt:dt="string">SLEEP-S0</Type>
+        % <Location dt:dt="string">EEG-C3-M2</Location>
+        % <StartTime dt:dt="string">2021-03-09T21:10:21.000000</StartTime>
+        % <StopTime dt:dt="string">2021-03-09T21:10:51.000000</StopTime>
+        
+        
+        
+        eventtypes_stage = scoremap.labelold;
+        %eventtypes_stage = {'SLEEP-S0', 'SLEEP-S1', 'SLEEP-S2', 'SLEEP-S3', 'SLEEP-REM', 'SLEEP-UNSCORED'};
+        eventtypes_lighsoff = {'LIGHTS-OFF'};
+        eventtypes_lighson = {'LIGHTS-ON'};
+        eventtypes_arousal = { 'AROUSAL'};
+        
+        %eventtypes
+        expression = xpath.compile('//EventTypes/EventType[*]/text()');
+        eventTypes = getValuesByExpression(doc,expression);
+        
+        expression = xpath.compile('//Events/Event[*]/Type/text()');
+        evenTypeValues = getValuesByExpression(doc,expression);
+        
+        expression = xpath.compile('//Events/Event[*]/Location/text()');
+        evenTypeLocations = getValuesByExpression(doc,expression);
+        
+        expression = xpath.compile('//Events/Event[*]/StartTime/text()');
+        evenTypeStartTimes = getValuesByExpression(doc,expression);
+        
+        expression = xpath.compile('//Events/Event[*]/StopTime/text()');
+        evenTypeStopTimes = getValuesByExpression(doc,expression);
+        
+        
+        first_sleep_stage = find(logical(ismember(evenTypeValues,eventtypes_stage)'),1,'first');
+        if ~isempty(first_sleep_stage)
+            offsetdts = evenTypeStartTimes{first_sleep_stage};
+        end
+        
+        
+        if (numel(evenTypeValues) ~= numel(evenTypeStartTimes)) || (numel(evenTypeValues) ~= numel(evenTypeStopTimes))
+            ft_error('the Events are inconsistent with regard to the presence in their XML children: Type, StartTime, StopTime')
+        end
+        
+        %offsetdts = '2021-03-10T00:04:00.773124';
+        %dts = '2021-03-10T00:05:01.884235';
+        dtformat = 'yyyy-MM-dd''T''HH:mm:ss.SSSSSSS';
+        tableScoring = table({},'VariableNames',{'stage'});
+        tableScoring = cat(2,tableScoring,table([],[],[],'VariableNames',{'start','stop','duration'}));
+        tableScoring = cat(2,tableScoring,table({},'VariableNames',{'channel'}));
+        
+        tableArousal = table({},'VariableNames',{'arousal'});
+        tableArousal = cat(2,tableArousal,table([],[],[],'VariableNames',{'start','stop','duration'}));
+        tableArousal = cat(2,tableArousal,table({},'VariableNames',{'channel'}));
+        
+        tableLightsOff = table({},'VariableNames',{'event'});
+        tableLightsOff = cat(2,tableLightsOff,table([],[],[],'VariableNames',{'start','stop','duration'}));
+        tableLightsOff = cat(2,tableLightsOff,table({},'VariableNames',{'channel'}));
+        
+        tableLightsOn = table({},'VariableNames',{'event'});
+        tableLightsOn = cat(2,tableLightsOn,table([],[],[],'VariableNames',{'start','stop','duration'}));
+        tableLightsOn = cat(2,tableLightsOn,table({},'VariableNames',{'channel'}));
+        
+        tableEvents = table({},'VariableNames',{'event'});
+        tableEvents = cat(2,tableEvents,table([],[],[],'VariableNames',{'start','stop','duration'}));
+        tableEvents = cat(2,tableEvents,table({},'VariableNames',{'channel'}));
+
+        
+        for iEvents = 1:numel(evenTypeValues)
+            ev_name = strtrim(evenTypeValues{iEvents});
+            
+            ev_time_start = datetimeDiffToOffsetInSeconds(offsetdts,evenTypeStartTimes{iEvents},dtformat);
+            ev_time_stop = datetimeDiffToOffsetInSeconds(offsetdts,evenTypeStopTimes{iEvents},dtformat);
+            ev_time_duration =  ev_time_stop-ev_time_start;
+            ev_channel = strtrim(evenTypeLocations{iEvents});
+
+            
+            switch ev_name
+                case eventtypes_stage
+                    tableScoring = cat(1,tableScoring,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'stage','start','stop','duration','channel'}));
+                case eventtypes_lighsoff
+                    tableLightsOff = cat(1,tableLightsOff,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
+                case eventtypes_lighson
+                    tableLightsOn = cat(1,tableLightsOn,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
+                case eventtypes_arousal
+                    tableArousal = cat(1,tableArousal,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'arousal','start','stop','duration','channel'}));
+                otherwise
+                	tableEvents = cat(1,tableEvents,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
+                    ft_warning('an event with name name %s was not covered by the reading function',ev_name)
+            end
+        end
+        
+        tableScoring = tableScoring;
+        
+        if any(round(tableScoring.duration/cfg.epochlength,3) ~= 1)
+            ft_error('cfg.epochlength = ''%d'' does not match the duration of all the epochs detected.',cfg.epochlength)
+        end
+        if any(round(tableScoring.start + tableScoring.duration,3) ~= round(tableScoring.stop,3))
+        	ft_error('There is at least one epoch missing that is missing after detected epochs number ',strjoin(num2str(find(round(tableScoring.start + tableScoring.duration,3) ~= round(tableScoring.stop,3)))'))
+        end
+        
+        if ~isempty(tableArousal)
+            tableArousal = tableArousal;
+            hasArousals = true;
+        end
+        if ~isempty(tableLightsOff)
+        	lightsoff_from_scoring_offset = tableLightsOff.start(end);
+            hasLightsOff = true;
+        end
+        if ~isempty(tableLightsOff)
+            lightson_from_scoring_offset = tableLightsOn.start(1);
+            hasLightsOn = true;
+        end
+        if ~isempty(tableEvents)
+            tableEvents = tableEvents;
+            hasEvents = true;
+        end
+
+        cfg.columnnum        = 1;
+        %cfg.exclepochs       = 'no';
+        %cfg.exclcolumnnum    = 2;
+        processTableStucture = true;
+        
+        readoption = 'xml';
     case {'sleeptrip'}
         readoption = 'loadmat';
     otherwise
 end
 
-if ~strcmp(cfg.datatype, 'columns')
-    % TODO implement the use of tree structure in XML files, e.g. with
-    % XPath, or xslt
-    ft_error('The datatype parameter only supports the option ''columns'' for now.');
+switch cfg.datatype 
+    case 'columns'
+    case 'xml'
+        readoption = 'xml';
+    otherwise
+    ft_error('cfg.datatype = ''%s'' unknown',cfg.datatype);
 end
 
-% optionally get the data from the URL and make a temporary local copy
-if nargin<2
-    filename = fetch_url(cfg.scoringfile);
-    if ~exist(filename, 'file')
-        ft_error('The scoring file "%s" file was not found, cannot read in scoring information. No scoring created.', filename);
-    end
-else
-    cfg.scoringfile = [];
-end
-processTableStucture = true;
+
 switch readoption
+    case 'xml'
+        
     case 'table';
         tableScoring = tableScoring;
     case 'readtable'
         parampairs = {};
         parampairs = [parampairs, {'ReadVariableNames',false}];
-        parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
+        %parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
         
         if ~isempty(cfg.columndelimimter)
             parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
@@ -326,8 +613,13 @@ switch readoption
         if ~isempty(cfg.fileencoding)
             parampairs = [parampairs, {'FileEncoding',cfg.fileencoding}];
         end
-        
-        tableScoring = readtable(filename,parampairs{:});
+        try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
+            parampairs2 = [parampairs, {'HeaderLines',cfg.skiplines}];
+            tableScoring = readtable(filename,parampairs2{:});
+        catch
+            parampairs2 = [parampairs, {'NumHeaderLines',cfg.skiplines}];
+            tableScoring = readtable(filename,parampairs2{:});
+        end
     case 'load'
         hyp = load(filename);
         tableScoring = table(hyp(:,1),hyp(:,2));
@@ -411,7 +703,7 @@ if processTableStucture
     end
     
     if any(~match_cum)
-        ft_warning('The sleep stages''%s'' in the original/raw scoring were not covered in the scoremap and have thus been set to ''%s''',strjoin(unique(scoring.ori.epochs(~match_cum))),scoremap.unknown)
+        ft_warning('The sleep stages ''%s'' in the original/raw scoring were not covered in the scoremap and have thus been set to ''%s''',strjoin(unique(scoring.ori.epochs(~match_cum))),scoremap.unknown)
     end
     
     scoring.excluded = logical(zeros(1,numel(scoring.ori.epochs)));
@@ -436,6 +728,38 @@ if processTableStucture
     scoring.epochlength = cfg.epochlength;
     scoring.dataoffset = cfg.dataoffset;
     scoring.standard = cfg.standard;
+    if hasArousals
+        switch cfg.eventsoffset
+            case 'scoringonset'
+                tableArousal.start = tableArousal.start + scoring.dataoffset;
+                tableArousal.stop = tableArousal.stop + scoring.dataoffset;
+        end
+        scoring.arousals = tableArousal;
+    end
+    if hasLightsOff
+        switch cfg.eventsoffset
+            case 'scoringonset'
+                scoring.lightsoff = lightsoff_from_scoring_offset + scoring.dataoffset;
+            otherwise
+                scoring.lightsoff = lightsoff_from_scoring_offset;
+        end
+    end
+    if hasLightsOn
+        switch cfg.eventsoffset
+            case 'scoringonset'
+                scoring.lightson = lightson_from_scoring_offset + scoring.dataoffset;
+            otherwise
+                scoring.lightson = lightson_from_scoring_offset;
+        end
+    end
+    if hasEvents
+        switch cfg.eventsoffset
+            case 'scoringonset'
+        tableEvents.start = tableEvents.start + scoring.dataoffset;
+        tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+        end
+        scoring.events = tableEvents;
+    end
     
 end
 
@@ -449,5 +773,25 @@ if isfield(cfg,'to')
         cfg_sc.scoremap = scoremap;
     end
     scoring = st_scoringconvert(cfg_sc, scoring);
+end
+end
+
+function diffsec = datetimeDiffToOffsetInSeconds(offsetdts,dts,dtformat)
+%offsetdts = '2021-03-10T00:04:00.773124';
+%dts = '2021-03-10T00:05:01.884235';
+%dtformat = 'yyyy-MM-dd''T''HH:mm:ss.SSSSSSS';
+offsetdt = datetime(offsetdts,'InputFormat',dtformat);
+dt = datetime(dts,'InputFormat',dtformat);
+diffsec = datenum(dt-offsetdt)*24*3600;
+end
+
+function nodevalues = getValuesByExpression(doc,expression)
+        import javax.xml.xpath.*
+
+nodeList = expression.evaluate(doc,XPathConstants.NODESET);
+nodevalues = {};
+for iNode = 1:nodeList.getLength
+    node = nodeList.item(iNode-1);
+    nodevalues{iNode} = char(node.getNodeValue);
 end
 end

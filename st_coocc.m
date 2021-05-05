@@ -151,6 +151,8 @@ function [res_summary, res_match_test_target, res_mismatch_test, res_mismatch_ta
 %                               number of lines a dataset can have for concatenation
 %                               and when low can increase performance for >10000 events.
 %                               (default = 100)
+% cfg.column_prefix_test   =   the column prefix for the test events (default = 'te_');
+% cfg.column_prefix_target =   the column prefix for the target events (default = 'ta_');
 %
 %
 % See also ST_SPINDLES, ST_SLOWWAVES
@@ -198,6 +200,9 @@ cfg.EventsTargetFilterForColumns  = ft_getopt(cfg, 'EventsTargetFilterForColumns
 cfg.EventsTargetFilterValues  = ft_getopt(cfg, 'EventsTargetFilterValues', {});
 
 cfg.overlapdef = ft_getopt(cfg, 'overlapdef', 'overlap');
+
+cfg.column_prefix_test  = ft_getopt(cfg, 'column_prefix_test', 'te_');
+cfg.column_prefix_target  = ft_getopt(cfg, 'column_prefix_target', 'ta_');
 
 cfg.UseSecondColumnAndOnlyOffsetsForTimeWindowTarget  = ft_getopt(cfg, 'UseSecondColumnAndOnlyOffsetsForTimeWindowTarget', 'no');
 cfg.EventsTargetTimePointColumn2  = ft_getopt(cfg, 'EventsTargetTimePointColumn2', 'seconds_end');
@@ -516,8 +521,8 @@ temp_nonoverlap_collector = {};
 temp_nonoverlap_collector{temp_nonoverlap_collector_iterator} = [];
 
 
-column_prefix_test = 'te_';
-column_prefix_target = 'ta_';
+column_prefix_test = cfg.column_prefix_test;
+column_prefix_target = cfg.column_prefix_target;
 
 columnNamesTestNew = strcat(column_prefix_test,EventsTestTable.Properties.VariableNames);
 columnNamesTargetNew = strcat(column_prefix_target,EventsTargetTable.Properties.VariableNames);
@@ -1107,7 +1112,7 @@ end
 if nargout > 4
     res_excluded_test = [];
     res_excluded_test.ori = functionname;
-    res_excluded_test.type = 'excluded_target';
+    res_excluded_test.type = 'excluded_test';
     res_excluded_test.cfg = cfg;
     if isempty(EventsTestTableExcluded)
         colnames = res_test.table.Properties.VariableNames;

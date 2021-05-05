@@ -75,7 +75,7 @@ cfg.postpeak      = ft_getopt(cfg, 'postpeak', 1);
 
 %cfg.title = '' 
 overwritetitle = false;
-if ~isfield(cfg, 'title')
+if isfield(cfg, 'title')
     overwritetitle = true;
 end
 

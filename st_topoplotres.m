@@ -139,43 +139,12 @@ cfg.average  = ft_getopt(cfg, 'average', 'no');
 
 set(0, 'DefaultFigureRenderer', cfg.renderer);
 
-if ~isfield(res,'table')
-    ft_error('result structure needs to have a table with the properties in the columns')
-end
+fprintf([functionname ' function initialized\n']);
 
-if ~any(strcmp(res.table.Properties.VariableNames,'channel'))
-    ft_error('result structure table needs to have a column called ''channel'' ')
-end
+res = st_res_filter(cfg, res);
 
 if ~any(strcmp(res.table.Properties.VariableNames,cfg.property))
     ft_error(['result structure table needs to have a column called %s as defined in cfg.property'], cfg.property)
-end
-
-fprintf([functionname ' function initialized\n']);
-
-%select the channels of interest
-res.table = res.table(ismember(res.table.channel,ft_channelselection(cfg.channel,res.table.channel)),:);
-
-if isfield(cfg,'filtercolumns')
-    if ~isfield(cfg,'filtervalues')
-        ft_error(['if cfg.filtercolumns is defined then cfg.filtervalues also needs to be defined'])
-    end
-    if ~iscell(cfg.filtercolumns)
-        cfg.filtercolumns = {cfg.filtercolumns};
-    end
-    if ~iscell(cfg.filtervalues)
-        cfg.filtervalues = {cfg.filtervalues};
-    end
-    if numel(cfg.filtercolumns) ~= numel(cfg.filtervalues)
-        ft_error(['cfg.filtercolumns needs to have the same amount of elements as cfg.filtervalues'])
-    end
-    
-    for iCol = 1:numel(cfg.filtercolumns)
-        fv = res.table{:,{cfg.filtercolumns{iCol}}};
-        if ~isempty(fv)
-            res.table = res.table{ismember(fv,cfg.filtervalues{iCol}),:};
-        end
-    end
 end
 
 if istrue(cfg.average)

@@ -49,7 +49,7 @@ fprintf([functionname ' function started\n']);
 
 cfg.datatype           = ft_getopt(cfg, 'datatype', 'columns');
 cfg.columndelimimter   = ft_getopt(cfg, 'columndelimimter', ',');
-%cfg.skiplines          = ft_getopt(cfg, 'skiplines', 0);
+cfg.skiplines          = ft_getopt(cfg, 'skiplines', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
 
 
@@ -61,8 +61,9 @@ end
 
 
 parampairs = {};
-parampairs = [parampairs, {'ReadVariableNames',true}];
-%parampairs = [parampairs, {'numHeaderLines',cfg.skiplines}];
+parampairs = [parampairs, {'ReadVariableNames',false}];
+
+
 
 if ~isempty(cfg.columndelimimter)
     parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
@@ -72,14 +73,20 @@ if ~isempty(cfg.fileencoding)
     parampairs = [parampairs, {'FileEncoding',cfg.fileencoding}];
 end
 
-montageTable = readtable(filename,parampairs{:});
+try
+    parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
+    montageTable = readtable(filename,parampairs{:});
+catch
+    parampairs = [parampairs, {'numHeaderLines',cfg.skiplines}];
+    montageTable = readtable(filename,parampairs{:});
+end
 
 %delete empty lines
 montageTable = montageTable([1; find(~cellfun(@isempty,table2cell(montageTable(2:end,1))))+1],:);
 montmat = montageTable(2:end,2:end);
 
 montage = [];
-montage.labelold = montageTable.Properties.VariableNames(2:end);
+montage.labelold = table2cell(montageTable(1,2:end));
 montage.labelnew  = table2cell(montageTable(2:end,1))';
 montage.tra = [];
 if ~isempty(montmat)

@@ -74,7 +74,7 @@ cfg.parameter    =  ft_getopt(cfg, 'parameter', 'powspctrm');
 
 % check validity of input options
 cfg =               ft_checkopt(cfg, 'baseline', {'char', 'doublevector', 'doublematrix'});
-cfg =               ft_checkopt(cfg, 'baselinetype', 'char', {'absolute', 'relative', 'relchange', 'normchange', 'db', 'vssum','zscore'});
+cfg =               ft_checkopt(cfg, 'baselinetype', 'char', {'absolute', 'relative', 'relchange', 'normchange', 'db', 'vssum','zscore', 'db_absolute', 'db(data+1)', 'db(data+1)_absolute', 'log10', 'log10_absolute', 'log10(data+1)', 'log10(data+1)_absolute'});
 cfg =               ft_checkopt(cfg, 'parameter', {'char', 'charcell'});
 
 % make sure cfg.parameter is a cell-array of strings
@@ -205,14 +205,20 @@ elseif (strcmp(baselinetype, 'normchange')) || (strcmp(baselinetype, 'vssum'))
   data = (data - meanVals) ./ (data + meanVals);
 elseif (strcmp(baselinetype, 'db'))
   data = 10*log10(data ./ meanVals);
-elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
-  data = 10*log10(data+1);
 elseif (strcmp(baselinetype, 'db_absolute'))
-  data = 10*log10(data);
+  data = 10*log10(data - meanVals);
+elseif (strcmp(baselinetype, 'db(data+1)'))
+  data = 10*log10((data ./ meanVals)+1);
+elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
+  data = 10*log10((data - meanVals)+1);
+elseif (strcmp(baselinetype, 'log10'))
+  data = log10(data ./ meanVals);
 elseif (strcmp(baselinetype, 'log10_absolute'))
-  data = log10(data);
+  data = log10(data - meanVals);
+elseif (strcmp(baselinetype, 'log10(data+1)'))
+  data = log10((data ./ meanVals)+1);
 elseif (strcmp(baselinetype, 'log10(data+1)_absolute'))
-  data = log10(data+1);
+  data = log10((data - meanVals)+1);
 elseif (strcmp(baselinetype,'zscore'))
     stdVals = repmat(nanstd(data(:,:,baselineTimes),1, 3), [1 1 size(data, 3)]);
     data=(data-meanVals)./stdVals;

@@ -424,10 +424,35 @@ fsample = data.fsample;
 
 trlSampleLengths = cellfun(@numel, data.time)';
 
+scoring = cfg.scoring;
 
 if istrue(cfg.quick)
+    if scoring.dataoffset ~= 0
+        maxtimedata = max(data.time{1});
+        
+        if scoring.dataoffset < 0
+            iCut = ceil(abs(scoring.dataoffset)/scoring.epochlength);
+            scoring.epochs = scoring.epochs{(iCut+1):end};
+            scoring.excluded = scoring.excluded((iCut+1):end);
+            scoring.dataoffset = scoring.dataoffset + iCut*scoring.epochlength;
+        end
+        
+        if scoring.dataoffset > (maxtimedata - scoring.epochlength)
+            cfg_int = [];
+            hasROIs = false;
+            % make in dummy data
+            cfg_sd = [];
+            cfg_sd.latency = [0 round(cfg.segmentlength)+1/fsample];
+            data = ft_selectdata(cfg_sd,data);
+        data.sampleinfo = [0 -1];
+        else
+        cfg_sd = [];
+        cfg_sd.latency = [scoring.dataoffset maxtimedata];
+        data = ft_selectdata(cfg_sd,data);
+        end
+    end
     
-scoring = cfg.scoring;
+    
 cfg.windowproportion = 1/scoring.epochlength;
 cfg.segmentlength = scoring.epochlength;
 cfg.segmentoverlap = 0;

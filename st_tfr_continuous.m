@@ -5,57 +5,21 @@ function freq = st_tfr_continuous(cfg, data)
 % Use as
 %   freq = st_tfr_continuous(cfg, data)
 %
-% Required configuration parameters are:
-%   cfg.scoring  = structure provided by ST_READ_SCORING
-%   cfg.stages   = either a string or a Nx1 cell-array with strings that indicate sleep stages
-%                  if no data structure is provided as input next to configuration also
-%                  provide this parameter, possible stages are a subset of
-%                  {'W', 'N1', 'N2', 'N3', 'S4', 'R'}
-%
-%  if no data structure is provided as parameter then you need to define
-%   cfg.dataset  = string with the filename
-%
 % Optional configuration parameters are:
 %
-%   cfg.segmentlength  = scalar, segment length in seconds,
-%                        should be lower than the epoch length (default = 10)
-%   cfg.segmentoverlap = fraction of the overlap of segments during
-%                        segmentation in the interval [0,1) (default = 0.1)
+% cfg.channel  = select channels;
+% cfg.approach = the approach to calculate either 'mtmconvol_memeff', 'mtmfft_segments', 'spectrogram' (default = 'spectrogram');
+% cfg.length   = timewindow/segment length in seconds (default = 30);
+% cfg.overlap  = the amount of overlap for each segment (default = 0.85);
+% cfg.taper    = choose the tapper either 'hanning', 'hanning_proportion'
+%                or 'dpss' (see ft_freqanalysis for details)
+% cfg.windowproportion = if cfg.taper = 'hanning_proportion' then the window proportion can be set to here (default = 0.2 i.e. 10% left and right of each segment is 'hanninged' leaving the ceter 80% not tapered or attenuated);
+% cfg.foi      = the frequencies of interrest with their granularity (default = 0.5:0.5:30);
+% cfg.transform = power value transformations in a different scaleing 'none' 'db' 'db(p+1)' 'log10' (like in Helfrich et al. 2018) or 'log10(p+1)' (default = 'none');
+% cfg.powvalue  = non yet relevant modifier for cfg.approach = 'spectromgram'  with either 'power' or 'psd' (default = 'psd');
+% cfg.feedback = feedback flag (default = 'text');
 %
-%   cfg.channel  = Nx1 cell-array with selection of channels (default = 'all'), see FT_CHANNELSELECTION
-%   cfg.foilim   = [begin end], frequency band of interest, default = [0.5 30]
-%   cfg.bands    = structure of frequency band definitions in the form of
-%                  the default one, e.g.
-%                  cfg.bands = ...
-%                             {{'SO',0.5,1},...
-%                             {'SWA',0.5,4},...
-%                             {'delta',1,4},...
-%                             {'theta',4,8},...
-%                             {'alpha',8,11},...
-%                             {'slow_spindle',9,12},...
-%                             {'fast_spindle',12,15},...
-%                             {'spindle',9,15},...
-%                             {'beta',15,30}}
-%   cfg.windowproportion = the fraction of hanning window (only) that is applied.
-%                          e.g. 1 means 100% of hanning window applied and
-%                          0.5 means 50% of hanning window with symmetrically
-%                          25% of each segment tail (left and right) given a hanning shape.
-%                          cfg.segmentoverlap should be adpated to at least
-%                          half this values (which is the optimal for speed or calulation, higher overlaps will increase computation time)
-%                          (default = 0.2)
-%   cfg.downsamplefs       = downsample the data to this frequency in Hz before doing the anlysis (default = 100)
-%
-% Some additional parameters from FT_PREPROCESSING can also be included
-% including the reprocessing options that you can only use for EEG data are:
-%
-%     cfg.reref         = 'no' or 'yes' (default = 'no')
-%     cfg.refchannel    = cell-array with new EEG reference channel(s), this can be 'all' for a common average reference
-%     cfg.refmethod     = 'avg', 'median', or 'bipolar' for bipolar derivation of sequential channels (default = 'avg')
-%     cfg.implicitref   = 'label' or empty, add the implicit EEG reference as zeros (default = [])
-%     cfg.montage       = 'no' or a montage structure, see FT_APPLY_MONTAGE (default = 'no')
-%
-%
-% See also ST_READ_SCORING, FT_PREPROCESSING, FT_APPLY_MONTAGE
+% See also FT_PREPROCESSING, FT_FREQANALYSIS
 
 % Copyright (C) 2019-, Frederik D. Weber
 %
@@ -109,7 +73,7 @@ data = ft_checkdata(data, 'datatype', {'raw', 'comp'}, 'feedback', 'yes', 'hassa
 % set defaults
 cfg.feedback = ft_getopt(cfg, 'feedback', 'text');
 cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
-cfg.approach = ft_getopt(cfg, 'approach', 'mtmconvol_memeff');
+cfg.approach = ft_getopt(cfg, 'approach', 'spectrogram');
 cfg.length  = ft_getopt(cfg, 'length', 30);
 cfg.overlap  = ft_getopt(cfg, 'overlap', 0.85);
 cfg.taper  = ft_getopt(cfg, 'taper', 'dpss');

@@ -1,10 +1,10 @@
-function [table] = st_stack_res(varargin)
+function [res] = st_stack_res(varargin)
 
 % ST_STACK_RES stack result structures by converting the results into a long format table and
 % then appending them (stack-append)
 %
 % Use as
-%   [table] = st_stack_res(res,...)
+%   [res] = st_stack_res(res,...)
 %
 %
 % See also ST_APPEND_RES
@@ -38,9 +38,12 @@ memtic
 functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
+valueSep = '_';
+propertySep = '__';
+noPropertySymb = 'unknown';
+
+
 % check if some are empty
-
-
 empty_res = [];
 iE = 0;
 for iArg = 1:nargin
@@ -60,12 +63,12 @@ end
 
 nRes = numel(varargin);
 
-resIDs = cell(nargin,1);
+% resIDs = cell(nargin,1);
 
 
-r = varargin{1};
-o = r.ori;
-t = r.type;
+% r = varargin{1};
+% o = r.ori;
+% t = r.type;
 
 allAppended = true;
 anyAppended = false;
@@ -78,12 +81,12 @@ for iRes = 1:nRes
     numericVars = varfun(@isnumeric,r.table,'output','uniform');
     nonNumericVarNames = r.table.Properties.VariableNames(find(~numericVars));
     if isempty(nonNumericVarNames)
-        descriptor = repmat({'?'},size(r.table,1),1);
+        descriptor = repmat({noPropertySymb},size(r.table,1),1);
     else
-        descriptor = strcat(nonNumericVarNames{1},'_',r.table.(nonNumericVarNames{1}));
+        descriptor = strcat(nonNumericVarNames{1},valueSep,r.table.(nonNumericVarNames{1}));
         if numel(nonNumericVarNames) > 1
             for iNNVN = 2:(numel(nonNumericVarNames))
-                descriptor = strcat(descriptor,'_',nonNumericVarNames{iNNVN},'_',r.table.(nonNumericVarNames{iNNVN}));
+                descriptor = strcat(descriptor,valueSep,nonNumericVarNames{iNNVN},propertySep,r.table.(nonNumericVarNames{iNNVN}));
             end
         end
     end
@@ -99,7 +102,7 @@ for iRes = 1:nRes
             if isnumeric(rescol)
                 rescol = num2str(table2array(rescol));
             end
-            	descriptor = strcat('resnum','_',rescol,'_',descriptor);
+            	descriptor = strcat('resnum','_',rescol,propertySep,descriptor);
         end
     end
         
@@ -122,6 +125,13 @@ end
 if anyAppended
    ft_warning('some results have been appended before, will put the resnum column in the descriptor as well for the results affected')
 end
+
+res = [];
+res.ori = functionname;
+res.type = 'stack';
+res.cfg = cfg;
+res.table = rt;
+
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)

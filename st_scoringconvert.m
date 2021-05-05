@@ -33,7 +33,7 @@ function [scoring] = st_scoringconvert(cfg, scoring)
 % See also ST_READ_SCORING
 
 % Copyright (C) 2019-, Frederik D. Weber
-%
+% Thanks Roy cox for valuable suggestions and code snippets
 % This file is part of SleepTrip, see http://www.sleeptrip.org
 % for the documentation and details.
 %

@@ -92,7 +92,7 @@ montage_zmax.tra = [
 %               -0.5 -0.5  0   0   0   0   0   1 % O2-A1A2
 %               ];
 
-%% write and read montage with standard settings
+%% write/read/handle montages with standard settings
 cfg = [];
 cfg.filename = 'montage_zmax.txt';
 montage_filepath = st_write_montage(cfg,montage_zmax);
@@ -100,9 +100,8 @@ montage_filepath = st_write_montage(cfg,montage_zmax);
 cfg = [];
 montage_zmax = st_read_montage(cfg,montage_filepath);
 
-%% read a data grammer
-cfg = [];
-datagrammer = st_read_datagrammer(cfg, 'datagrammer.txt');
+%%% combine multiple montages together to get one resulting
+montage_zmax_level2_example = ft_apply_montage(montage_zmax, montage_zmax);
 
 %% prepare the subject data, e.g. zmax data in a compressed format
 
@@ -121,7 +120,7 @@ subject.standard           = 'aasm'; % 'aasm' or 'rk'
 subject.scoring_dataoffset = 0; % in seconds
 % at which time in seconds was the lights off
 % with respect to the beginning of scoring,
-% only relevant for
+% only relevant for assessing sleep (stage) onset delays
 subject.lightsoff          = 0; 
 subject.eegchannels        = {'EEG L', 'EEG R'};
 subject.ppgchannels        = {'OXY_IR_AC'};
@@ -134,6 +133,7 @@ subject.oxychannels        = {'OXY_IR_DC'};
 %  'OXY_DARK_AC' 'OXY_DARK_DC' 'OXY_IR_AC' 'OXY_IR_DC' ...
 %  'OXY_R_AC' 'OXY_R_DC' 'RSSI'}
 
+subject.datagrammerfile = 'datagrammer.txt';
 subject.montage = montage_zmax;
 
 save('subject-1','subject');
@@ -267,7 +267,7 @@ contingency_excluded_tables
 
 cfg = [];
 cfg.title           = subject.name;
-cfg.plottype        = 'colorblocks'; %'classic' 'colorblocks' 'colorbar'
+cfg.plottype        = 'deepcolorblocks'; %'classic' 'colorblocks' 'colorbar' 'deepcolorblocks'
 % cfg.yaxdisteqi      = 'yes';
 % cfg.timeticksdiff   = 60;
 cfg.plotunknown     = 'no'; % 'yes' or 'no' 
@@ -276,13 +276,15 @@ cfg.plotunknown     = 'no'; % 'yes' or 'no'
 % cfg.timemin         = 600 % in minutes, e.g. plot on a 10-hour time axis.   
 % cfg.timerange          = [50 100];
 % cfg.considerdataoffset = 'no';
-% cfg.plotexcluded       = 'no';     
+% cfg.plotexcluded       = 'no'; 
+% cfg.colorblocksconnect = 'yes';
+% cfg.colorscheme        = 'restless'; % 'bright' or 'dark' or 'restless'
 
 %%% if you want to export the figure immediately add these parameters
 cfg.figureoutputfile   = [subject.name '.pdf'];
 cfg.figureoutputformat = 'pdf';
 
-figure_handle = st_hypnoplot(cfg, scoring);
+[figure_handle figure_axis_handle] = st_hypnoplot(cfg, scoring);
 % close(figure_handle) close the figure automatically e.g. after exporting
 
 %practice: play around with the plotting paramters. Export the file as a
@@ -302,7 +304,6 @@ res_scoringdescriptive.table
 cfg = [];
 cfg. cycle = 'all';
 res_sleepdescriptive_cycle = st_scoringdescriptives(cfg, scoring);
-
 
 % lets take a look what we got in there
 res_sleepdescriptive_cycle.table
@@ -339,13 +340,17 @@ cfg.lpfreq   = 35;
 data = st_preprocessing(cfg);
 % plot(data.trial{1}(1,1:(data.fsample*10)))
 
-%% apply montage
+%% using and applying a montage
 %if there is a montage defined you might whant to use it or not
 if isfield(subject,'montage')
     cfg.montage = subject.montage;
 end
 
 data_with_montage = st_preprocessing(cfg);
+
+%alternatively if the data is already read in
+data_with_montage = ft_apply_montage(data,subject.montage);
+
 
 %% extract the date from zmax/edf data header. 
 % this will not work for other data formats than edf
@@ -421,24 +426,81 @@ cfg = [];
 cfg.order = 'alphabetical';
 data_reord = st_reorderdata(cfg, data);
 
-%% applying grammer to data
+%% applying grammers to data
+
+%%% one grammer to multiple or signgle channels
 cfg = [];
 %cfg.grammer = 'hp 0.3 lp 35';
 cfg.grammer = '( ( bp 12 14 mult 4 ) + ( hp 0.5 lp 2 ) ) + ( bp 6 8 mult 2 )';
 cfg.channel = 1;
-data_new = st_datagrammer(cfg, data);
+data_new_single_dg = st_datagrammer(cfg, data);
+
+%%% read a data grammer
+cfg = [];
+datagrammer = st_read_datagrammer(cfg, subject.datagrammerfile);
+
+datagrammer.channel
+datagrammer.grammer
+
+%%% multiple grammers maped by channels
+data_new_multiple_dg = st_apply_datagrammer(data, datagrammer);
+
+
+%% whole night (multitapper) spectrogram
+
+cfg = [];
+cfg.approach = 'spectrogram'; % 'spectrogram' 'mtmfft_segments' 'mtmconvol_memeff'
+%cfg.approach = 'mtmfft_segments';
+cfg.taper  = 'dpss'; % 'hanning' 'hanning_proportion' 'dpss'
+cfg.transform  = 'log10'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
+cfg.channel = subject.eegchannels;
+cfg.powvalue = 'power';
+freq_continous = st_tfr_continuous(cfg, data);
+
+cfg = [];
+cfg.zlim           = [-3 0];
+cfg.colormap       = jet(256); % still a good colormap, however not for some forms of colorblindness
+% cfg.layout         = ...
+% ft_multiplotTFR(cfg, freq_continous);
+
+cfg.channel        = subject.eegchannels{1};
+ft_singleplotTFR(cfg, freq_continous);
+
+%%% to make this a bit prettier and in hours as units
+set(gca,'TickDir','out');
+time = freq_continous.time;
+timeticksdiff = 3600;
+xTick = [0:timeticksdiff:(max([max(time)]))];
+set(gca, 'xTick', xTick);
+set(gca, 'xTickLabel', arrayfun(@num2str,round(xTick/3600,2),'UniformOutput',false)); 
+timeunit = 'h';
+set(gca, 'box', 'off')
+xlabel(['Time [' timeunit ']']);
+ylabel('Frequency [Hz]');
+
+%practice: compare the results of cfg.approach = 'mtmfft_segments' with
+%cfg.approach = 'spectrogram', the latter computation is about 10 times
+%faster as it uses matlab internal functions. Also play around with the
+%cfg.taper options and see how that influences the speed of calculation vs.
+% 'prettyness'. Finally check the the cfg.transform options to tansform 
+% the power values and see how to change z axis scaling cfg.zlim (after commenting it out
+% first to check the scale) to adapt to the different transformations.
 
 %% looking at the data in the "score" browser STILL ALPHA version
 cfg = [];
 cfg.renderer = 'opengl'; % to get things plotted a little faster
 cfg.scoring = scoring;
 cfg.bgcolor = 'dark'; % 'white' or 'dark'
+% Instead of specifiying a dataset, data header, a montage or a scoring you
+% can also dot this interactively by setting
+% cfg.datainteractive = 'yes';
 cfg_postscore = st_scorebrowser(cfg ,data);
 
-%st_scorebrowser(cfg,data); % without an output argument the browser will give the handling back to Matlab immediately. Not recommended!
+% st_scorebrowser(cfg, data); % without an output argument the browser will give the handling back to Matlab immediately. Not recommended!
 % There are many features, it is recommended to never press Ctrl+C while
 % using it (as to not crash it) and to see the button "shortcuts" to get
 % some help on what can be done.
+   
 
 %% take a look at the data, MIGHT NOT WORK ON ALL MATLAB VERSIONS!
 
@@ -449,16 +511,14 @@ epochs_N2   = find(strcmp(scoring.epochs, 'N2'));
 epochs_N3   = find(strcmp(scoring.epochs, 'N3'));
 epochs_R    = find(strcmp(scoring.epochs, 'R'));
 
-% in the original data there are 30 seconds times the sample_rate samples per epoch
-epochlenght_samples = scoring.epochlength*data.fsample;
-
-% the first epoch is from sample 1 to sample 7680 in 256 Hz sample rate, etc.
+% take the epochs and transform them into sample values, st_times2samples
+% helps to match this to the samples to the data structure
 artfctdef                  = [];
-artfctdef.W.artifact  = [(epochs_W(:)  -1)*epochlenght_samples+1 (epochs_W(:)  +0)*epochlenght_samples];
-artfctdef.N1.artifact = [(epochs_N1(:) -1)*epochlenght_samples+1 (epochs_N1(:) +0)*epochlenght_samples];
-artfctdef.N2.artifact = [(epochs_N2(:) -1)*epochlenght_samples+1 (epochs_N2(:) +0)*epochlenght_samples];
-artfctdef.N3.artifact = [(epochs_N3(:) -1)*epochlenght_samples+1 (epochs_N3(:) +0)*epochlenght_samples];
-artfctdef.R.artifact  = [(epochs_R(:)  -1)*epochlenght_samples+1 (epochs_R(:)  +0)*epochlenght_samples];
+artfctdef.W.artifact  = st_times2samples(data,[(epochs_W(:)  -1)*scoring.epochlength epochs_W(:)*scoring.epochlength],'rmnanrows');
+artfctdef.N1.artifact = st_times2samples(data,[(epochs_N1(:) -1)*scoring.epochlength epochs_N1(:)*scoring.epochlength],'rmnanrows');
+artfctdef.N2.artifact = st_times2samples(data,[(epochs_N2(:) -1)*scoring.epochlength epochs_N2(:)*scoring.epochlength],'rmnanrows');
+artfctdef.N3.artifact = st_times2samples(data,[(epochs_N3(:) -1)*scoring.epochlength epochs_N3(:)*scoring.epochlength],'rmnanrows');
+artfctdef.R.artifact  = st_times2samples(data,[(epochs_R(:)  -1)*scoring.epochlength epochs_R(:)*scoring.epochlength],'rmnanrows');
 
 cfg               = [];
 cfg.continuous    = 'yes';
@@ -470,7 +530,6 @@ cfg.renderer      = 'opengl'; % 'painters' or 'opengl' or 'zbuffer'
 ft_databrowser(cfg, data);
 
 %% calculate power density
-
 % power values in some sleep stages, e.g. non-REM
 cfg = [];
 cfg.scoring     = scoring;
@@ -489,12 +548,14 @@ cfg.channel     = subject.eegchannels;
 %     {'spindle', 9, 15},...
 %     {'beta', 15, 30}};
 
-% this saves RAM, but is slower, especially with zmax data that is
-% compressed (e.g. in a .zip file)
+% this saves RAM, but is slower, especially with zmax data because it is
+% compressed (e.g. in a .zip file).
+% thus better use this option only when the EEG files are not compressed,
+% otherwise might be slow.
 % cfg.dataset     = subject.dataset;
 % [res_power_bins, res_power_bands] = st_power(cfg); 
 
-% cfg.quick = 'yes'; % if you want to do quick and dirty determination
+cfg.quick = 'yes'; % if you want to do quick and dirty determination
 % cfg.windowproportion = 1/scoring.epochlength;
 % cfg.segmentlength = scoring.epochlength;
 % cfg.segmentoverlap = 0;
@@ -538,11 +599,184 @@ plot(freq_x,power_y_logscale.*freq_x) % db scaled, 1/freq corrected
 % practice: Try different scaling and normalization, how would this change
 % the results? Can you plot muliple channels at the same time.
 
+%% detect slow waves
+
+cfg = [];
+cfg.scoring          = scoring;
+cfg.stages           = {'N2', 'N3'};
+%cfg.thresholdstages  = {'N3'}; % if you want threshold on another sleep stage
+cfg.channel          = subject.eegchannels;
+
+% this saves RAM, but is slower, especially with zmax data because it is
+% compressed (e.g. in a .zip file).
+% thus better use this option only when the EEG files are not compressed,
+% otherwise might be slow.
+% cfg.dataset     = subject.dataset;
+% [res_spindles_channel res_spindles_event res_spindles_filter] = st_spindles(cfg);
+
+[res_slowwaves_channel, res_slowwaves_event, res_slowwaves_filter] = st_slowwaves(cfg, data);
+
+%export the data
+cfg = [];
+cfg.prefix = 'example';
+cfg.infix  = subject.name;
+cfg.posfix = '';
+filelist_res_slowwave = st_write_res(cfg, res_slowwaves_channel, res_slowwaves_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
+
+%% plot a event related potentials (ERP) of slow waves
+
+%%% set the time limits for plotting
+time_min = -1.5;
+time_max = 1.5;
+
+cfg = [];
+%cfg.maxevents = 50; % only use random 50 events per channel
+[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_slowwaves_event, data);
+%[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_slowwaves_event, data_100Hz);
+
+
+% split by the ERP data between the channels to plot in single figure for
+% one channel
+cfg = [];
+cfg.channel = subject.eegchannels{1};
+timelock_ch1 = ft_selectdata(cfg,timelock);
+cfg.channel = subject.eegchannels{2};
+timelock_ch2 = ft_selectdata(cfg,timelock);
+
+%overwrite the labels as to making plotting with ft_singleplotER feasible
+timelock_ch1.label = {'chan'};
+timelock_ch2.label = {'chan'};
+
+
+% view the timelocked signals for both channels
+figure
+cfg        = [];
+cfg.xlim   = [time_min time_max];
+cfg.title  = 'Non-REM event ERP time-locked to trough';
+cfg.graphcolor = 'br';
+cfg.linestyle = {'-','-'};
+cfg.linewidth = 1;
+fh = ft_singleplotER(cfg,timelock_ch1,timelock_ch2);
+
+
+%%% to make this a bit prettier and in hours as units
+time_min = -1.5;
+time_max = 1.5;
+time_ticks = time_min:0.25:time_max;
+time_tickLabels = arrayfun(@(t) num2str(t), time_ticks(:), 'UniformOutput', false)';
+time_tickLabels{time_ticks == 0} = 'Trough';
+time_tickLabels(2:2:(end-1)) = {' '};
+
+ylabel(gca,'Signal [µV]');
+xlabel(gca,'Time [s]');
+set(gca, 'xTick', time_ticks);
+set(gca, 'xTickLabel', time_tickLabels);
+%set(gca, 'xMinorTick', 'on');
+set(gca, 'TickDir','out');
+set(gca, 'box', 'off')
+set(gca, 'LineWidth',1)
+set(gca, 'TickLength',[0.01 0.01]);
+
+%%% practice: if the data is in sampling rate of 256 Hz but the events have
+%%% been detected in 100 Hz note that the time-point 0 is off due to
+%%% rounding issues. You can resolve by using a downsampled data e.g.
+%%% data_100Hz from further above to create the ERPs
+
+
+%% plot a time-frequency power (TFR power) of slow waves
+
+%%% set the time limits for plotting
+time_min = -1.5;
+time_max = 1.5;
+
+cfg = [];
+cfg.maxevents = Inf; % only use random 50 events per channel
+cfg.baselinecorrect = 'no';
+
+% cfg.baselinecorrect = 'yes'; 
+% cfg.baseline = [time_min time_max];    
+% cfg.baselinetype = 'zscore'; 
+
+
+%%% the following lines are taken from the end of ft_freqbaseline and show
+%%% how the baseline correction calculations are based on and the options
+% if (strcmp(baselinetype, 'absolute'))
+%   data = data - meanVals;
+% elseif (strcmp(baselinetype, 'relative'))
+%   data = data ./ meanVals;
+% elseif (strcmp(baselinetype, 'relchange'))
+%   data = (data - meanVals) ./ meanVals;
+% elseif (strcmp(baselinetype, 'normchange')) || (strcmp(baselinetype, 'vssum'))
+%   data = (data - meanVals) ./ (data + meanVals);
+% elseif (strcmp(baselinetype, 'db'))
+%   data = 10*log10(data ./ meanVals);
+% elseif (strcmp(baselinetype, 'db_absolute'))
+%   data = 10*log10(data - meanVals);
+% elseif (strcmp(baselinetype, 'db(data+1)'))
+%   data = 10*log10((data ./ meanVals)+1);
+% elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
+%   data = 10*log10((data - meanVals)+1);
+% elseif (strcmp(baselinetype, 'log10'))
+%   data = log10(data ./ meanVals);
+% elseif (strcmp(baselinetype, 'log10_absolute'))
+%   data = log10(data - meanVals);
+% elseif (strcmp(baselinetype, 'log10(data+1)'))
+%   data = log10((data ./ meanVals)+1);
+% elseif (strcmp(baselinetype, 'log10(data+1)_absolute'))
+%   data = log10((data - meanVals)+1);
+% elseif (strcmp(baselinetype,'zscore'))
+%     stdVals = repmat(nanstd(data(:,:,baselineTimes),1, 3), [1 1 size(data, 3)]);
+%     data=(data-meanVals)./stdVals;
+
+% cfg.method = 'mtmconvol';
+% cfg.taper = 'dpss';
+% cfg.foi = 4:0.5:30;
+% cfg.tapsmofrq  = 0.4*cfg.foi;
+% cfg.t_ftimwin  = 5./cfg.foi;
+
+cfg.foi = 4:0.1:24;
+cfg.timestep = 0.05;
+cfg.bounds = [time_min time_max];
+[event_freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_slowwaves_event, data);
+
+cfg = [];
+cfg.baseline = [time_min time_max];    
+cfg.baselinetype = 'zscore';    
+[event_freq_baselined] = ft_freqbaseline(cfg, event_freq);
+
+%%% localize the fast spindle delay (of the power maximum) 
+%  and primary frequency of the slow-wave-locked spindle activity. 
+cfg = [];
+cfg.timewin = [0 0.75];
+cfg.freqwin = [11 16];
+[time_freq_pow_centroids] = st_tfr_localize(cfg, event_freq_baselined);
+time_freq_pow_centroids
+
+% split by the TFR data between the channels to plot in single figure for
+% one channel
+cfg = [];
+cfg.channel = subject.eegchannels{1};
+event_freq_ch1 = ft_selectdata(cfg,event_freq_baselined);
+cfg.channel = subject.eegchannels{2};
+event_freq_ch2 = ft_selectdata(cfg,event_freq_baselined);
+
+% view the time-frequency of a slow wave or spindle event, for each channel
+cfg                = [];
+%cfg.baseline       = [time_min time_max]; % a 3 s baseline around the event as it has no clear start or end.
+%cfg.baselinetype   = 'normchange';
+%cfg.zlim           = [-0.2 0.2];
+cfg.xlim           = [time_min time_max];
+cfg.title          = 'Event, time-frequency';
+fh = ft_singleplotTFR(cfg,event_freq_ch1);
+fh = ft_singleplotTFR(cfg,event_freq_ch2);
+
+
 
 %% determine the spindle(s) frequency peak(s) from the power spectrum
 
 cfg = [];
 cfg.peaknum = 1; % either 1 or 2 (default)
+%cfg.powlawnorm = 'yes';
 [res_freqpeaks] = st_freqpeak(cfg,res_power_bin);
 
 res_freqpeaks.table
@@ -586,6 +820,327 @@ filelist_res_spindles = st_write_res(cfg, res_spindles_channel, res_spindles_eve
 %filtering of the data matters? Search in different sleep stages, does the
 %threshold change depending on the sleep stages used? if so, what to do
 %then?
+
+%% plot a event related potentials (ERP) of spindles
+
+%%% set the time limits for plotting
+time_min = -1.5;
+time_max = 1.5;
+
+cfg = [];
+%cfg.maxevents = 50; % only use random 50 events per channel
+[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_spindles_event, data);
+%[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_spindles_event, data_100Hz);
+
+
+% split by the ERP data between the channels to plot in single figure for
+% one channel
+cfg = [];
+cfg.channel = subject.eegchannels{1};
+timelock_ch1 = ft_selectdata(cfg,timelock);
+cfg.channel = subject.eegchannels{2};
+timelock_ch2 = ft_selectdata(cfg,timelock);
+
+%overwrite the labels as to making plotting with ft_singleplotER feasible
+timelock_ch1.label = {'chan'};
+timelock_ch2.label = {'chan'};
+
+
+% view the timelocked signals for both channels
+figure
+cfg        = [];
+cfg.xlim   = [time_min time_max];
+cfg.title  = 'Non-REM event ERP time-locked to trough';
+cfg.graphcolor = 'br';
+cfg.linestyle = {'-','-'};
+cfg.linewidth = 1;
+fh = ft_singleplotER(cfg,timelock_ch1,timelock_ch2);
+
+
+%%% to make this a bit prettier and in hours as units
+time_min = -1.5;
+time_max = 1.5;
+time_ticks = time_min:0.25:time_max;
+time_tickLabels = arrayfun(@(t) num2str(t), time_ticks(:), 'UniformOutput', false)';
+time_tickLabels{time_ticks == 0} = 'Trough';
+time_tickLabels(2:2:(end-1)) = {' '};
+
+ylabel(gca,'Signal [µV]');
+xlabel(gca,'Time [s]');
+set(gca, 'xTick', time_ticks);
+set(gca, 'xTickLabel', time_tickLabels);
+%set(gca, 'xMinorTick', 'on');
+set(gca, 'TickDir','out');
+set(gca, 'box', 'off')
+set(gca, 'LineWidth',1)
+set(gca, 'TickLength',[0.01 0.01]);
+
+%%% practice: if the data is in sampling rate of 256 Hz but the events have
+%%% been detected in 100 Hz note that the time-point 0 is off due to
+%%% rounding issues. You can resolve by using a downsampled data e.g.
+%%% data_100Hz from further above to create the ERPs
+
+
+%% plot a time-frequency power (TFR power) of spindles
+
+%%% set the time limits for plotting
+time_min = -1.5;
+time_max = 1.5;
+
+cfg = [];
+cfg.maxevents = Inf; % only use random 50 events per channel
+cfg.baselinecorrect = 'no';
+
+% cfg.baselinecorrect = 'yes'; 
+% cfg.baseline = [time_min time_max];    
+% cfg.baselinetype = 'zscore'; 
+
+
+%%% the following lines are taken from the end of ft_freqbaseline and show
+%%% how the baseline correction calculations are based on and the options
+% if (strcmp(baselinetype, 'absolute'))
+%   data = data - meanVals;
+% elseif (strcmp(baselinetype, 'relative'))
+%   data = data ./ meanVals;
+% elseif (strcmp(baselinetype, 'relchange'))
+%   data = (data - meanVals) ./ meanVals;
+% elseif (strcmp(baselinetype, 'normchange')) || (strcmp(baselinetype, 'vssum'))
+%   data = (data - meanVals) ./ (data + meanVals);
+% elseif (strcmp(baselinetype, 'db'))
+%   data = 10*log10(data ./ meanVals);
+% elseif (strcmp(baselinetype, 'db_absolute'))
+%   data = 10*log10(data - meanVals);
+% elseif (strcmp(baselinetype, 'db(data+1)'))
+%   data = 10*log10((data ./ meanVals)+1);
+% elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
+%   data = 10*log10((data - meanVals)+1);
+% elseif (strcmp(baselinetype, 'log10'))
+%   data = log10(data ./ meanVals);
+% elseif (strcmp(baselinetype, 'log10_absolute'))
+%   data = log10(data - meanVals);
+% elseif (strcmp(baselinetype, 'log10(data+1)'))
+%   data = log10((data ./ meanVals)+1);
+% elseif (strcmp(baselinetype, 'log10(data+1)_absolute'))
+%   data = log10((data - meanVals)+1);
+% elseif (strcmp(baselinetype,'zscore'))
+%     stdVals = repmat(nanstd(data(:,:,baselineTimes),1, 3), [1 1 size(data, 3)]);
+%     data=(data-meanVals)./stdVals;
+
+% cfg.method = 'mtmconvol';
+% cfg.taper = 'dpss';
+% cfg.foi = 4:0.5:30;
+% cfg.tapsmofrq  = 0.4*cfg.foi;
+% cfg.t_ftimwin  = 5./cfg.foi;
+
+cfg.foi = 4:0.1:24;
+cfg.timestep = 0.05;
+cfg.bounds = [time_min time_max];
+[event_freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_spindles_event, data);
+
+cfg = [];
+cfg.baseline = [time_min time_max];    
+cfg.baselinetype = 'zscore';    
+[event_freq_baselined] = ft_freqbaseline(cfg, event_freq);
+
+%%% localize the fast spindle delay (of the power maximum) 
+%  and primary frequency of the slow-wave-locked spindle activity. 
+cfg = [];
+cfg.timewin = [-0.5 0.5];
+cfg.freqwin = [11 16];
+[time_freq_pow_centroids] = st_tfr_localize(cfg, event_freq_baselined);
+time_freq_pow_centroids
+
+% split by the TFR data between the channels to plot in single figure for
+% one channel
+cfg = [];
+cfg.channel = subject.eegchannels{1};
+event_freq_ch1 = ft_selectdata(cfg,event_freq_baselined);
+cfg.channel = subject.eegchannels{2};
+event_freq_ch2 = ft_selectdata(cfg,event_freq_baselined);
+
+% view the time-frequency of a slow wave or spindle event, for each channel
+cfg                = [];
+%cfg.baseline       = [time_min time_max]; % a 3 s baseline around the event as it has no clear start or end.
+%cfg.baselinetype   = 'normchange';
+%cfg.zlim           = [-0.2 0.2];
+cfg.xlim           = [time_min time_max];
+cfg.title          = 'Event, time-frequency';
+fh = ft_singleplotTFR(cfg,event_freq_ch1);
+fh = ft_singleplotTFR(cfg,event_freq_ch2);
+
+%% SW-(fast)spindles/SO-spindles detection from cooccurrence of both events
+
+%%% by default the time window in a slow wave that a spindle 
+%%% is considered a SW-spindle is if its maximal trough of that spindles 
+%%% falls withing the time window of the trough and the end of the slow wave.
+%%% This is mostly true for fast spindles and mastoid/neutral referenced
+%%% channels. st_swsp is a wrapper function for st_cooc
+
+cfg = [];
+[res_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] ...
+    = st_swsp(cfg, res_spindles_event, res_slowwaves_event);
+
+res_summary.table
+res_swsp_channel_stat.table
+
+%write out the results
+cfg = [];
+cfg.prefix = 'example';
+cfg.infix  = subject.name;
+cfg.posfix = '';
+filelist_res_swsp = st_write_res(cfg, res_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
+
+%% plot a event related potentials (ERP) of  SW-spindles
+
+%%% set the time limits for plotting
+time_min = -1.5;
+time_max = 1.5;
+
+cfg = [];
+%cfg.maxevents = 50; % only use random 50 events per channel
+cfg.eventtimecolumn = 'sp_seconds_trough_max';
+%cfg.eventtimecolumn = 'sw_seconds_trough_max';
+[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_swsp_event, data);
+%[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_swsp_event, data_100Hz);
+
+
+% split by the ERP data between the channels to plot in single figure for
+% one channel
+cfg = [];
+cfg.channel = subject.eegchannels{1};
+timelock_ch1 = ft_selectdata(cfg,timelock);
+cfg.channel = subject.eegchannels{2};
+timelock_ch2 = ft_selectdata(cfg,timelock);
+
+%overwrite the labels as to making plotting with ft_singleplotER feasible
+timelock_ch1.label = {'chan'};
+timelock_ch2.label = {'chan'};
+
+
+% view the timelocked signals for both channels
+figure
+cfg        = [];
+cfg.xlim   = [time_min time_max];
+cfg.title  = 'Non-REM event ERP time-locked to trough';
+cfg.graphcolor = 'br';
+cfg.linestyle = {'-','-'};
+cfg.linewidth = 1;
+fh = ft_singleplotER(cfg,timelock_ch1,timelock_ch2);
+
+
+%%% to make this a bit prettier and in hours as units
+time_min = -1.5;
+time_max = 1.5;
+time_ticks = time_min:0.25:time_max;
+time_tickLabels = arrayfun(@(t) num2str(t), time_ticks(:), 'UniformOutput', false)';
+time_tickLabels{time_ticks == 0} = 'Trough';
+time_tickLabels(2:2:(end-1)) = {' '};
+
+ylabel(gca,'Signal [µV]');
+xlabel(gca,'Time [s]');
+set(gca, 'xTick', time_ticks);
+set(gca, 'xTickLabel', time_tickLabels);
+%set(gca, 'xMinorTick', 'on');
+set(gca, 'TickDir','out');
+set(gca, 'box', 'off')
+set(gca, 'LineWidth',1)
+set(gca, 'TickLength',[0.01 0.01]);
+
+%%% practice: if the data is in sampling rate of 256 Hz but the events have
+%%% been detected in 100 Hz note that the time-point 0 is off due to
+%%% rounding issues. You can resolve by using a downsampled data e.g.
+%%% data_100Hz from further above to create the ERPs
+
+
+%% plot a time-frequency power (TFR power) of SW-spindles
+
+%%% set the time limits for plotting
+time_min = -1.5;
+time_max = 1.5;
+
+cfg = [];
+cfg.maxevents = Inf; % only use random 50 events per channel
+cfg.baselinecorrect = 'no';
+
+% cfg.baselinecorrect = 'yes'; 
+% cfg.baseline = [time_min time_max];    
+% cfg.baselinetype = 'zscore'; 
+
+
+%%% the following lines are taken from the end of ft_freqbaseline and show
+%%% how the baseline correction calculations are based on and the options
+% if (strcmp(baselinetype, 'absolute'))
+%   data = data - meanVals;
+% elseif (strcmp(baselinetype, 'relative'))
+%   data = data ./ meanVals;
+% elseif (strcmp(baselinetype, 'relchange'))
+%   data = (data - meanVals) ./ meanVals;
+% elseif (strcmp(baselinetype, 'normchange')) || (strcmp(baselinetype, 'vssum'))
+%   data = (data - meanVals) ./ (data + meanVals);
+% elseif (strcmp(baselinetype, 'db'))
+%   data = 10*log10(data ./ meanVals);
+% elseif (strcmp(baselinetype, 'db_absolute'))
+%   data = 10*log10(data - meanVals);
+% elseif (strcmp(baselinetype, 'db(data+1)'))
+%   data = 10*log10((data ./ meanVals)+1);
+% elseif (strcmp(baselinetype, 'db(data+1)_absolute'))
+%   data = 10*log10((data - meanVals)+1);
+% elseif (strcmp(baselinetype, 'log10'))
+%   data = log10(data ./ meanVals);
+% elseif (strcmp(baselinetype, 'log10_absolute'))
+%   data = log10(data - meanVals);
+% elseif (strcmp(baselinetype, 'log10(data+1)'))
+%   data = log10((data ./ meanVals)+1);
+% elseif (strcmp(baselinetype, 'log10(data+1)_absolute'))
+%   data = log10((data - meanVals)+1);
+% elseif (strcmp(baselinetype,'zscore'))
+%     stdVals = repmat(nanstd(data(:,:,baselineTimes),1, 3), [1 1 size(data, 3)]);
+%     data=(data-meanVals)./stdVals;
+
+% cfg.method = 'mtmconvol';
+% cfg.taper = 'dpss';
+% cfg.foi = 4:0.5:30;
+% cfg.tapsmofrq  = 0.4*cfg.foi;
+% cfg.t_ftimwin  = 5./cfg.foi;
+
+cfg.foi = 4:0.1:24;
+cfg.timestep = 0.05;
+cfg.bounds = [time_min time_max];
+cfg.eventtimecolumn = 'sp_seconds_trough_max';
+%cfg.eventtimecolumn = 'sw_seconds_trough_max';
+[event_freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_swsp_event, data);
+
+cfg = [];
+cfg.baseline = [time_min time_max];    
+cfg.baselinetype = 'zscore';    
+[event_freq_baselined] = ft_freqbaseline(cfg, event_freq);
+
+%%% localize the fast spindle delay (of the power maximum) 
+%  and primary frequency of the slow-wave-locked spindle activity. 
+cfg = [];
+cfg.timewin = [-0.5 0.5];
+cfg.freqwin = [11 16];
+[time_freq_pow_centroids] = st_tfr_localize(cfg, event_freq_baselined);
+time_freq_pow_centroids
+
+% split by the TFR data between the channels to plot in single figure for
+% one channel
+cfg = [];
+cfg.channel = subject.eegchannels{1};
+event_freq_ch1 = ft_selectdata(cfg,event_freq_baselined);
+cfg.channel = subject.eegchannels{2};
+event_freq_ch2 = ft_selectdata(cfg,event_freq_baselined);
+
+% view the time-frequency of a slow wave or spindle event, for each channel
+cfg                = [];
+%cfg.baseline       = [time_min time_max]; % a 3 s baseline around the event as it has no clear start or end.
+%cfg.baselinetype   = 'normchange';
+%cfg.zlim           = [-0.2 0.2];
+cfg.xlim           = [time_min time_max];
+cfg.title          = 'Event, time-frequency';
+fh = ft_singleplotTFR(cfg,event_freq_ch1);
+fh = ft_singleplotTFR(cfg,event_freq_ch2);
+
 
 %% define events for further analysis
 
