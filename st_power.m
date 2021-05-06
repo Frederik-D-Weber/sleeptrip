@@ -29,7 +29,7 @@ function [res_power_bin, res_power_band] = st_power(cfg, data)
 %                       and no overlap of segments cfg.segmentoverlap = 0
 %
 %   cfg.segmentlength  = scalar, segment length in seconds,
-%                        should be lower than the epoch length (default = 10)
+%                        should be lower or equal to the epoch length (default = 10, or the epoch length)
 %   cfg.segmentoverlap = fraction of the overlap of segments during
 %                        segmentation in the interval [0,1) (default = 0.1)
 % 
@@ -152,8 +152,10 @@ maxBandFreq = cfg.foilim(2);
 
 PreDownSampleHighPassFilter_FpassLeft_or_F3dBcutoff = minBandFreq/2;
 
-if cfg.segmentlength > cfg.scoring.epochlength
-    error(['Parameter cfg.segmentlength ' num2str(cfg.segmentlength) ' s must not be greater than epoch length ' num2str(cfg.scoring.epochlength) ' s!'])
+if (cfg.segmentlength > cfg.scoring.epochlength) && (~istrue(cfg.quick))
+    ft_warning(['Parameter cfg.segmentlength ' num2str(cfg.segmentlength) ' s should not be greater than epoch length ' num2str(cfg.scoring.epochlength) ' s!'])
+    ft_warning(['Parameter cfg.segmentlength ' num2str(cfg.segmentlength) ' was set to epoch length ' num2str(cfg.scoring.epochlength) ' s!'])
+    cfg.segmentlength = cfg.scoring.epochlength;
 end
 
 hasdata = false;

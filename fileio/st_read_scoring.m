@@ -387,7 +387,7 @@ switch  cfg.scoringformat
         eventInputs = getValuesByExpression(doc,expression);
         
         if ~isempty(eventNames)
-            tableArousal = table(eventNames','VariableNames',{'arousal'});
+            tableArousal = table(eventNames','VariableNames',{'event'});
             tableArousal = cat(2,tableArousal,table(cellfun(@str2num,eventStarts,'UniformOutput',true)',cellfun(@str2num,eventStarts,'UniformOutput',true)'+cellfun(@str2num,eventDurations,'UniformOutput',true)',cellfun(@str2num,eventDurations,'UniformOutput',true)','VariableNames',{'start','stop','duration'}));
             tableArousal = cat(2,tableArousal,table(eventInputs','VariableNames',{'channel'}));
         end
@@ -402,7 +402,7 @@ switch  cfg.scoringformat
         eventInputs = getValuesByExpression(doc,expression);
         
         if ~isempty(eventNames)
-            tableEvents = table(eventNames','VariableNames',{'arousal'});
+            tableEvents = table(eventNames','VariableNames',{'event'});
             tableEvents = cat(2,tableEvents,table(cellfun(@str2num,eventStarts,'UniformOutput',true)',cellfun(@str2num,eventStarts,'UniformOutput',true)'+cellfun(@str2num,eventDurations,'UniformOutput',true)',cellfun(@str2num,eventDurations,'UniformOutput',true)','VariableNames',{'start','stop','duration'}));
             tableEvents = cat(2,tableEvents,table(eventInputs','VariableNames',{'channel'}));
         end
@@ -511,7 +511,7 @@ switch  cfg.scoringformat
         tableScoring = cat(2,tableScoring,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableScoring = cat(2,tableScoring,table({},'VariableNames',{'channel'}));
         
-        tableArousal = table({},'VariableNames',{'arousal'});
+        tableArousal = table({},'VariableNames',{'event'});
         tableArousal = cat(2,tableArousal,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableArousal = cat(2,tableArousal,table({},'VariableNames',{'channel'}));
         
@@ -545,7 +545,7 @@ switch  cfg.scoringformat
                 case eventtypes_lighson
                     tableLightsOn = cat(1,tableLightsOn,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
                 case eventtypes_arousal
-                    tableArousal = cat(1,tableArousal,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'arousal','start','stop','duration','channel'}));
+                    tableArousal = cat(1,tableArousal,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
                 otherwise
                 	tableEvents = cat(1,tableEvents,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
                     ft_warning('an event with name name %s was not covered by the reading function',ev_name)
