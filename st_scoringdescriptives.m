@@ -80,16 +80,16 @@ cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 % one valid epoch of N2 or N3 or S4 or R
 
 hasLightsOff = false;
-lightsOffMoment = 0;
+lightsOffMoment = NaN;
 if isfield(scoring, 'lightsoff')
     if ~isnan(scoring.lightsoff)
         hasLightsOff = true;
         lightsOffMoment = scoring.lightsoff;
     else
-        ft_warning('The lights off moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
+        ft_warning('The lights off moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as lights off, but sleep onset will be NaN.');
     end
 else
-    ft_warning('The lights off moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
+    ft_warning('The lights off moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as lights off, but sleep onset will be NaN.');
 end
 
 
@@ -226,7 +226,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
     
     
     dummySampleRate = 100;
-    lightsOffSample = round(lightsOffMoment*dummySampleRate);
+    %lightsOffSample = round(lightsOffMoment*dummySampleRate);
     epochLengthSamples = scoring.epochlength * dummySampleRate;
     
     epochs = cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0);
