@@ -106,8 +106,8 @@ elseif isnumeric(cfg.start)
         if ~all(size(cfg.end) == size(cfg.start))
             ft_error('if cfg.start and cfg.end are numeric, they must be matching dimensions or of same size')
         end
-        if any((cfg.end - cfg.start) < 1)
-            ft_error('cfg.start must correspond to cfg.end and always be smaller')
+        if any((cfg.end - cfg.start) < 0)
+            ft_error('cfg.start must correspond to cfg.end and not be bigger')
         end
         startEpochs = cfg.start;
 else
