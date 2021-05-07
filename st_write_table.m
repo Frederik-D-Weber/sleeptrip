@@ -60,6 +60,11 @@ for iCol = 1:numel(colnames)
         else
             rowwritestr = [rowwritestr deli '%d'];
         end
+    elseif islogical(table.(colnames{iCol}))
+        rowwritestr = [rowwritestr deli '%d'];
+    elseif iscategorical(table.(colnames{iCol}))
+        table.(colnames{iCol}) = cellstr(table.(colnames{iCol}));
+        rowwritestr = [rowwritestr deli '%s'];
     else
         rowwritestr = [rowwritestr deli '%s'];
     end

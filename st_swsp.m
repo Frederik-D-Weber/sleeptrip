@@ -1,9 +1,9 @@
-function [res_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] = st_swsp(cfg, res_spindles_event, res_slowwaves_event)
+function [res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] = st_swsp(cfg, res_spindles_event, res_slowwaves_event)
 
 % ST_SWSP find the slow-wave spindles (SW-spindles) from the resutls of st_spindles and st_slowwaves (e.g. ST_SPINDLES, ST_SLOWWAVES)
 %
 % Use as
-%   [res_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp, res_nonswsp, res_nonspsw, res_excluded_sp, res_excluded_sw] = st_swsp(cfg, res_spindles_event, res_slowwaves_event)
+%   [res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp, res_nonswsp, res_nonspsw, res_excluded_sp, res_excluded_sw] = st_swsp(cfg, res_spindles_event, res_slowwaves_event)
 %
 % Optional configuration parameters are:
 %
@@ -88,9 +88,9 @@ cfg_co.EventTargetTimeWindowOffsetTime2 = cfg.SlowwaveTimeWindowOffsetTime2;
 cfg_co.column_prefix_test   =  'sp_';
 cfg_co.column_prefix_target =  'sw_';
 
-[res_summary, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] = st_coocc(cfg_co, res_spindles_event, res_slowwaves_event);
+[res_swsp_summary, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] = st_coocc(cfg_co, res_spindles_event, res_slowwaves_event);
 
-res_summary.ori = functionname;
+res_swsp_summary.ori = functionname;
 res_swsp_event.ori = functionname;
 res_nonswsp_event.ori = functionname;
 res_nonspsw_event.ori = functionname;
@@ -98,7 +98,7 @@ res_excluded_sp_event.ori = functionname;
 res_excluded_sw_event.ori = functionname;
 
 
-res_summary.type = 'swsp_summary';
+res_swsp_summary.type = 'swsp_summary';
 res_swsp_event.type = 'swsp_event';
 res_nonswsp_event.type = 'nonswsp_event';
 res_nonspsw_event.type = 'nonspsw_event';
@@ -132,8 +132,9 @@ res_swsp_channel_stat.table = grpstats(res_swsp_event.table, idcols_temp,...
     'sw_duration_seconds', 'sw_amplitude_peak2trough_max', 'sw_slope_to_trough_min_potential_per_second', 'sw_slope_zeroxing_to_trough_potential_per_second', 'sw_slope_trough_to_up_max_potential_per_second', 'sw_slope_trough_to_zeroxing_potential_per_second','sw_frequency_by_duration',...
     'delay_sp_time_minus_sw_offset','delay_sp_time_minus_sw_trough','sp_lengths_ROI_seconds'});
 res_swsp_channel_stat.table.Properties.VariableNames{(strcmp(res_swsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
-
 res_swsp_channel_stat.table.density_per_minute = res_swsp_channel_stat.table.count ./ (res_swsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
+res_swsp_channel_stat.table.Properties.RowNames = {};
+
 
 idcols_temp = idcols(ismember(idcols, res_nonswsp_event.table.Properties.VariableNames));
 res_nonswsp_channel_stat = [];
@@ -147,6 +148,7 @@ res_nonswsp_channel_stat.table = grpstats(res_nonswsp_event.table,idcols_temp,..
     });
 res_nonswsp_channel_stat.table.Properties.VariableNames{(strcmp(res_nonswsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
 res_nonswsp_channel_stat.table.density_per_minute = res_nonswsp_channel_stat.table.count ./ (res_nonswsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
+res_nonswsp_channel_stat.table.Properties.RowNames = {};
 
 
 idcols_temp = idcols(ismember(idcols, res_nonspsw_event.table.Properties.VariableNames));
@@ -162,6 +164,7 @@ res_nonspsw_channel_stat.table = grpstats(res_nonspsw_event.table, idcols_temp,.
 
 res_nonspsw_channel_stat.table.Properties.VariableNames{(strcmp(res_nonspsw_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
 res_nonspsw_channel_stat.table.density_per_minute = res_nonspsw_channel_stat.table.count ./ (res_nonspsw_channel_stat.table.mean_sw_lengths_ROI_seconds/60);
+res_nonspsw_channel_stat.table.Properties.RowNames = {};
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug

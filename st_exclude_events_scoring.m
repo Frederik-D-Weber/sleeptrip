@@ -1,4 +1,4 @@
-function [scoring] = st_exclude_events_scoring(cfg, scoring, varagin)
+function [scoring] = st_exclude_events_scoring(cfg, scoring, varargin)
 
 % ST_EXCLUDE_EVENTS_SCORING excludes the epochs in a scoring that overlap
 % or fall together with events.
@@ -61,11 +61,11 @@ cfg.timebuffer      = ft_getopt(cfg, 'timebuffer', [0 0]);
 
 
 isBoundayEvent = false;
-starts = varargin{2};
+starts = varargin{1};
 
-if nargin > 2
+if nargin > 3
     isBoundayEvent = true;
-    stops = varargin{3};
+    stops = varargin{2};
 end
 
 

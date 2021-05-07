@@ -73,12 +73,33 @@ nRes = numel(varargin);
 allAppended = true;
 anyAppended = false;
 
+tempIDnames = cat(2,{'resstacknum'},{'res_ori'},{'res_type'},{'descriptor'},{'property'},{'value'});
+tempvarnames = [tempIDnames];
+rts = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+    
 for iRes = 1:nRes
     r = varargin{iRes};
     
 
     if ~isempty(r.table)
     numericVars = varfun(@isnumeric,r.table,'output','uniform');
+    logicalVars = varfun(@islogical,r.table,'output','uniform');
+    categoricalVars = varfun(@iscategorical,r.table,'output','uniform');
+    
+    if any(categoricalVars & ~logicalVars)
+        tempIdx = find(categoricalVars & ~logicalVars);
+        for iCat = 1:numel(tempIdx)
+            iCatCol = tempIdx(iCat);
+            ft_warning('the column %s in res %d is categorical, this might cause issues with writing the table with st_write_res.',r.table.Properties.VariableNames{iCatCol},iRes)
+        end
+        %r.table.Properties.VariableNames(find(iscategorical))
+    end
+    
+    if any(logicalVars)
+            r.table(:,find(logicalVars)) = array2table(int8(table2array(r.table(:,find(logicalVars)))));
+    end
+
+    numericVars = numericVars | logicalVars;
     nonNumericVarNames = r.table.Properties.VariableNames(find(~numericVars));
     if isempty(nonNumericVarNames)
         descriptor = repmat({noPropertySymb},size(r.table,1),1);
@@ -86,7 +107,7 @@ for iRes = 1:nRes
         descriptor = strcat(nonNumericVarNames{1},valueSep,r.table.(nonNumericVarNames{1}));
         if numel(nonNumericVarNames) > 1
             for iNNVN = 2:(numel(nonNumericVarNames))
-                descriptor = strcat(descriptor,valueSep,nonNumericVarNames{iNNVN},propertySep,r.table.(nonNumericVarNames{iNNVN}));
+                descriptor = strcat(descriptor,propertySep,nonNumericVarNames{iNNVN},valueSep,r.table.(nonNumericVarNames{iNNVN}));
             end
         end
     end
@@ -112,15 +133,28 @@ for iRes = 1:nRes
                   'NewDataVariableName','value');
     else
     
-    tempIDnames = cat(2,{'resstacknum'},{'res_ori'},{'res_type'},{'descriptor'},{'property'},{'value'});
-    tempvarnames = [tempIDnames];
+    
     rt = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
     end
-    
+    %to avoid duplicate row names conflicts
+    rt.Properties.RowNames = {};
+    rts = cat(1,rts,rt);
+
     anyAppended = anyAppended || wasAppended;
     allAppended = allAppended && wasAppended;
 end
     
+
+    categoricalVars = varfun(@iscategorical,rts,'output','uniform');
+
+    if any(categoricalVars)
+         tempIdx = find(categoricalVars);
+        for iCat = 1:numel(tempIdx)
+            iCatCol = tempIdx(iCat);
+            rts.(iCatCol) = cellstr(rts.(iCatCol));
+            ft_warning('the column %s in final output res is categorical, and is converted to a cellstr in the table for better handling in other functions.',rts.Properties.VariableNames{iCatCol})
+        end
+    end
 
 if anyAppended
    ft_warning('some results have been appended before, will put the resnum column in the descriptor as well for the results affected')
@@ -129,8 +163,8 @@ end
 res = [];
 res.ori = functionname;
 res.type = 'stack';
-res.cfg = cfg;
-res.table = rt;
+res.cfg = [];
+res.table = rts;
 
 
 fprintf([functionname ' function finished\n']);

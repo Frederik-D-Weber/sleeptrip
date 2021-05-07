@@ -201,6 +201,13 @@ scoring.lightsoff = subject.lightsoff;
 
 %practice: read in another format, maybe a custom format.
 
+%%% exclude arousals (with respect to data start time = 0, if present
+%%% exclude those epochs for further analysis
+if isfield(scoring,'arousals')
+    [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.arousals.start, scoring.arousals.stop);
+end
+
+
 %% write out the scoring again and re-read it in.
 cfg = [];
 cfg.filename = 'scoring_test';
@@ -977,10 +984,10 @@ fh = ft_singleplotTFR(cfg,event_freq_ch2);
 %%% channels. st_swsp is a wrapper function for st_cooc
 
 cfg = [];
-[res_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] ...
+[res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] ...
     = st_swsp(cfg, res_spindles_event, res_slowwaves_event);
 
-res_summary.table
+res_swsp_summary.table
 res_swsp_channel_stat.table
 
 %write out the results
@@ -988,7 +995,7 @@ cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
 cfg.posfix = '';
-filelist_res_swsp = st_write_res(cfg, res_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
+filelist_res_swsp = st_write_res(cfg, res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %% plot a event related potentials (ERP) of  SW-spindles
 
@@ -1140,6 +1147,30 @@ cfg.xlim           = [time_min time_max];
 cfg.title          = 'Event, time-frequency';
 fh = ft_singleplotTFR(cfg,event_freq_ch1);
 fh = ft_singleplotTFR(cfg,event_freq_ch2);
+
+
+%% stack all the results together 
+
+res_all_stacked = st_stack_res(...
+res_sleepdescriptive_cycle,...
+res_scoringdescriptive,...
+res_slowwaves_channel, res_slowwaves_event,...
+res_spindles_channel, res_spindles_event, res_spindles_filter,...
+res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event...
+);
+
+
+%take a look
+res_all_stacked.table
+
+%write out the results
+cfg = [];
+cfg.prefix = 'example';
+cfg.infix  = subject.name;
+cfg.posfix = '';
+filelist_res_all_stacked = st_write_res(cfg, res_all_stacked); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
+
+
 
 
 %% define events for further analysis
