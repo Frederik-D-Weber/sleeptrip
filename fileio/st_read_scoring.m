@@ -569,7 +569,7 @@ switch  cfg.scoringformat
         	lightsoff_from_scoring_offset = tableLightsOff.start(end);
             hasLightsOff = true;
         end
-        if ~isempty(tableLightsOff)
+        if ~isempty(tableLightsOn)
             lightson_from_scoring_offset = tableLightsOn.start(1);
             hasLightsOn = true;
         end
