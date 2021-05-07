@@ -77,7 +77,7 @@ try
     parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
     montageTable = readtable(filename,parampairs{:});
 catch
-    parampairs = [parampairs, {'numHeaderLines',cfg.skiplines}];
+    parampairs = [parampairs, {'numHeaderLines',cfg.skiplines}, {'ExpChars', ''} ];
     montageTable = readtable(filename,parampairs{:});
 end
 
