@@ -9,6 +9,10 @@ function [irodsfinaldestinationpaths irodsfinaldestinationfolder] = st_irodsput(
 %   irodspath = a string (single path) to a folder as it apears on
 %                    the irods file system 
 %
+%    cfg.deletelocal = either 'yes' or 'no' if local files in filepaths
+%                      should be deleted when they were uploaded to the
+%                      irods path (default = 'no')
+%
 % See also ST_IRODSCLEANUP, ST_WAIT_EXISTS
 
 % Copyright (C) 2021-, Frederik D. Weber
@@ -60,6 +64,7 @@ end
 
 % set defaults
 cfg.tempfolderbase = ft_getopt(cfg, 'tempfolderbase', ['~/' functionname ]); 
+cfg.deletelocal = ft_getopt(cfg, 'deletelocal', 'no'); 
 
 fprintf([functionname ' function initialized\n']);
 
@@ -112,6 +117,10 @@ command = ['iput -K -f -P -N 10 -X ' [filepath '.' 'iput_restartfile.txt'] ' --r
 if status_system ~= 0
     disp(cmdout_system)
     ft_error('failed to execute %d of %d iget commands: %s',ifilepaths, numel(irodspath), command)
+else
+    if istrue(cfg.deletelocal)
+        delete(filepath);
+    end
 end
 
 [pathstr, name, ext] = fileparts(filepath);
