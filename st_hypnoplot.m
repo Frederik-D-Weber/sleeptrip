@@ -265,8 +265,17 @@ if isfield(cfg, 'eventtimes')
     hasEvents = true;
 end
 
-if (isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventlabels')) || (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
-    ft_error('both cfg.eventtimes and cfg.eventlabels have to be defined togehter.');
+% if (isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventlabels')) || (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
+%     ft_error('both cfg.eventtimes and cfg.eventlabels have to be defined togehter.');
+% end
+
+if (isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventlabels'))
+    ft_warning('both cfg.eventtimes defined but not cfg.eventlabels aribrary event labels will be created.');
+    cfg.eventlabels = arrayfun(@(s) ['ev' num2str(s)],(1:numel(cfg.eventtimes))','UniformOutput',false);
+end
+
+if (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
+    ft_error(' cfg.eventtimes needs to be defined for the cfg.eventlabels and  have to be defined togehter.');
 end
 
 if isfield(cfg, 'eventtimes')
@@ -1001,7 +1010,7 @@ if isfield(cfg, 'eventtimes')
                 event_scale_null = fw_normalize(currEventValues, min(currEventValueRanges),  max(currEventValueRanges), 0, 1)';
                 text(max_temp_x_all+1,temp_y(1),['[' num2str(min(currEventValueRanges)) ' ' num2str(max(currEventValueRanges)) ']']);
             else
-                event_scale = ones(1,nEvents);
+                event_scale = ones(1,numel(currEvents))';
             end
             
             if istrue(cfg.eventcolorsbystagecolor)
@@ -1058,7 +1067,7 @@ if isfield(cfg, 'eventtimes')
                     %                 end
                     hev = patch([temp_x1 temp_x2 temp_x2 temp_x1]', [temp_plot_y(:,1) temp_plot_y(:,1) temp_plot_y(:,2) temp_plot_y(:,2)]',color,'edgecolor','none');
                 else
-                    plot(axh,[temp_x1 temp_x1]',temp_plot_y,'Color',color)
+                    plot(axh,[temp_x1 temp_x1]',temp_plot_y','Color',color)
                 end
             end
         end

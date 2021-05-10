@@ -13,13 +13,10 @@ function [res reschannelcolumnname] = st_res_filter(cfg, res)
 %                        chosen by the firs column that contains the string
 %                        'channel';
 %   cfg.filtercolumns = either a string or a cellstr of the columns you want to filter for, e.g.
-%                        {'resnum', 'freq'}
+%                        {'resnum', 'freq', 'channel'}
 %   cfg.filtervalues  = either a string/value or cell of cells/cellstr, with the corresponding values to
 %                       the columns defined cfg.filtercolumns, e.g. 
-%                        {{1}, {4:5}}
-%   cfg.average       = if (after filtering) the property values should be
-%                       avearaged for each channel (NaNs are ignored)
-%                       either 'yes' or 'no', NOT supported with parallel use of cfg.maskproperty (default = 'no')
+%                        {1:3, [1:20], {'C3', 'C4'}}
 %
 % See also ST_TOPOPLOTRES, ST_CHANNEL_EVENT_ERP, ST_CHANNEL_EVENT_TFR
 
@@ -90,7 +87,7 @@ if isfield(cfg,'filtercolumns')
     for iCol = 1:numel(cfg.filtercolumns)
         fv = res.table{:,{cfg.filtercolumns{iCol}}};
         if ~isempty(fv)
-            res.table = res.table{ismember(fv,cfg.filtervalues{iCol}),:};
+            res.table = res.table(ismember(fv,cfg.filtervalues{iCol}),:);
         end
     end
 end

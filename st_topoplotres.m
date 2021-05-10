@@ -22,10 +22,10 @@ function [cfg, fh, ah, ch, res] = st_topoplotres(cfg, res)
 %                         'zbuffer'  fast and accurate
 %                         'OpenGL'   when you have a good opengl function
 %   cfg.filtercolumns = either a string or a cellstr of the columns you want to filter for, e.g.
-%                        {'resnum', 'freq'}
+%                        {'resnum', 'freq', 'channel'}
 %   cfg.filtervalues  = either a string/value or cell of cells/cellstr, with the corresponding values to
 %                       the columns defined cfg.filtercolumns, e.g. 
-%                        {{1}, {4:5}}
+%                        {1:3, [1:20], {'C3', 'C4'}}
 %   cfg.average       = if (after filtering) the property values should be
 %                       avearaged for each channel (NaNs are ignored)
 %                       either 'yes' or 'no', NOT supported with parallel use of cfg.maskproperty (default = 'no')
@@ -141,7 +141,7 @@ set(0, 'DefaultFigureRenderer', cfg.renderer);
 
 fprintf([functionname ' function initialized\n']);
 
-res = st_res_filter(cfg, res);
+[res channelcolumnname] = st_res_filter(cfg, res);
 
 if ~any(strcmp(res.table.Properties.VariableNames,cfg.property))
     ft_error(['result structure table needs to have a column called %s as defined in cfg.property'], cfg.property)
@@ -151,8 +151,8 @@ if istrue(cfg.average)
     if isfield(cfg,'maskproperty')
         ft_error(['cfg.maskproperty not supported for cfg.average = ''yes'''])
     end
-    res.table = res.table{ismember(fv,cfg.filtervalues{iCol}),:};
-    res.table = varfun(@nanmean,res.table,'InputVariables',cfg.property,'GroupingVariables','channel');
+    %res.table = res.table{ismember(fv,cfg.filtervalues{iCol}),:};
+    res.table = varfun(@nanmean,res.table,'InputVariables',cfg.property,'GroupingVariables',channelcolumnname);
     res.table.Properties.VariableNames{end} = cfg.property;
 end
 
@@ -161,7 +161,7 @@ cfg2 = cfg;
 data = [];
 data.dimord = 'chan_time';
 data.time = [0];
-data.label = res.table.channel;
+data.label = res.table.(channelcolumnname);
 data.avg = res.table.(cfg.property);
 cfg2.parameter  = 'avg';
 if isfield(cfg,'maskproperty')

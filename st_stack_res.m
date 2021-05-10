@@ -117,10 +117,10 @@ for iRes = 1:nRes
     end
     
     if wasAppended
-        idx_resnum = find(ismember(r.table.Properties.VariableNames, {'resnum'}),'first',1);
+        idx_resnum = find(ismember(r.table.Properties.VariableNames, {'resnum'}),1,'first');
         if ~isempty(idx_resnum)
             rescol = r.table(:,idx_resnum);
-            if isnumeric(rescol)
+            if isnumeric(rescol{1,1})
                 rescol = num2str(table2array(rescol));
             end
             	descriptor = strcat('resnum','_',rescol,propertySep,descriptor);
