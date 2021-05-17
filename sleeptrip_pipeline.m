@@ -430,8 +430,10 @@ scoring = scoring_aasm;
 
 %% reorder channels
 cfg = [];
-cfg.order = 'alphabetical';
+cfg.order = 'natural_shortfirst';
 data_reord = st_reorderdata(cfg, data);
+data.label
+data_reord.label
 
 %% applying grammers to data
 
@@ -630,7 +632,7 @@ cfg.infix  = subject.name;
 cfg.posfix = '';
 filelist_res_slowwave = st_write_res(cfg, res_slowwaves_channel, res_slowwaves_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
-%% plot a event related potentials (ERP) of slow waves
+%% plot an event related potential (ERP) of slow waves
 
 %%% set the time limits for plotting
 time_min = -1.5;
@@ -828,7 +830,7 @@ filelist_res_spindles = st_write_res(cfg, res_spindles_channel, res_spindles_eve
 %threshold change depending on the sleep stages used? if so, what to do
 %then?
 
-%% plot a event related potentials (ERP) of spindles
+%% plot an event related potential (ERP) of spindles
 
 %%% set the time limits for plotting
 time_min = -1.5;
@@ -888,7 +890,7 @@ set(gca, 'TickLength',[0.01 0.01]);
 %%% data_100Hz from further above to create the ERPs
 
 
-%% plot a time-frequency power (TFR power) of spindles
+%% plot time-frequency power (TFR power) of spindles
 
 %%% set the time limits for plotting
 time_min = -1.5;
@@ -997,7 +999,7 @@ cfg.infix  = subject.name;
 cfg.posfix = '';
 filelist_res_swsp = st_write_res(cfg, res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
-%% plot a event related potentials (ERP) of  SW-spindles
+%% plot an event related potential (ERP) of  SW-spindles
 
 %%% set the time limits for plotting
 time_min = -1.5;
@@ -1008,6 +1010,7 @@ cfg = [];
 cfg.eventtimecolumn = 'sp_seconds_trough_max';
 %cfg.eventtimecolumn = 'sw_seconds_trough_max';
 [timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_swsp_event, data);
+%[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_nonswsp_event, data);
 %[timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_swsp_event, data_100Hz);
 
 
@@ -1147,6 +1150,24 @@ cfg.xlim           = [time_min time_max];
 cfg.title          = 'Event, time-frequency';
 fh = ft_singleplotTFR(cfg,event_freq_ch1);
 fh = ft_singleplotTFR(cfg,event_freq_ch2);
+
+%% find phase of SW-spindles within the slow wave cycle
+
+cfg = [];
+cfg.eventtimecolumn = 'sp_seconds_trough_max';
+cfg.grammer         = 'hp 0.5 lp 2';
+[res_swsp_event_with_phase reschannelcolumnname] = st_channel_event_phase(cfg, res_swsp_event, data);
+
+(0.5+(mean(res_swsp_event_with_phase.table.sp_seconds_trough_max_phase_wrapped_rad)/(2*pi))) * mean(res_swsp_event_with_phase.table.sw_duration_seconds)
+mean(res_swsp_event_with_phase.table.delay_sp_time_minus_sw_trough)
+
+figure
+polarhistogram(360*res_swsp_event_with_phase.table.sp_seconds_trough_max_phase_wrapped_rad/(2*pi),36)
+%pre-Matlab 2016b try: rose(360*res_swsp_event_with_phase.table.sp_seconds_trough_max_phase_wrapped_rad/(2*pi),36)
+figure
+histogram(res_swsp_event_with_phase.table.delay_sp_time_minus_sw_trough,36)
+%figure
+%histogram((0.5+(res_swsp_event_with_phase.table.sp_seconds_trough_max_phase_wrapped_rad)/(2*pi)) * mean(res_swsp_event_with_phase.table.sw_duration_seconds),36)
 
 
 %% stack all the results together 
@@ -1683,7 +1704,6 @@ cfg.highlight = 'on';
 cfg.colorbar = 'yes';
 cfg.colormap = colormap_bluewhitered;
 cfg.zlim = [-0.4 0];
-% FIXME: the next two lines wont work.
 %cfg.filtercolumns =  {'use'};
 %cfg.filtervalues  = {[1]};
 cfg = st_topoplotres(cfg, res);

@@ -1,4 +1,4 @@
-function [timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_event, data)
+function [timelock reschannelcolumnname channels] = st_channel_event_erp(cfg, res_event, data)
 
 % ST_CHANNEL_EVENT_ERP creates the event related potential of the average 
 % event for each channel separately form a res structure
@@ -9,6 +9,10 @@ function [timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_event, 
 % Use as
 %   [timelock] = st_channel_event_erp(cfg, res, data)
 %   [timelock reschannelcolumnname] = st_channel_event_erp(cfg, res, data)
+%    if cfg.keeptrials = 'yes'
+%   [timelocks reschannelcolumnname channels] = st_channel_event_erp(cfg, res_event, data)
+%   [timelocks channels] = st_channel_event_erp(cfg, res_event, data)
+%    where timelock is a cell with each event for each of the channels
 %
 % Required configuration parameters are:
 %   cfg.eventtimecolumn = string, giving the column names to hold the even times = 0 in the in res.table (default = 'seconds_trough_max')
@@ -20,6 +24,7 @@ function [timelock reschannelcolumnname] = st_channel_event_erp(cfg, res_event, 
 %   cfg.maxevents       = number of trials/event to maximally use per channel before sampled out (by random) (default is unset and unlimited trial number)
 %   cfg.randseed        = numer as a seed for the randomization functions.
 %   cfg.eventsamplemethod = the method to select the maximal number (N) of events in case cfg.maxevents is set, either 'first' (for the first N) 'random' or 'last' (the last N), (default = 'random').
+%   cfg.keeptrials      = 'yes' or 'no', return individual trials or average (default = 'no')
 %
 % Optional configuration parameters from ST_RES_FILTER are:
 %
@@ -83,6 +88,7 @@ if ft_abort
     return
 end
 
+channels = {};
 % set defaults
 cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
 hasMaxEvents = false;
@@ -96,6 +102,8 @@ cfg.baseline   = ft_getopt(cfg, 'baseline', cfg.bounds);
 cfg.baselinetype   = ft_getopt(cfg, 'baselinetype', 'normchange');
 cfg.eventtimecolumn   = ft_getopt(cfg, 'eventtimecolumn', 'seconds_trough_max');
 cfg.eventtimeoffset   = ft_getopt(cfg, 'eventtimeoffset', 0);
+cfg.keeptrials   = ft_getopt(cfg, 'keeptrials', 'no');
+
 
 if istrue(cfg.baselinecorrect)
 bounds = [min(min(cfg.baseline),cfg.bounds(1)) max(max(cfg.baseline),cfg.bounds(2))];
@@ -171,6 +179,7 @@ for iCh = 1:nChannels
             event_timelock_ch = ft_selectdata(cfg_sd,event_timelock_ch);
             
             event_time_chs{iCh} = event_timelock_ch;
+            channels = cat(1,channels,ch);
         end
     else
         ft_warning('No events left for channel %s',ch)
@@ -187,7 +196,11 @@ if all(idx_empty_channels)
 elseif any(idx_empty_channels)
     ft_warning('at least one channel produced had empty timelock structures and was thus excluded from the resutling timelock structure.')
 else
-    timelock = ft_appendtimelock([], event_time_chs{:});
+    if istrue(cfg.keeptrials)
+        timelock = event_time_chs;
+    else
+        timelock = ft_appendtimelock([], event_time_chs{:});
+    end
 end
 
 % do the general cleanup and bookkeeping at the end of the function

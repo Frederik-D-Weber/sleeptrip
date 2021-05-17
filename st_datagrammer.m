@@ -25,6 +25,13 @@ function data = st_datagrammer(cfg, data)
 %     'bp [low_Hz] [high_Hz] [[filter_order]] [[iir|fir]]' applies a band-pass filter with to preserve signal between [low_Hz] [high_Hz] with optional parameters of [filter_order] and filter type as either fir or iir fitler [[fir|iir]]
 %     'hp [low_Hz] [[filter_order]] [[iir|fir]]' applies a high-pass filter with to preserve signal above [low_Hz] with optional parameters of [filter_order] and filter type as either fir or iir fitler [[fir|iir]]
 %     'lp [high_Hz] [[filter_order]] [[iir|fir]]' applies a low-pass filter with to preserve signal below [high_Hz] with optional parameters of [filter_order] and filter type as either fir or iir fitler [[fir|iir]]
+%     'phase_wrapped_rad' for transformation into wrappted phase in radians [rad, +-pi] from the positive peak being t = 0, please use apply a filter band first 
+%     'phase_wrapped_turns' for transformation into wrappted phase in turns [0 to 1 turn]from the positive peak being t = 0, please use apply a filter band first 
+%     'phase_wrapped_deg' for transformation into wrappted phase in degree [0 to 360] from the positive peak being t = 0, please use apply a filter band first 
+%     'phase_unwrapped_rad' for transformation into unwrappted (non-zigsag but continous) phase in radians [rad, +-pi] from the positive peak being t = 0, please use apply a filter band first 
+%     'phase_unwrapped_turns' for transformation into unwrappted (non-zigsag but continous) phase in turns [0 to 1 turn]from the positive peak being t = 0, please use apply a filter band first 
+%     'phase_unwrapped_deg' for transformation into unwrappted (non-zigsag but continous) phase in degree [0 to 360] from the positive peak being t = 0, please use apply a filter band first 
+%     'instfreq' for transformation into instantaenous frequency, please use apply a filter band first
 %     'waveletband [low_Hz] [high_Hz] [[filter_order]]' applies a band-pass filter based on wavelet filtering with to preserve signals activity between [low_Hz] [high_Hz] with optional parameters of [cycle_witdh] fro the width of the wavelet in number of cycles
 %     'no' apply nothing
 %     '+' add signals together sample by sample
@@ -206,6 +213,10 @@ for iChannelbyOrder = 1:numel(channel_all)
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'env'
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
+                    case 'instfreq'
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
+                    case {'phase_wrapped_rad', 'phase_wrapped_deg', 'phase_wrapped_turns', 'phase_unwrapped_rad', 'phase_unwrapped_deg', 'phase_unwrapped_turns'}
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'mult'
                         [MultFactor conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
@@ -359,6 +370,46 @@ for iChannelbyOrder = 1:numel(channel_all)
                     data_new{iChanCount}.trial{1} = abs(data_new{iChanCount}.trial{1});
                 case 'env'
                     data_new{iChanCount}.trial{1} = abs(hilbert(data_new{iChanCount}.trial{1}));
+                case 'instfreq'
+                    instfreq = (diff(unwrap(angle(hilbert(data_new{iChanCount}.trial{1})))) / (2.0 * pi) * fsample); 
+                    if numel(instfreq) >= 1
+                        data_new{iChanCount}.trial{1} = [instfreq(1) instfreq];
+                    end
+                    
+                    data_new{iChanCount}.trial{1} = angle(hilbert(data_new{iChanCount}.trial{1}));
+                    
+%                     t = 0:(1/100):10; 
+%                     x = cos(pi/0.1*t);
+% 
+%                     fsample = 100;
+%                     phase_raw_rad = angle(hilbert(x));
+%                     phase_raw_deg = 360*phase_raw_rad/(2.0 * pi);
+%                     phase_raw_turns = phase_raw_rad/(2.0 * pi);
+%                     phase_raw_turns_unwarp = unwrap(phase_raw_turns);
+%                     instfreq = (diff(phase_raw_rad) / (2.0 * pi) * fsample);
+%                     instfreq = [instfreq(1) instfreq];
+%                     figure
+%                     plot(t,x)
+%                     hold on
+%                     plot(t,phase_raw_rad)
+%                     plot(t,phase_raw_deg)
+%                     plot(t,phase_raw_turns)
+%                     plot(t,phase_raw_turns_unwarp)
+%                     figure
+%                     plot(t,instfreq)
+
+                case 'phase_wrapped_rad'
+                    data_new{iChanCount}.trial{1} = angle(hilbert(data_new{iChanCount}.trial{1}));
+                case 'phase_wrapped_deg'
+                    data_new{iChanCount}.trial{1} = 360*angle(hilbert(data_new{iChanCount}.trial{1}))/(2*pi);
+                case 'phase_wrapped_turns'
+                    data_new{iChanCount}.trial{1} = angle(hilbert(data_new{iChanCount}.trial{1}))/(2*pi);
+                case 'phase_unwrapped_rad'
+                    data_new{iChanCount}.trial{1} = unwrap(angle(hilbert(data_new{iChanCount}.trial{1})));
+                case 'phase_unwrapped_deg'
+                    data_new{iChanCount}.trial{1} = 360*unwrap(angle(hilbert(data_new{iChanCount}.trial{1})))/(2*pi);
+                case 'phase_unwrapped_turns'
+                    data_new{iChanCount}.trial{1} = unwrap(angle(hilbert(data_new{iChanCount}.trial{1})))/(2*pi);
                 case 'mult'
                     data_new{iChanCount}.trial{1} = data_new{iChanCount}.trial{1} .* MultFactor;
                 case 'waveletband'

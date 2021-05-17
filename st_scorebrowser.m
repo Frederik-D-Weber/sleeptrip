@@ -1223,7 +1223,7 @@ end
 opt.artdata     = artdata;
 opt.hdr         = hdr;
 opt.event       = event;
-opt.trlop       = cfg.startepoch;          % the active trial being displayed
+opt.trlop       = 1;   
 opt.ftsel       = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected
 opt.trlorg      = trlorg;
 opt.fsample     = hdr.Fs;
@@ -1236,7 +1236,7 @@ opt.eventtypescolors = [0 0 0; 1 0 0; 0 0 1; 0 1 0; 1 0 1; 0.5 0.5 0.5; 0 1 1; 1
 opt.eventtypecolorlabels = {'black', 'red', 'blue', 'green', 'cyan', 'grey', 'light blue', 'yellow'};
 opt.nanpaddata  = []; % this is used to allow horizontal scaling to be constant (when looking at last segment continous data, or when looking at segmented/zoomed-out non-continous data)
 opt.trllock     = []; % this is used when zooming into trial based data
-
+    
 % save original layout when viewmode = component
 if strcmp(cfg.viewmode,'component')
     opt.layorg    = cfg.layout;
@@ -1659,6 +1659,20 @@ end
 
 
 definetrial_cb(h);
+
+opt = getappdata(h, 'opt');
+cfg = getappdata(h, 'cfg');
+
+data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
+opt.nEpochs = floor(data_duration_seconds/cfg.epochlength);
+if strcmp(cfg.doSleepScoring,'yes')
+    opt = set_curr_epoch(cfg.startepoch, opt, cfg);
+else
+    opt.trlop       = 1;
+end
+
+setappdata(h, 'opt', opt);
+setappdata(h, 'cfg', cfg);
 
 if cfg.StartWithOpenSession
     try
@@ -2300,9 +2314,13 @@ else
     funcfg = cfg.selcfg{selfunind};
     % get windowname and give as input (can be used for the other functions as well, not implemented yet)
     if ~strcmp(opt.trialviewtype,'trialsegment')
-        str = sprintf('%s %d/%d, time from %g to %g min', opt.trialviewtype, opt.trlop, size(opt.trlvis,1), seldata.time{1}(1)./60, seldata.time{1}(end)./60);
-    else
-        str = sprintf('trial %d/%d: epoch: %d/%d , time from %g to %g min', opt.trllock, size(opt.trlorg,1), opt.trlop, size(opt.trlvis,1), seldata.time{1}(1)./60, seldata.time{1}(end)./60);
+        if strcmp(opt.trialviewtype,'epoch')
+            str = sprintf('segment %d/%d epoch %d/%d, time from %g to %g min', opt.trlop, size(opt.trlvis,1), opt.curr_epoch, opt.nEpochs, seldata.time{1}(1)./60, seldata.time{1}(end)./60);
+        else
+            str = sprintf('%s %d/%d, time from %g to %g min', opt.trialviewtype,opt.trlop, size(opt.trlvis,1), seldata.time{1}(1)./60, seldata.time{1}(end)./60);
+        end
+   else
+        str = sprintf('trial %d/%d: epoch: %d/%d , time from %g to %g min', opt.trllock, size(opt.trlorg,1), opt.curr_epoch, opt.nEpochs, seldata.time{1}(1)./60, seldata.time{1}(end)./60);
     end
     funcfg.figurename = [cmenulab ': ' str];
     feval(funhandle, funcfg, seldata);
@@ -2605,14 +2623,8 @@ switch key
 	            key = '0';
             end
             
-            curr_epoch = opt.trlop;
-            
-            temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
-            nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
-            if curr_epoch > nEpochs
-                curr_epoch = curr_epoch - 1;
-            end
-            curr_hypn = cfg.hypn(curr_epoch,:);
+   
+            curr_hypn = cfg.hypn(opt.curr_epoch,:);
             
             switch key
                 case {'0' '1' '2' '3' '4' '5' '8'}
@@ -2633,7 +2645,7 @@ switch key
                 case 'always'
                     temp_skip_to_next_epoch = (h1 ~= -1);
                 case 'firstscore'
-                    temp_skip_to_next_epoch = ((cfg.hypn(curr_epoch,1) == -1) && (h1 ~= -1));
+                    temp_skip_to_next_epoch = ((cfg.hypn(opt.curr_epoch,1) == -1) && (h1 ~= -1));
                 case 'unknown'
                     % see code below
                 case 'stay'
@@ -2646,10 +2658,10 @@ switch key
             next_low_conf_epoch = [];
             if cfg.confidence_skip_to_lower_than_threshold ~= 0
                 if size(cfg.hypn,2) > 2
-                    if curr_epoch < size(cfg.hypn,1)
-                        next_low_conf_epoch = find(cfg.hypn((curr_epoch+1):end,3) < cfg.confidence_skip_to_lower_than_threshold,1,'first');
+                    if opt.curr_epoch < size(cfg.hypn,1)
+                        next_low_conf_epoch = find(cfg.hypn((opt.curr_epoch+1):end,3) < cfg.confidence_skip_to_lower_than_threshold,1,'first');
                         if ~isempty(next_low_conf_epoch)
-                            next_low_conf_epoch = curr_epoch + next_low_conf_epoch;
+                            next_low_conf_epoch = opt.curr_epoch + next_low_conf_epoch;
                             temp_skip_to_next_epoch = true;
                         end
                     end
@@ -2658,10 +2670,10 @@ switch key
             
             next_unknown_epoch = [];
             if strcmp(cfg.skip_to_next, 'unknown')
-                    if curr_epoch < size(cfg.hypn,1)
-                        next_unknown_epoch = find(cfg.hypn((curr_epoch+1):end,1) == -1,1,'first');
+                    if opt.curr_epoch < size(cfg.hypn,1)
+                        next_unknown_epoch = find(cfg.hypn((opt.curr_epoch+1):end,1) == -1,1,'first');
                         if ~isempty(next_unknown_epoch)
-                            next_unknown_epoch = curr_epoch + next_unknown_epoch;
+                            next_unknown_epoch = opt.curr_epoch + next_unknown_epoch;
                             temp_skip_to_next_epoch = (h1 ~= -1);
                         end
                     end
@@ -2669,15 +2681,15 @@ switch key
 
             
             
-            opt.prev_stages = getPrevStageString_stage(cfg.hypn,curr_epoch,6);
-            opt.next_stages = getNextStageString_stage(cfg.hypn,curr_epoch,6);
+            opt.prev_stages = getPrevStageString_stage(cfg.hypn,opt.curr_epoch,6,opt);
+            opt.next_stages = getNextStageString_stage(cfg.hypn,opt.curr_epoch,6,opt);
             
             
             
             if isfield(cfg, 'hypn_mult')
                 if ~isempty(cfg.hypn_mult)
                     for iHypMult = 1:numel(cfg.hypn_mult)
-                        opt.curr_stage_mult{iHypMult} = getStageStringByHypnValue(cfg.hypn_mult{iHypMult}(curr_epoch,1),cfg.hypn_mult{iHypMult}(curr_epoch,2));
+                        opt.curr_stage_mult{iHypMult} = getStageStringByHypnValue(cfg.hypn_mult{iHypMult}(opt.curr_epoch,1),cfg.hypn_mult{iHypMult}(opt.curr_epoch,2));
                         %                 opt.prev_stages_mult{iHypMult}
                         %                 opt.next_stages_mult{iHypMult}
                         %                 opt.curr_stage_mult = '?';
@@ -2688,8 +2700,8 @@ switch key
             
             
             
-            if (cfg.toggle_epoch_marker ~= 0) && (cfg.toggle_epoch_marker <= curr_epoch)
-                for iTempEpoch = cfg.toggle_epoch_marker:curr_epoch
+            if (cfg.toggle_epoch_marker ~= 0) && (cfg.toggle_epoch_marker <= opt.curr_epoch)
+                for iTempEpoch = cfg.toggle_epoch_marker:opt.curr_epoch
                     if size(cfg.hypn,2) > 2
                         cfg.hypn(iTempEpoch,:) = [h1 h2 1];
                     else
@@ -2698,23 +2710,23 @@ switch key
                     hyp_begsample = cfg.hyp_epochLengthSamples*(cfg.toggle_epoch_marker-1)+1; % opt.trlvis(opt.trlop,1);
                     
                 end
-                temp_hyp_part = cfg.hypn(cfg.toggle_epoch_marker:curr_epoch,:);
+                temp_hyp_part = cfg.hypn(cfg.toggle_epoch_marker:opt.curr_epoch,:);
             else
-                hyp_begsample = cfg.hyp_epochLengthSamples*(curr_epoch-1)+1; % opt.trlvis(opt.trlop,1);
+                hyp_begsample = cfg.hyp_epochLengthSamples*(opt.curr_epoch-1)+1; % opt.trlvis(opt.trlop,1);
                 if size(cfg.hypn,2) > 2
                     temp_hyp_part = [h1 h2 1];
                 else
                     temp_hyp_part = [h1 h2];
                 end
-                cfg.hypn(curr_epoch,:) = temp_hyp_part;
+                cfg.hypn(opt.curr_epoch,:) = temp_hyp_part;
                 
             end
             
             
             
             
-            hyp_begsample_this_epoch = cfg.hyp_epochLengthSamples*(curr_epoch-1)+1; % opt.trlvis(opt.trlop,1);
-            hyp_endsample = cfg.hyp_epochLengthSamples*(curr_epoch);% opt.trlvis(opt.trlop,2);
+            hyp_begsample_this_epoch = cfg.hyp_epochLengthSamples*(opt.curr_epoch-1)+1; % opt.trlvis(opt.trlop,1);
+            hyp_endsample = cfg.hyp_epochLengthSamples*(opt.curr_epoch);% opt.trlvis(opt.trlop,2);
             [curr_ep_hypn_plot_interpol, curr_ep_hypn_plot_interpol_MA] = interpolate_hypn_for_plot(temp_hyp_part,length(hyp_begsample_this_epoch:hyp_endsample),cfg.plot_MA_offset,istrue(cfg.yaxdisteqi));
             
             cfg.toggle_epoch_marker = 0;
@@ -2729,7 +2741,7 @@ switch key
             end
             
             if temp_skip_to_next_epoch
-                next_epoch = opt.trlop + 1;
+                next_epoch = opt.curr_epoch + 1;
                 if ~isempty(next_low_conf_epoch)
                     next_epoch = next_low_conf_epoch;
                 end
@@ -2740,7 +2752,8 @@ switch key
                         next_epoch = next_unknown_epoch;
                     end
                 end
-                opt.trlop = min(next_epoch, size(opt.trlvis,1)); % should not be larger than the number of trials
+                opt = set_curr_epoch(next_epoch, opt, cfg);
+
                 if isfield(opt,'marks')
                     opt.marks = [];
                 end
@@ -2808,7 +2821,9 @@ switch key
             end
         end
     case 'leftarrow'
-        opt.trlop = max(opt.trlop - 1, 1); % should not be smaller than 1
+        if strcmp(cfg.doSleepScoring,'yes')
+            opt = set_curr_epoch(opt.curr_epoch-1, opt, cfg);
+        end
         if isfield(opt,'marks')
             opt.marks = [];
         end
@@ -2817,7 +2832,34 @@ switch key
         setappdata(h, 'cfg', cfg);
         redraw_cb(h, eventdata);
     case 'rightarrow'
+
+        if strcmp(cfg.doSleepScoring,'yes')
+            opt = set_curr_epoch(opt.curr_epoch+1, opt, cfg);
+        end
+        if isfield(opt,'marks')
+            opt.marks = [];
+        end
+        cfg.curr_displayed_marking = -1;
+        setappdata(h, 'opt', opt);
+        setappdata(h, 'cfg', cfg);
+        redraw_cb(h, eventdata);
+    case 'control+leftarrow'
+        opt.trlop = max(opt.trlop - 1, 1); % should not be smaller than 1
+        if strcmp(cfg.doSleepScoring,'yes')
+            opt = set_curr_epoch((opt.trlop-1)*(cfg.blocksize/cfg.epochlength)+1, opt, cfg);
+        end
+        if isfield(opt,'marks')
+            opt.marks = [];
+        end
+        cfg.curr_displayed_marking = -1;
+        setappdata(h, 'opt', opt);
+        setappdata(h, 'cfg', cfg);
+        redraw_cb(h, eventdata);
+    case 'control+rightarrow'
         opt.trlop = min(opt.trlop + 1, size(opt.trlvis,1)); % should not be larger than the number of trials
+        if strcmp(cfg.doSleepScoring,'yes')
+            opt = set_curr_epoch((opt.trlop-1)*(cfg.blocksize/cfg.epochlength)+1, opt, cfg);
+        end
         if isfield(opt,'marks')
             opt.marks = [];
         end
@@ -2854,21 +2896,26 @@ switch key
         delete(findobj(h,'tag', 'chanlabel'));  % remove channel labels here, and not in redrawing to save significant execution time (see bug 2065)
         redraw_cb(h, eventdata);
     case 'shift+leftarrow'
-        if ~strcmp(cfg.doSleepScoring,'yes')
+        if strcmp(cfg.doSleepScoring,'yes')
+            cfg.blocksize = max(cfg.epochlength,cfg.blocksize - cfg.epochlength);
+        else
             cfg.blocksize = cfg.blocksize*sqrt(2);
+        end
             setappdata(h, 'opt', opt);
             setappdata(h, 'cfg', cfg);
             definetrial_cb(h, eventdata);
             redraw_cb(h, eventdata);
-        end
     case 'shift+rightarrow'
-        if ~strcmp(cfg.doSleepScoring,'yes')
-            cfg.blocksize = cfg.blocksize/sqrt(2);
+        if strcmp(cfg.doSleepScoring,'yes')
+            data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
+        	cfg.blocksize = min(ceil(data_duration_seconds/cfg.epochlength)*cfg.epochlength,cfg.blocksize + cfg.epochlength);
+        else
+           	cfg.blocksize = cfg.blocksize/sqrt(2);
+        end
             setappdata(h, 'opt', opt);
             setappdata(h, 'cfg', cfg);
             definetrial_cb(h, eventdata);
             redraw_cb(h, eventdata);
-        end
     case 'uparrow'
         cfg.ylim = cfg.ylim/sqrt(2);
         setappdata(h, 'opt', opt);
@@ -3074,15 +3121,17 @@ switch key
     case 't'
         % select the trial to display
         if ~strcmp(opt.trialviewtype,'trialsegment')
-            str = sprintf('%s to display (current epoch = %d/%d)', opt.trialviewtype, opt.trlop, size(opt.trlvis,1));
+            str = sprintf('%s to display (current epoch = %d/%d)', opt.trialviewtype, opt.curr_epoch, opt.nEpochs);
         else
-            str = sprintf('epoch to display (current epoch = %d/%d)', opt.trlop, size(opt.trlvis,1));
+            str = sprintf('epoch to display (current epoch = %d/%d)', opt.curr_epoch, opt.nEpochs);
         end
         response = inputdlg(str, 'specify', 1, {num2str(opt.trlop)});
         if ~isempty(response)
-            opt.trlop = str2double(response);
-            opt.trlop = min(opt.trlop, size(opt.trlvis,1)); % should not be larger than the number of trials
-            opt.trlop = max(opt.trlop, 1); % should not be smaller than 1
+            try
+                opt = set_curr_epoch(str2double(response), opt, cfg);
+            catch e
+                
+            end
             if isfield(opt,'marks')
                 opt.marks = [];
             end
@@ -3094,9 +3143,11 @@ switch key
         
     case 'shift+t'
         if strcmp(cfg.doSleepScoring,'yes')
-            curr_epoch = opt.trlop;
-            if (curr_epoch >= cfg.toggle_epoch_marker)
-                cfg.toggle_epoch_marker = curr_epoch;
+            %curr_epoch = opt.trlop;
+            %opt.curr_epoch = ceil(opt.trlvis(1, 1)/(opt.orgdata.fsample*cfg.epochlength));
+
+            if (opt.curr_epoch >= cfg.toggle_epoch_marker)
+                cfg.toggle_epoch_marker = opt.curr_epoch;
             else
                 cfg.toggle_epoch_marker = 0;
             end
@@ -3395,9 +3446,9 @@ switch key
                             import_success = selected_file_format;
                         end
                         
-                        begsample = opt.trlvis(opt.trlop,1);
-                        endsample = opt.trlvis(opt.trlop,2);
-                        temp_epochLengthSamples = endsample - begsample + 1;
+                       %begsample = opt.trlvis(opt.trlop,1);
+                        %endsample = opt.trlvis(opt.trlop,2);
+                        %temp_epochLengthSamples = endsample - begsample + 1;
                         
                         temp_hypnogramPath = [hyp_file_path hyp_file_name];
                         cfg_rs = [];
@@ -3460,9 +3511,11 @@ switch key
                 
                 
                 
-                temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
-                nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
-                
+                %                 temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
+                %                 nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
+                data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
+                nEpochs = floor(data_duration_seconds/cfg.epochlength);
+
                 if (size(temp_hypn,1) > nEpochs)
                     msgbox(sprintf(['Wrong Hypnogram?\n' 'It is too long!\n' ' data: ' num2str(nEpochs) ' ep\n' ' import: ' num2str(size(temp_hypn,1)) ' ep\n' 'hypnogram will be truncated to data by cutting its tail']) ,'Wrong Hypnogram imported?', 'warn','modal');
                     temp_hypn = temp_hypn(1:nEpochs,:);
@@ -3929,16 +3982,20 @@ if strcmp(cfg.doSleepScoring,'yes')
         end
         
         
-        curr_epoch = opt.trlop;
+        %curr_epoch = opt.trlop;
+%         curr_epoch = ceil(opt.trlvis(1, 1)/(opt.orgdata.fsample*cfg.epochlength));
         
-        temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
-        nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
-        if curr_epoch > nEpochs
-            curr_epoch = curr_epoch - 1;
-        end
+        %temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
+        %nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
         
-        hyp_begsample = cfg.hyp_epochLengthSamples*(curr_epoch-1)+1; % opt.trlvis(opt.trlop,1);
-        hyp_endsample = cfg.hyp_epochLengthSamples*(curr_epoch);% opt.trlvis(opt.trlop,2);
+%         data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
+%         nEpochs = floor(data_duration_seconds/cfg.epochlength);
+%         if curr_epoch > nEpochs
+%             curr_epoch = curr_epoch - 1;
+%         end
+        
+        hyp_begsample = cfg.hyp_epochLengthSamples*(opt.curr_epoch-1)+1; % opt.trlvis(opt.trlop,1);
+        hyp_endsample = cfg.hyp_epochLengthSamples*(opt.curr_epoch);% opt.trlvis(opt.trlop,2);
         
         if opt.hyp_figure_reload
             beg_time = opt.orgdata.time{1,1}(1);
@@ -5103,26 +5160,20 @@ end
 
 
 if strcmp(cfg.doSleepScoring,'yes')
-    curr_epoch = opt.trlop;
-    
-    temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
-    nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
-    if curr_epoch > nEpochs
-        curr_epoch = curr_epoch - 1;
-    end
-    curr_hypn = cfg.hypn(curr_epoch,:);
+
+    curr_hypn = cfg.hypn(opt.curr_epoch,:);
     h1 = curr_hypn(:,1);
     h2 = curr_hypn(:,2);
     [stagestring h1_str h2_str] = getStageStringByHypnValue(h1,h2);
     opt.curr_stage = stagestring;
     
-    opt.prev_stages = getPrevStageString_stage(cfg.hypn,curr_epoch,6);
-    opt.next_stages = getNextStageString_stage(cfg.hypn,curr_epoch,6);
+    opt.prev_stages = getPrevStageString_stage(cfg.hypn,opt.curr_epoch,6,opt);
+    opt.next_stages = getNextStageString_stage(cfg.hypn,opt.curr_epoch,6,opt);
     
     if isfield(cfg, 'hypn_mult')
         if ~isempty(cfg.hypn_mult)
             for iHypMult = 1:numel(cfg.hypn_mult)
-                opt.curr_stage_mult{iHypMult} = getStageStringByHypnValue(cfg.hypn_mult{iHypMult}(curr_epoch,1),cfg.hypn_mult{iHypMult}(curr_epoch,2));
+                opt.curr_stage_mult{iHypMult} = getStageStringByHypnValue(cfg.hypn_mult{iHypMult}(opt.curr_epoch,1),cfg.hypn_mult{iHypMult}(opt.curr_epoch,2));
                 %                 opt.prev_stages_mult{iHypMult}
                 %                 opt.next_stages_mult{iHypMult}
                 %                 opt.curr_stage_mult = '?';
@@ -5513,9 +5564,13 @@ else
 end
 
 if ~strcmp(opt.trialviewtype,'trialsegment')
-    str = sprintf('%s %d/%d, time from %0.2f to %0.2f min', opt.trialviewtype, opt.trlop, size(opt.trlvis,1), startim/60, endtim/60);
+    if strcmp(opt.trialviewtype,'epoch')
+        str = sprintf('segment %d/%d epoch %d/%d, time from %0.2f to %0.2f min', opt.trlop, size(opt.trlvis,1), opt.curr_epoch, opt.nEpochs, startim/60, endtim/60);
+    else
+        str = sprintf('%s %d/%d, time from %0.2f to %0.2f min', opt.trialviewtype, opt.trlop, size(opt.trlvis,1), startim/60, endtim/60);
+    end
 else
-    str = sprintf('trial %d/%d: epoch: %d/%d , time from %g to %g min', opt.trllock, size(opt.trlorg,1), opt.trlop, size(opt.trlvis,1), startim/60, endtim/60);
+    str = sprintf('trial %d/%d: epoch: %d/%d , time from %g to %g min', opt.trllock, size(opt.trlorg,1), opt.curr_epoch, opt.nEpochs, startim/60, endtim/60);
 end
 
 
@@ -5940,10 +5995,10 @@ xlime_hypn = get(cfg.hhypfigax, 'xlim');
 if (press_x > xlime_hypn(1)) && (press_x  < xlime_hypn(2))
     press_x_sec = press_x*60;
     
-    new_epoch = max(1,fix(press_x_sec/cfg.blocksize));
-    if new_epoch ~= opt.trlop
-        opt.trlop = max(1,fix(press_x_sec/cfg.blocksize));
-        
+    new_epoch = max(1,fix(press_x_sec/cfg.epochlength));
+
+    if new_epoch ~= opt.curr_epoch
+        opt = set_curr_epoch(new_epoch, opt, cfg);
         setappdata(h, 'opt',opt);
         setappdata(h, 'cfg',cfg);
         redraw_cb(h);
@@ -6236,7 +6291,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [stagesstring] = getPrevStageString_stage(hypn,curr_epoch,n)
+function [stagesstring] = getPrevStageString_stage(hypn,curr_epoch,n,opt)
 idx = max(1,curr_epoch-n):max(0,(curr_epoch-1));
 hv = hypn(idx,1);
 if isempty(hv)
@@ -6249,7 +6304,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [stagesstring] = getNextStageString_stage(hypn,curr_epoch,n)
+function [stagesstring] = getNextStageString_stage(hypn,curr_epoch,n,opt)
 idx = min(size(hypn,1),curr_epoch+1):min(size(hypn,1),(curr_epoch+n));
 hv = hypn(idx,1);
 if isempty(hv)
@@ -6776,6 +6831,11 @@ val = get(src,'Value');
 %set(panel,'Position',[0 -val*nch/(1/vsizech) 1 vsize]);
 change_range = vsize-1;
 set(panel,'Position',[0 (1-vsize)+(1-val)*change_range 1 vsize]);
+end
+
+function opt = set_curr_epoch(curr_epoch, opt, cfg)
+    opt.curr_epoch = min(opt.nEpochs,max(1,curr_epoch));
+    opt.trlop = max(1,min(ceil(opt.curr_epoch*cfg.epochlength/cfg.blocksize), size(opt.trlvis,1))); % should not be larger than the number of trials
 end
 
 function opt = changeDataChannelOrder(channel_order,opt)

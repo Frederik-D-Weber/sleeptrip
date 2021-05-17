@@ -1,4 +1,4 @@
-function [freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_event, data)
+function [freq reschannelcolumnname channels] = st_channel_event_tfr(cfg, res_event, data)
 
 % ST_CHANNEL_EVENT_TFR creates the time-frequency distribution of the average 
 % event for each channel separately form a res structure
@@ -10,6 +10,10 @@ function [freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_event, data
 % Use as
 %   [freq] = st_channel_event_tfr(cfg, res_event, data)
 %   [freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_event, data)
+%    if cfg.keeptrials = 'yes'
+%   [freqs reschannelcolumnname channels] = st_channel_event_tfr(cfg, res_event, data)
+%   [freqs channels] = st_channel_event_tfr(cfg, res_event, data)
+%    where freqs is a cell with each event for each of the channels
 %
 % Optional configuration parameters are:
 %   cfg.eventtimecolumn = string, giving the column names to hold the even times = 0 in the in res.table (default = 'seconds_trough_max')
@@ -24,6 +28,7 @@ function [freq reschannelcolumnname] = st_channel_event_tfr(cfg, res_event, data
 %   cfg.maxevents       = number of trials maximally use per channel before sampled out (by random) (default is unset and unlimited trial number)
 %   cfg.randseed       = numer as a seed for the randomization functions.
 %   cfg.eventsamplemethod = the method to select the maximal number (N) of events in case cfg.maxevents is set, either 'first' (for the first N) 'random' or 'last' (the last N), (default = 'random').
+%   cfg.keeptrials      = 'yes' or 'no', return individual trials or average (default = 'no')
 %
 % More optional configuration parameters from ST_RES_FILTER are:
 %
@@ -86,6 +91,8 @@ ft_preamble trackconfig
 if ft_abort
     return
 end
+
+channels = {};
 
 % set defaults
 cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
@@ -208,6 +215,7 @@ for iCh = 1:nChannels
             cfg_sd.latency = cfg.bounds;
             event_freq_ch = ft_selectdata(cfg_sd,event_freq_ch);
             
+            channels = cat(1,channels,ch);
             event_freq_chs{iCh} = event_freq_ch;
         end
     else
@@ -225,7 +233,11 @@ if all(idx_empty_channels)
 elseif any(idx_empty_channels)
     ft_warning('at least one channel produced had empty freq structures and was thus excluded from the resutling freq structure.')
 else
+    if istrue(cfg.keeptrials)
+        freq = event_freq_chs;
+    else
     freq = ft_appendfreq([], event_freq_chs{:});
+    end
 end
 
 % do the general cleanup and bookkeeping at the end of the function
