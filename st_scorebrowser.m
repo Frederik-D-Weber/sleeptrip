@@ -36,6 +36,27 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                      (default = 'no')
 %
 % The following configuration options are supported:
+%   cfg.signallinewidth         =  the line width of the signals to draw (default = 0.5);
+%   cfg.events                  = a table or events with the columns named: event start stop duration channel
+%                                 ... with the columns giving:
+%                                 event: the name of the event type, note
+%                                        that giving a lot of unique event
+%                                        names results in a lot of
+%                                        different event types (with each
+%                                        an own color).
+%                                 start: start of the event in seconds since data start
+%                                 stop: stop of the event in seconds since data start
+%                                 duration: duration of the event in seconds since data start
+%                                 channel: a string with the channels that
+%                                          match each event e.g. 'C*' to match all
+%                                          channels that start with C, or 'all' to
+%                                          match all channels, SEE FT_CHANNELSELECTION for details. 
+%   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' (default = 'snake+box');
+%   cfg.eventminduration        = the minimal duration in seconds of an
+%                                 event to better display it e.g. if duration is 0 seconds then
+%                                 this will be changed to
+%                                 cfg.eventminduration for plotting
+%                                 (default = 0.05)
 %   cfg.startepoch              = number of epoch to start view in.
 %   cfg.ylim                    = vertical scaling, can be 'maxmin', 'maxabs' or [ymin ymax] (default = 'maxabs')
 %   cfg.zlim                    = color scaling to apply to component topographies, 'minmax', 'maxabs' (default = 'maxmin')
@@ -198,7 +219,9 @@ cfg.cuttoscoring    = ft_getopt(cfg, 'cuttoscoring', 'no');
 cfg.viewmode        = ft_getopt(cfg, 'viewmode', 'vertical');
 cfg.startepoch      = ft_getopt(cfg, 'startepoch', 1);
 cfg.datainteractive = ft_getopt(cfg, 'datainteractive', 'no');
-
+cfg.signallinewidth = ft_getopt(cfg, 'signallinewidth', 0.5);
+cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'snake+box');
+cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
 
 if istrue(cfg.datainteractive)
     ask_again = true;
@@ -317,7 +340,7 @@ if ~hasdata && ~istrue(cfg.datainteractive)
     hasdata = true;
 end
 
-cfg.channel  = ft_getopt(cfg, 'channel', 'all', 1);
+cfg.channel         = ft_getopt(cfg, 'channel', 'all', 1);
 
 if isfield(cfg,'scoring')
     cfg.blocksize = cfg.scoring.epochlength;
@@ -368,9 +391,68 @@ end
     
     %cfg.colorgroups = 'jet';
     cfg.colorgroups       = ft_getopt(cfg, 'colorgroups', 'allblack');
+    
+    %%% columns:  event      start      stop     duration      channel  
+    cfg.nEventTypes = 0;
+    cfg.EventTypes = [];
 
-    cfg.event_begin_end_color = [0 1 0];
-    cfg.event_begin_end_color2 = [0 0 1];
+    if isfield(cfg,'events')
+        nDataSamples = size(data.trial{1},2);
+        cfg.events.stop((cfg.events.stop-cfg.events.start) < cfg.eventminduration) = cfg.events.start((cfg.events.stop-cfg.events.start) < cfg.eventminduration) + cfg.eventminduration;
+        eventssamples = cfg.events;
+        eventssamples.start = st_times2samples(data,cfg.events.start);
+        eventssamples.stop  = st_times2samples(data,cfg.events.stop);
+        eventssamples.duration = st_times2samples(data,cfg.events.start+cfg.events.duration)-eventssamples.start;
+
+        
+        eventssamples(eventssamples.start > nDataSamples,:) = [];
+        eventssamples(eventssamples.stop < 1,:) = [];
+
+        ind_exeding = eventssamples.stop > nDataSamples;
+        eventssamples.stop(ind_exeding) = nDataSamples;
+        eventssamples.duration(ind_exeding) = eventssamples.stop(ind_exeding) - eventssamples.start(ind_exeding);
+        
+        ind_preceding = eventssamples.start < 1;
+        eventssamples.start(ind_preceding) = 1;
+        eventssamples.duration(ind_preceding) = eventssamples.stop(ind_preceding) - eventssamples.start(ind_preceding);
+        cfg.eventssamples = eventssamples;
+        eventssamples = [];
+        
+        cfg.EventTypes = unique(cfg.eventssamples.event);
+        cfg.nEventTypes = numel(cfg.EventTypes);
+        
+        
+        
+        cfg.times_ind_per_channel_evtypes = {};
+        cfg.begin_end_per_channel_evtypes = {};
+        for iEventTypes = 1:cfg.nEventTypes
+            eventType = cfg.EventTypes{iEventTypes};
+            for iCh = 1:length(data.label)
+                cfg.times_ind_per_channel_evtypes{iEventTypes, iCh} = [];
+                cfg.begin_end_per_channel_evtypes{iEventTypes, iCh} = [];
+                ch = data.label{iCh};
+                
+                idx_evt = strcmp(cfg.eventssamples.event,eventType);
+                idx_ch = ~logical(cellfun(@isempty,cellfun(@(chs) ft_channelselection(chs, ch),cfg.eventssamples.channel,'UniformOutput',false)));
+                
+                curr_begins_ends = table2array(cfg.eventssamples(idx_evt & idx_ch,{'start','stop'}));
+                if ~isempty(curr_begins_ends)
+                curr_times_ind = logical(zeros(1,nDataSamples));
+                    for iEv = 1:size(curr_begins_ends,1)
+                        temp_beg = curr_begins_ends(iEv,1);
+                        temp_end = curr_begins_ends(iEv,2);
+                        curr_times_ind(temp_beg:temp_end) = 1;
+                    end
+                 cfg.times_ind_per_channel_evtypes{iEventTypes, iCh} = curr_times_ind;
+                 cfg.begin_end_per_channel_evtypes{iEventTypes, iCh} = curr_begins_ends;
+                end
+            end % for each of the limEvents each channels
+        end
+  
+    end
+    
+    cfg.event_begin_end_color = flipud(brighten(lines(cfg.nEventTypes), .8));
+    %cfg.event_begin_end_color2 = [0 0 1];
     
     
 %     if strcmp(ApplyEventmappingSettings,'yes')
@@ -1101,41 +1183,41 @@ end
 
 
 %FW begin
-if isfield(cfg,'begin_end_events')
-    begin_end_events_per_channel = cfg.begin_end_events;
-    cfg.times_ind_per_channel = {};
-    data_samples_length = length(data.time{1,1});
-    for channelIndex = 1:length(cfg.channel)
-        curr_begins_ends = begin_end_events_per_channel{channelIndex};
-        curr_times_ind = zeros(1,data_samples_length);
-        if ~isempty(curr_begins_ends)
-            for iEv = 1:size(curr_begins_ends,1)
-                temp_beg = curr_begins_ends(iEv,1);
-                temp_end = curr_begins_ends(iEv,2);
-                curr_times_ind(temp_beg:temp_end) = 1;
-            end
-        end
-        cfg.times_ind_per_channel{channelIndex} = curr_times_ind;
-    end % for each of the limEvents each channels
-end
+% if isfield(cfg,'begin_end_events')
+%     begin_end_events_per_channel = cfg.begin_end_events;
+%     cfg.times_ind_per_channel = {};
+%     data_samples_length = length(data.time{1,1});
+%     for channelIndex = 1:length(cfg.channel)
+%         curr_begins_ends = begin_end_events_per_channel{channelIndex};
+%         curr_times_ind = zeros(1,data_samples_length);
+%         if ~isempty(curr_begins_ends)
+%             for iEv = 1:size(curr_begins_ends,1)
+%                 temp_beg = curr_begins_ends(iEv,1);
+%                 temp_end = curr_begins_ends(iEv,2);
+%                 curr_times_ind(temp_beg:temp_end) = 1;
+%             end
+%         end
+%         cfg.times_ind_per_channel{channelIndex} = curr_times_ind;
+%     end % for each of the limEvents each channels
+% end
 
-if isfield(cfg,'begin_end_events2')
-    begin_end_events_per_channel = cfg.begin_end_events2;
-    cfg.times_ind_per_channel2 = {};
-    data_samples_length = length(data.time{1,1});
-    for channelIndex = 1:length(cfg.channel)
-        curr_begins_ends = begin_end_events_per_channel{channelIndex};
-        curr_times_ind = zeros(1,data_samples_length);
-        if ~isempty(curr_begins_ends)
-            for iEv = 1:size(curr_begins_ends,1)
-                temp_beg = curr_begins_ends(iEv,1);
-                temp_end = curr_begins_ends(iEv,2);
-                curr_times_ind(temp_beg:temp_end) = 1;
-            end
-        end
-        cfg.times_ind_per_channel2{channelIndex} = curr_times_ind;
-    end % for each of the limEvents each channels
-end
+% if isfield(cfg,'begin_end_events2')
+%     begin_end_events_per_channel = cfg.begin_end_events2;
+%     cfg.times_ind_per_channel2 = {};
+%     data_samples_length = length(data.time{1,1});
+%     for channelIndex = 1:length(cfg.channel)
+%         curr_begins_ends = begin_end_events_per_channel{channelIndex};
+%         curr_times_ind = zeros(1,data_samples_length);
+%         if ~isempty(curr_begins_ends)
+%             for iEv = 1:size(curr_begins_ends,1)
+%                 temp_beg = curr_begins_ends(iEv,1);
+%                 temp_end = curr_begins_ends(iEv,2);
+%                 curr_times_ind(temp_beg:temp_end) = 1;
+%             end
+%         end
+%         cfg.times_ind_per_channel2{channelIndex} = curr_times_ind;
+%     end % for each of the limEvents each channels
+% end
 %FW end
 
 
@@ -1282,13 +1364,13 @@ set(gca,'TickLength',[0.005 0.01])
 % set(b,  'YColor', [0.3 0.3 0.3], 'XTickLabel', [], 'YTickLabel', [])
 set(gca,'Fontsize',5,'FontUnits','normalized');
 
-if isfield(cfg,'begin_end_events') || isfield(cfg,'begin_end_events2')
+if isfield(cfg,'events')
     cfg.displayEvents = 'yes';
 else
     cfg.displayEvents = 'no';
 end
 
-cfg.browserversion = '3.0.0';
+cfg.browserversion = '3.1.0';
 
 if strcmp(cfg.doSleepScoring,'yes')
     
@@ -2173,8 +2255,10 @@ helptext = [ ...
     '  Shift + I: Import Hypnogram (dialog) \n'...
     '  Shift + E: Export Hypnogram (dialog) \n'...
     ' Non-Scoring:\n'...
-    '  Shift + Left-arrow: decrease epoch length\n'...
-    '  Shift + Right-arrow: increase epoch length\n'...
+    '  Shift + Left-arrow: decrease segment length\n'...
+    '  Shift + Right-arrow: increase segment length\n'...
+    '  Ctrl + Left-arrow: previous segment\n'...
+    '  Ctrl + Right-arrow: next segment\n'...
     '  H: Horizontal scaling \n'...
     '  (S: switch highlighting/marking style, deprecated)\n'...
     ];
@@ -2909,6 +2993,27 @@ switch key
         if strcmp(cfg.doSleepScoring,'yes')
             data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
         	cfg.blocksize = min(ceil(data_duration_seconds/cfg.epochlength)*cfg.epochlength,cfg.blocksize + cfg.epochlength);
+        else
+           	cfg.blocksize = cfg.blocksize/sqrt(2);
+        end
+            setappdata(h, 'opt', opt);
+            setappdata(h, 'cfg', cfg);
+            definetrial_cb(h, eventdata);
+            redraw_cb(h, eventdata);
+    case 'shift+leftbracket'
+        if strcmp(cfg.doSleepScoring,'yes')
+            cfg.blocksize = max(cfg.epochlength,cfg.blocksize - cfg.epochlength*(floor((cfg.blocksize/2)/cfg.epochlength)));
+        else
+            cfg.blocksize = cfg.blocksize*sqrt(2);
+        end
+            setappdata(h, 'opt', opt);
+            setappdata(h, 'cfg', cfg);
+            definetrial_cb(h, eventdata);
+            redraw_cb(h, eventdata);
+    case 'shift+rightbracket'
+        if strcmp(cfg.doSleepScoring,'yes')
+            data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
+        	cfg.blocksize = min(ceil(data_duration_seconds/cfg.epochlength)*cfg.epochlength,cfg.blocksize + cfg.epochlength*((cfg.blocksize/cfg.epochlength)));
         else
            	cfg.blocksize = cfg.blocksize/sqrt(2);
         end
@@ -4102,54 +4207,66 @@ if strcmp(cfg.doSleepScoring,'yes')
             yTick = [0 -0.5 -1 -2 -3 -4 cfg.plot_MA_offset+1 cfg.plot_MA_offset+0.5];
             yTickLabel = {'W' 'REM' 'S1' 'S2' 'S3' 'S4' 'MT' 'MA'};
         end
-        if strcmp(cfg.displayEvents,'yes')
-            
-            ev1_offset = 0.9;
-            ev2_offset = 0.8;
-            
-            if isfield(cfg,'begin_end_events2')
-                yTick = [ev2_offset yTick];
-                yTickLabel = {'Ev2' yTickLabel{:}};
-                for channelIndex = 1:length(chanindx)
-                    curr_begins_ends = cfg.begin_end_events2{chanindx(channelIndex)};
-                    if strcmp(cfg.viewmode, 'component')
-                        color = 'k';
-                    else
-                        %color = opt.chancolors(chanindx(i),:);
-                        color = opt.chancolors(chanindx(channelIndex),:);
-                    end
-                    
-                    temp_x = (curr_begins_ends(:,1)/opt.fsample)/60;
-                    temp_y = repmat(ev2_offset,size(curr_begins_ends,1),1);
-                    plot(axh,[temp_x temp_x]',[temp_y-0.04 temp_y+0.04]','Color',color)
-                    %scatter(axh,(curr_begins_ends(:,1)/opt.fsample)/60,repmat(ev1_offset,1,size(curr_begins_ends,1)),'MarkerEdgeColor',color)
-                end
-            end
-            
-            if isfield(cfg,'begin_end_events')
-                yTick = [ev1_offset yTick];
-                yTickLabel = {'Ev1' yTickLabel{:}};
-                for channelIndex = 1:length(chanindx)
-                    curr_begins_ends = cfg.begin_end_events{chanindx(channelIndex)};
-                    if strcmp(cfg.viewmode, 'component')
-                        color = 'k';
-                    else
-                        %color = opt.chancolors(chanindx(i),:);
-                        color = opt.chancolors(chanindx(channelIndex),:);
-                    end
-                    
-                    temp_x = (curr_begins_ends(:,1)/opt.fsample)/60;
-                    temp_y = repmat(ev1_offset,size(curr_begins_ends,1),1);
-                    plot(axh,[temp_x temp_x]',[temp_y-0.05 temp_y+0.05]','Color',color)
-                    %scatter(axh,(curr_begins_ends(:,1)/opt.fsample)/60,repmat(ev1_offset,1,size(curr_begins_ends,1)),'MarkerEdgeColor',color)
-                end
-            end
-            
-            
-        end
         
         yTick = [1 yTick];
         yTickLabel = {'?' yTickLabel{:}};
+        
+        if strcmp(cfg.displayEvents,'yes')
+            
+            ev_offset = 1.5;
+            ev_step = 0.3;
+            ev_halfhight = 0.05;
+            
+%             if isfield(cfg,'begin_end_events2')
+%                 yTick = [ev2_offset yTick];
+%                 yTickLabel = {'Ev2' yTickLabel{:}};
+%                 for channelIndex = 1:length(chanindx)
+%                     curr_begins_ends = cfg.begin_end_events2{chanindx(channelIndex)};
+%                     if strcmp(cfg.viewmode, 'component')
+%                         color = 'k';
+%                     else
+%                         %color = opt.chancolors(chanindx(i),:);
+%                         color = opt.chancolors(chanindx(channelIndex),:);
+%                     end
+%                     
+%                     temp_x = (curr_begins_ends(:,1)/opt.fsample)/60;
+%                     temp_y = repmat(ev2_offset,size(curr_begins_ends,1),1);
+%                     plot(axh,[temp_x temp_x]',[temp_y-0.04 temp_y+0.04]','Color',color)
+%                     %scatter(axh,(curr_begins_ends(:,1)/opt.fsample)/60,repmat(ev1_offset,1,size(curr_begins_ends,1)),'MarkerEdgeColor',color)
+%                 end
+%             end
+            
+
+            if isfield(cfg,'times_ind_per_channel_evtypes')
+                        ylim(axh,[cfg.plot_MA_offset (cfg.nEventTypes-1)*ev_step+ev_offset+ev_halfhight*2])
+
+                for iEventType = 1:cfg.nEventTypes
+                	ev_y = (iEventType-1)*ev_step+ev_offset;
+                    yTick = [ev_y yTick];
+                    yTickLabel = {cfg.EventTypes{iEventType} yTickLabel{:}};
+                
+                    for ich = 1:length(chanindx)
+                        curr_begins_ends = cfg.begin_end_per_channel_evtypes{iEventType,chanindx(ich)};
+                        if ~isempty(curr_begins_ends)
+                            if strcmp(cfg.viewmode, 'component')
+                                color = 'k';
+                            else
+                                %color = opt.chancolors(chanindx(i),:);
+                                color = opt.chancolors(chanindx(ich),:);
+                            end
+
+                            temp_x = (curr_begins_ends(:,1)/opt.fsample)/60;
+                            temp_y = repmat(ev_y,size(curr_begins_ends,1),1);
+                            plot(axh,[temp_x temp_x]',[temp_y-ev_halfhight temp_y+ev_halfhight]','Color',color)
+                            %scatter(axh,(curr_begins_ends(:,1)/opt.fsample)/60,repmat(ev1_offset,1,size(curr_begins_ends,1)),'MarkerEdgeColor',color)
+                        end
+                    end
+                end
+            end
+            
+        end
+        
+
         
         set(axh, 'yTick', flip(yTick));
         set(axh, 'yTickLabel', flip(yTickLabel));
@@ -4309,6 +4426,34 @@ opt.vlim = cfg.ylim;
 % FW begin
 %hold all
 if strcmp(cfg.doSleepScoring,'yes')
+    
+    
+    opt.nEpochsPerBlock = cfg.blocksize/cfg.epochlength;
+    opt.nEpochInBlock = mod(opt.curr_epoch*cfg.epochlength,cfg.blocksize)/cfg.epochlength;
+    if opt.nEpochInBlock == 0
+        opt.nEpochInBlock = opt.nEpochsPerBlock;
+    end
+    
+    switch opt.nEpochsPerBlock
+        case 1
+            cfg.drawgrid_seconds = [0.5 1 3];
+            cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
+            cfg.drawgrid_LineStyle = {':' '-' '-'};
+        case 2
+            cfg.drawgrid_seconds = [1 3 30];
+            cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
+            cfg.drawgrid_LineStyle = {':' '-' '-'};
+        case 3
+            cfg.drawgrid_seconds = [3 30];
+            cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.5 0 0]};
+            cfg.drawgrid_LineStyle = {'-' '-'};
+        otherwise
+            cfg.drawgrid_seconds = [30];
+            cfg.drawgrid_colors = {[0.5 0 0]};
+            cfg.drawgrid_LineStyle = {'-'};
+    end
+    
+ 
     
     delete(findobj(h,'tag', 'mark_spind'));
     delete(findobj(h,'tag', 'mark_slowosci'));
@@ -4807,10 +4952,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                         cfg.f_tfr_gca = gca;
                         %cfg.hhypfig = gcf;
                     end
-                    
-                    
-                    
-                    
+
                     
                     data_tfr.powspctrm(isnan(data_tfr.powspctrm(:))) = 10E-12;
                     
@@ -5267,11 +5409,15 @@ if strcmp(cfg.doSleepScoring,'yes')
         
         %temp_curr_channels_displayed = numel(opt.laytime.label);
         
-        h_curr_stage = ft_plot_text(tim(floor(end/2)), 0, opt.curr_stage, 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg , 'FontSize', 0.15, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
+        for iNEpochsPerBlock = 1:opt.nEpochsPerBlock
+            if iNEpochsPerBlock == opt.nEpochInBlock
+        h_curr_stage = ft_plot_text(tim(floor(((end/opt.nEpochsPerBlock)/2)+(iNEpochsPerBlock-1)*(end/opt.nEpochsPerBlock))), 0, opt.curr_stage, 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg , 'FontSize', 0.15, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
             'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none', 'axis', temp_ax);
         temp_ax = h_curr_stage;
+            end
+        end
         
-        
+        if opt.nEpochsPerBlock == 1
         temp_iChanDisplayed = iChanDisplayed;%iChanDisplayed-1;
         if temp_iChanDisplayed < 1
             temp_iChanDisplayed = 1;
@@ -5288,10 +5434,7 @@ if strcmp(cfg.doSleepScoring,'yes')
         h_prev_stage = ft_plot_text(tim(floor(end/2)), 0, [temp_prev_stages '                     ' temp_next_stages], 'tag', 'curr_stage', 'Color', cfg.color_text_on_bg, 'FontSize', 0.05, 'FontUnits',  'normalized', 'FontName', 'FixedWidth', ...
             'hpos', opt.laytime.pos(temp_iChanDisplayed,1), 'vpos', opt.laytime.pos(temp_iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(temp_iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none', 'axis', temp_ax);
         temp_ax = h_prev_stage;
-        
-        
-        
-        
+        end
         
     end
     end
@@ -5404,73 +5547,131 @@ end % for each of the artifact channels
 
 %FW begin
 
-delete(findobj(h,'tag', 'event_begin_end2'));
-delete(findobj(h,'tag', 'event_begin_end1'));
+%delete(findobj(h,'tag', 'event_begin_end2'));
+delete(findobj(h,'tag', 'event_begin_end'));
+delete(findobj(h,'type','legend'));
 
 if strcmp(cfg.displayEvents,'yes')
-    if isfield(cfg,'begin_end_events')
-        
-        for channelIndex = 1:length(chanindx)
-            tmp = diff([0 cfg.times_ind_per_channel{chanindx(channelIndex)}(begsample:endsample) 0]);
-            evbeg = find(tmp==+1);
-            evend = find(tmp==-1) - 1;
-            
-            for k=1:numel(evbeg)
-                h_event_begin_end1 = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color, 'edgecolor', 'none', 'tag', 'event_begin_end1',  ...
-                    'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
-            end
-            
-            evbegend_ind = cfg.begin_end_events{chanindx(channelIndex)}(((cfg.begin_end_events{chanindx(channelIndex)}(:,1) >= begsample) & (cfg.begin_end_events{chanindx(channelIndex)}(:,1) <= endsample)),:);
-            evbeg_ind = evbegend_ind(:,1);
-            evend_ind = floor(evbeg_ind+ 0.1*(evbegend_ind(:,2) - evbeg_ind));
-            
-            evend_ind((evend_ind-evbeg_ind) < 1) = evend_ind((evend_ind-evbeg_ind) < 1)+1;
-            evend_ind(evend_ind > endsample) = endsample;
-            
-            evbeg_ind = evbeg_ind-(begsample-1);
-            evend_ind = evend_ind-(begsample-1);
-            
-            for k=1:numel(evbeg_ind)
-                h_event_begin_end1_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color, 'edgecolor', 'none', 'tag', 'event_begin_end1',  ...
-                    'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
-                
-            end
-            
-        end
-    end
     
-    if isfield(cfg,'begin_end_events2')
-        
-        for channelIndex = 1:length(chanindx)
-            tmp = diff([0 cfg.times_ind_per_channel2{chanindx(channelIndex)}(begsample:endsample) 0]);
-            evbeg = find(tmp==+1);
-            evend = find(tmp==-1) - 1;
-            
-            for k=1:numel(evbeg)
-                h_event_begin_end2 = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
-                    'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
+    if isfield(cfg,'times_ind_per_channel_evtypes')
+        if ft_platform_supports('matlabversion','2017a',Inf)
+            set(h,'DefaultLegendAutoUpdate','off');
+        end
+        switch cfg.eventhighlighting
+                        case {'box','snake+box'}
+        for iEventTypes = 1:cfg.nEventTypes
+            eventcolor = cfg.event_begin_end_color(iEventTypes, :);
+            eventdarkercolor = brighten(eventcolor, -0.2);
+            for iChannel = 1:length(chanindx)
+                if isempty(cfg.times_ind_per_channel_evtypes{iEventTypes, chanindx(iChannel)});
+                    continue
+                end
+                tmp = diff([0 cfg.times_ind_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(begsample:endsample) 0]);
+                evbeg = find(tmp==+1);
+                evend = find(tmp==-1) - 1;
+                % plot big rectangle
+                for k=1:numel(evbeg)
+                    %the time course of channels
+                    switch cfg.eventhighlighting
+                        case {'box','snake+box'}
+                            ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+                            'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.width, 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', [-1 1]);
+                    end
+                    switch cfg.eventhighlighting
+                        case {'snake','snake+box'}
+                    ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', eventdarkercolor, 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*10,...
+                        'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.laytime.width(iChannel), 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                    end
+                end
+                switch cfg.eventhighlighting
+                        case {'box','snake+box'}
+                % plot little indicator rectangle on top
+                evbegend_ind = cfg.begin_end_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(((cfg.begin_end_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(:,1) >= begsample) & (cfg.begin_end_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(:,1) <= endsample)),:);
+                evbeg_ind = evbegend_ind(:,1);
+                evend_ind = floor(evbeg_ind+ 0.1*(evbegend_ind(:,2) - evbeg_ind));
                 
-            end
-            
-            evbegend_ind = cfg.begin_end_events2{chanindx(channelIndex)}(((cfg.begin_end_events2{chanindx(channelIndex)}(:,1) >= begsample) & (cfg.begin_end_events2{chanindx(channelIndex)}(:,1) <= endsample)),:);
-            evbeg_ind = evbegend_ind(:,1);
-            evend_ind = floor(evbeg_ind+ 0.1*(evbegend_ind(:,2) - evbeg_ind));
-            
-            evend_ind((evend_ind-evbeg_ind) < 1) = evend_ind((evend_ind-evbeg_ind) < 1)+1;
-            evend_ind(evend_ind > endsample) = endsample;
-            
-            evbeg_ind = evbeg_ind-(begsample-1);
-            evend_ind = evend_ind-(begsample-1);
-            
-            for k=1:numel(evbeg_ind)
-                h_event_begin_end2_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
-                    'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
+                evend_ind((evend_ind-evbeg_ind) < 1) = evend_ind((evend_ind-evbeg_ind) < 1)+1;
+                evend_ind(evend_ind > endsample) = endsample;
                 
+                evbeg_ind = evbeg_ind-(begsample-1);
+                evend_ind = evend_ind-(begsample-1);
+                
+                for k=1:numel(evbeg_ind)
+                    ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', eventdarkercolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+                        'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.width, 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', [-1 1]);
+                    
+                end
+                end
             end
-            
+        end
         end
     end
 end
+
+
+%     if isfield(cfg,'begin_end_events')
+%         
+%         for ich = 1:length(chanindx)
+%             tmp = diff([0 cfg.times_ind_per_channel{chanindx(ich)}(begsample:endsample) 0]);
+%             evbeg = find(tmp==+1);
+%             evend = find(tmp==-1) - 1;
+%             
+%             for k=1:numel(evbeg)
+%                 h_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color(iEventType,:), 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+%                     'hpos', opt.laytime.pos(ich,1), 'vpos', opt.laytime.pos(ich,2), 'width', opt.width, 'height', opt.laytime.height(ich), 'hlim', opt.hlim, 'vlim', [-1 1]);
+%             end
+%             
+%             evbegend_ind = cfg.begin_end_events{chanindx(ich)}(((cfg.begin_end_events{chanindx(ich)}(:,1) >= begsample) & (cfg.begin_end_events{chanindx(ich)}(:,1) <= endsample)),:);
+%             evbeg_ind = evbegend_ind(:,1);
+%             evend_ind = floor(evbeg_ind+ 0.1*(evbegend_ind(:,2) - evbeg_ind));
+%             
+%             evend_ind((evend_ind-evbeg_ind) < 1) = evend_ind((evend_ind-evbeg_ind) < 1)+1;
+%             evend_ind(evend_ind > endsample) = endsample;
+%             
+%             evbeg_ind = evbeg_ind-(begsample-1);
+%             evend_ind = evend_ind-(begsample-1);
+%             
+%             for k=1:numel(evbeg_ind)
+%                 h_event_begin_end_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color(iEventType,:), 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+%                     'hpos', opt.laytime.pos(ich,1), 'vpos', opt.laytime.pos(ich,2), 'width', opt.width, 'height', opt.laytime.height(ich), 'hlim', opt.hlim, 'vlim', [-1 1]);
+%                 
+%             end
+%             
+%         end
+%     end
+    
+%     if isfield(cfg,'begin_end_events2')
+%         
+%         for channelIndex = 1:length(chanindx)
+%             tmp = diff([0 cfg.times_ind_per_channel2{chanindx(channelIndex)}(begsample:endsample) 0]);
+%             evbeg = find(tmp==+1);
+%             evend = find(tmp==-1) - 1;
+%             
+%             for k=1:numel(evbeg)
+%                 h_event_begin_end2 = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
+%                     'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
+%                 
+%             end
+%             
+%             evbegend_ind = cfg.begin_end_events2{chanindx(channelIndex)}(((cfg.begin_end_events2{chanindx(channelIndex)}(:,1) >= begsample) & (cfg.begin_end_events2{chanindx(channelIndex)}(:,1) <= endsample)),:);
+%             evbeg_ind = evbegend_ind(:,1);
+%             evend_ind = floor(evbeg_ind+ 0.1*(evbegend_ind(:,2) - evbeg_ind));
+%             
+%             evend_ind((evend_ind-evbeg_ind) < 1) = evend_ind((evend_ind-evbeg_ind) < 1)+1;
+%             evend_ind(evend_ind > endsample) = endsample;
+%             
+%             evbeg_ind = evbeg_ind-(begsample-1);
+%             evend_ind = evend_ind-(begsample-1);
+%             
+%             for k=1:numel(evbeg_ind)
+%                 h_event_begin_end2_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
+%                     'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
+%                 
+%             end
+%             
+%         end
+%     end
+% end
 % begin_end_events_per_channel = cfg.begin_end_events;
 % for channelIndex = 1:length(chanindx)
 %     curr_begins_ends = begin_end_events_per_channel{chanindx(channelIndex)};
@@ -5605,7 +5806,7 @@ delete(findobj(h,'tag', 'ecg_HR_peaks_markers'));
 
 if strcmp(cfg.viewmode, 'butterfly')
     set(gca,'ColorOrder',opt.chancolors(chanindx,:)) % plot vector does not clear axis, therefore this is possible
-    ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', ...
+    ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
         'hpos', opt.laytime.pos(1,1), 'vpos', opt.laytime.pos(1,2), 'width', opt.laytime.width(1), 'height', opt.laytime.height(1), 'hlim', opt.hlim, 'vlim', opt.vlim);
     
     
@@ -5696,7 +5897,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
             end
             
             %the time course of channels
-            ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', color, 'tag', 'timecourse', ...
+            ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', color, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
             
             
@@ -5937,6 +6138,27 @@ end
 drawnow expose
 %drawnow update
 %drawnow expose update
+
+
+delete(findobj(h,'type','legend'));
+
+if strcmp(cfg.displayEvents,'yes')
+if isfield(cfg,'times_ind_per_channel_evtypes')
+    if ft_platform_supports('matlabversion', '2017a', Inf)
+        set(h,'DefaultLegendAutoUpdate','off');
+    end
+    hold on;
+    lines_handle_vector = [];
+    evtypes_name = {};
+    for iEventTypes = 1:cfg.nEventTypes
+        line_handle = plot([NaN,NaN], 'color', cfg.event_begin_end_color(iEventTypes, :));
+        lines_handle_vector(iEventTypes) = line_handle;
+    end
+    hold off;
+    legend(lines_handle_vector, cfg.EventTypes);
+end
+end
+
 
 
 
@@ -6685,15 +6907,15 @@ if ishandle(dlg)
         cfg.score_channel_ecg_number = find(curr_chanIndexOrder == chanNum_focusECG,1,'first');
     end
     
-    if isfield(cfg,'begin_end_events')
-        cfg.times_ind_per_channel = cfg.times_ind_per_channel(curr_chanIndexOrder);
-        cfg.begin_end_events = cfg.begin_end_events(curr_chanIndexOrder);
-    end
+%     if isfield(cfg,'begin_end_events')
+%         cfg.times_ind_per_channel = cfg.times_ind_per_channel(curr_chanIndexOrder);
+%         cfg.begin_end_events = cfg.begin_end_events(curr_chanIndexOrder);
+%     end
     
-    if isfield(cfg,'begin_end_events2')
-        cfg.times_ind_per_channel2 = cfg.times_ind_per_channel2(curr_chanIndexOrder);
-        cfg.begin_end_events2 = cfg.begin_end_events2(curr_chanIndexOrder);
-    end
+%     if isfield(cfg,'begin_end_events2')
+%         cfg.times_ind_per_channel2 = cfg.times_ind_per_channel2(curr_chanIndexOrder);
+%         cfg.begin_end_events2 = cfg.begin_end_events2(curr_chanIndexOrder);
+%     end
     
     index_selected_channels = [];
     for iCh = 1:numel(channels)

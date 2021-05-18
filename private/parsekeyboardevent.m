@@ -15,7 +15,7 @@ if isunix()
   end
 elseif ispc()
   if strfind(eventdata.Key, 'numpad')
-    key = eventdata.Character;d
+    key = eventdata.Character;
   end
 end
 

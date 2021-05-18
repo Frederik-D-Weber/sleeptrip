@@ -1,4 +1,4 @@
-function samples = st_times2samples(data, times_seconds, rmnanrows)
+function [samples ind_non_matching] = st_times2samples(data, times_seconds, rmnanrows)
 
 % ST_TIMES2SAMPLES converts time values from seconds to the samples 
 % that match the given data structure time. The data needs to be a
@@ -7,6 +7,8 @@ function samples = st_times2samples(data, times_seconds, rmnanrows)
 % Use as
 %   samples = st_convertsamples(data, times_seconds)
 %   samples = st_convertsamples(data, times_seconds, 'rmnanrows')
+%   [samples ind_non_matching] = st_convertsamples(data, times_seconds)
+%   [samples ind_non_matching] = st_convertsamples(data, times_seconds, 'rmnanrows')
 %
 %
 %
@@ -57,11 +59,12 @@ end
 
 samples = interp1(tsref, 1:numel(tsref), times_seconds, 'nearest');
 
-no_match_count = sum(sum(isnan(samples)));
+ind_non_matching = sum(isnan(samples),2) ~= 0;
+no_match_count = sum(ind_non_matching);
 if no_match_count>0
     ft_warning('%d times_seconds could not be matched.\n please check if they fall within the data boundary.',no_match_count)
     if (nargin>2) && strcmp(rmnanrows,'rmnanrows')
-        samples = samples(sum(isnan(samples),2)==0,:);
+        samples = samples(~ind_non_matching,:);
     end
 end
 
