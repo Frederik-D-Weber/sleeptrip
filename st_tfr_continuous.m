@@ -249,6 +249,9 @@ switch cfg.approach
         freq = [];
         freq.label = data.label;
         freq.dimord    = 'chan_freq_time'; % it used to be 'rpt_chan_freq'
+        freq.freq = [];
+        freq.powspctrm = [];
+        freq.time = [];
         for iCh = 1:nChannel
             %nfft_points = fix(diff(freq_range)/0.05);
             switch cfg.taper
@@ -288,7 +291,9 @@ switch cfg.approach
         end
         cfg_sd = [];
         cfg_sd.frequency = [min(cfg.foi) max(cfg.foi)];
-        freq = ft_selectdata(cfg_sd,freq);
+        if ~isempty(freq.powspctrm)
+            freq = ft_selectdata(cfg_sd,freq);
+        end
         ft_progress('close');
     otherwise
         ft_error('cfg.approach = ''%s'' is unknown',cfg.approach)

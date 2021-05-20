@@ -434,7 +434,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-
 In Addition this uses the rdir functions from
 
 Copyright (c) 2014, Thomas Vanaret
@@ -464,3 +463,29 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
+
+
+In Addition this uses code of fooof implementation in matalb from Brainstorm under GPL v3 licencse
+% with original authors: Luc Wilson, Francois Tadel, Martin Cousineau (bst_prctile), 2020 
+% https://neuroimage.usc.edu/brainstorm
+% https://github.com/brainstorm-tools/brainstorm3/blob/945b287f196e1610bc2c0ce97ab51e2bdf3b8df8/toolbox/process/functions/process_fooof.m
+% 
+% Copyright (c)2000-2020 University of Southern California & McGill University
+% This software is distributed under the terms of the GNU General Public License
+% as published by the Free Software Foundation. Further details on the GPLv3
+% license can be found at http://www.gnu.org/copyleft/gpl.html.
+% 
+% FOR RESEARCH PURPOSES ONLY. THE SOFTWARE IS PROVIDED "AS IS," AND THE
+% UNIVERSITY OF SOUTHERN CALIFORNIA AND ITS COLLABORATORS DO NOT MAKE ANY
+% WARRANTY, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+% MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, NOR DO THEY ASSUME ANY
+% LIABILITY OR RESPONSIBILITY FOR THE USE OF THIS SOFTWARE.
+%
+% For more information see https://github.com/brainstorm-tools/brainstorm3/blob/945b287f196e1610bc2c0ce97ab51e2bdf3b8df8/LICENSE
+% =============================================================================@
+%  REFERENCE original algorithm:
+%    Donoghue T, Haller M, Peterson E, Varma P, Sebastian P, Gao R, Noto T,
+%    Lara AH, Wallis JD, Knight RT, Shestyuk A, Voytek B. Parameterizing 
+%    neural power spectra into periodic and aperiodic components. 
+%    Nature Neuroscience
+% 

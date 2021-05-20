@@ -14,6 +14,10 @@ function [res_freqpeaks] = st_freqpeak(cfg, res)
 %                      a wider band of 2 frequency steps is required to
 %                      perform the analysis, e.g. [5.6 18.4] for a resolution
 %                      of 0.2 Hz
+%   cfg.fooof       = if the signal should be fooofed either 'no',
+%                     'fooofed' or 'fooofed_periodic'  'fooofed_periodic_fitted' 
+%                     SEE ST_FOOOF for
+%                     details on other parameters passes on to it (default = 'no')
 %   cfg.peaknum     = number of expected peaks to search for either 1 or 2 (default = 2)
 %   cfg.smooth      = smoothing window of moving symmetric mean of the
 %                      size specified here in Hz to make the power spectra
@@ -63,6 +67,14 @@ mtic = memtic;
 functionname = getfunctionname();
 fprintf([functionname ' function started\n']);
 
+%%% FOOOF %%%
+cfg.max_peaks = ft_getopt(cfg, 'max_peaks', cfg.peaknum + 1);
+cfg.fooof     = ft_getopt(cfg, 'fooof', 'no');
+switch cfg.fooof
+        case {'fooofed' 'fooofed_periodic' 'fooofed_periodic_fitted'}
+        ft_warning('FOOOF: cfg.powlawnorm is ignored')
+end
+
 cfg.channel       = ft_getopt(cfg, 'channel', 'all');
 cfg.foilim        = ft_getopt(cfg, 'foilim', [6 18]);
 cfg.peaknum       = ft_getopt(cfg, 'peaknum', 2);
@@ -72,6 +84,8 @@ cfg.powlawnorm    = ft_getopt(cfg, 'powlawnorm', 'no');
 cfg.pownorm       = ft_getopt(cfg, 'pownorm', 'no');
 cfg.prepeak       = ft_getopt(cfg, 'prepeak', 1);
 cfg.postpeak      = ft_getopt(cfg, 'postpeak', 1);
+
+
 
 %cfg.title = '' 
 overwritetitle = false;
@@ -147,6 +161,7 @@ for iResnum = 1:numel(resnums)
     
     pPower = mean(pPowerChan,1);
     
+    
     tempWD = round(cfg.smooth/resolution);
     if tempWD > 1
         if mod(tempWD,2) == 0
@@ -171,11 +186,15 @@ for iResnum = 1:numel(resnums)
         pPower = pPower';
     end
     
-    if istrue(cfg.powlawnorm)
-        pPower = pPower .* pFreq;
-        for iChannel = 1:length(pPowerChanLabels)
-        	pPowerChan(iChannel,:) = pPowerChan(iChannel,:) .* pFreq';
-        end
+    switch cfg.fooof
+        case {'fooofed' 'fooofed_periodic' 'fooofed_periodic_fitted'}
+        otherwise
+            if istrue(cfg.powlawnorm)
+                pPower = pPower .* pFreq;
+                for iChannel = 1:length(pPowerChanLabels)
+                    pPowerChan(iChannel,:) = pPowerChan(iChannel,:) .* pFreq';
+                end
+            end
     end
     
     if istrue(cfg.pownorm)
@@ -185,8 +204,31 @@ for iResnum = 1:numel(resnums)
         end
     end
     
-    [candSignalPowerPeaks, candSignalPowerPeaksSamples] = findpeaks(pPower,'MINPEAKHEIGHT',0,'MINPEAKDISTANCE',ceil(cfg.minpeakdist/resolution),'SORTSTR','descend');
+    switch cfg.fooof
+        case {'fooofed' 'fooofed_periodic' 'fooofed_periodic_fitted'}
+            for iChannel = 1:length(pPowerChanLabels)
+                [tempow, fooof, freqs] = st_fooof(cfg, pPowerChan(iChannel,:), pFreq);
+                pPowerChan(iChannel,:) = tempow;
+            end
+            [pPower, fooof, freqs, ePeaks, eAperiodics, eStats] = st_fooof(cfg, pPower, pFreq);
+            
+%             [peak_amplitude_sorted iSorted] = sort([ePeaks.amplitude],'descend');
+%             center_frequency_sorted = [ePeaks.center_frequency];
+%             center_frequency_sorted = center_frequency_sorted(iSorted);
+%             
+%             candSignalFreqPeaks = center_frequency_sorted;
+%             candSignalPowerPeaks = [];
+%             for iPeak = 1:numel(candSignalFreqPeaks)
+%                 ind_temp_power = find(candSignalFreqPeaks(iPeak) <= pFreq,1,'first');
+%                 if isempty(ind_temp_power)
+%                     ind_temp_power = 1;
+%                 end
+%                 candSignalPowerPeaks = [candSignalPowerPeaks pPower(ind_temp_power)];
+%             end            
+            
+    end
     
+    [candSignalPowerPeaks, candSignalPowerPeaksSamples] = findpeaks(pPower,'MINPEAKHEIGHT',0,'MINPEAKDISTANCE',ceil(cfg.minpeakdist/resolution),'SORTSTR','descend');
     
     tempValidSamples = (candSignalPowerPeaksSamples >= MinFreqStepPadding) & (candSignalPowerPeaksSamples <= (length(pFreq) - MinFreqStepPadding));
     if length(tempValidSamples) < 1
@@ -197,6 +239,7 @@ for iResnum = 1:numel(resnums)
     end
     candSignalPowerPeaks = candSignalPowerPeaks(tempValidSamples);
     candSignalFreqPeaks = pFreq(candSignalPowerPeaksSamples);
+    
     
 %     if (cfg.peaknum ~= length(candSignalFreqPeaks))
 %         tempiDataString = [tempiDataString ' Peak(s) not trusted!'];
@@ -231,8 +274,8 @@ for iResnum = 1:numel(resnums)
     %tempiDataString = sprintf('%s\n%s',tempiDataString);
 
     
-    par_pFreq{resnum} = pFreq;
-    par_pPower{resnum} = pPower;
+    par_pFreq{resnum} = pFreq(:);
+    par_pPower{resnum} = pPower(:);
     par_pPowerChan{resnum} = pPowerChan;
     par_pPowerChanLabels{resnum} = pPowerChanLabels;
     par_candSignalFreqPeaks{resnum} = candSignalFreqPeaks(1:cfg.peaknum);

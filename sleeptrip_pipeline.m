@@ -487,6 +487,23 @@ set(gca, 'box', 'off')
 xlabel(['Time [' timeunit ']']);
 ylabel('Frequency [Hz]');
 
+
+
+%%% fooof it
+freq_continous_pos = freq_continous;
+minpowerval = + min(freq_continous_pos.powspctrm(:));
+if minpowerval < 0
+freq_continous_pos.powspctrm = freq_continous_pos.powspctrm + abs(minpowerval) + 1;
+end
+cfg = [];
+freq_continous_fooofed = st_fooof(cfg,freq_continous_pos);
+figure
+cfg = [];
+cfg.zlim           = [-4 1];
+cfg.colormap       = jet(256); 
+ft_singleplotTFR(cfg, freq_continous_fooofed);
+
+
 %practice: compare the results of cfg.approach = 'mtmfft_segments' with
 %cfg.approach = 'spectrogram', the latter computation is about 10 times
 %faster as it uses matlab internal functions. Also play around with the
@@ -568,10 +585,13 @@ cfg.quick = 'yes'; % if you want to do quick and dirty determination
 % cfg.windowproportion = 1/scoring.epochlength;
 % cfg.segmentlength = scoring.epochlength;
 % cfg.segmentoverlap = 0;
+cfg.fooof = 'yes'; % this will also put the fooofed signals in the res_power_bin
 [res_power_bin, res_power_band] = st_power(cfg, data);
 
 %let us take a look
+res_power_bin.table
 res_power_band.table
+
 
 %export the data
 cfg = [];
@@ -589,14 +609,17 @@ filelist_res_power = st_write_res(cfg, res_power_bin, res_power_band); % write m
 %which channel would you like to select, we use the first eeg channel
 indChannel = strcmp(res_power_bin.table.channel,{subject.eegchannels{1}});
 %indFreq = (res_power_bins.table.freq > 8) & (res_power_bins.table.freq < 20);
-power_plot = figure;
 freq_x     = res_power_bin.table.freq(indChannel);
 %freq_x     = res_power_bins.table.freq(indChannel & indFreq);
 power_y    = res_power_bin.table.mean_powerDensity_over_segments(indChannel);
+%power_y    = res_power_bin.table.mean_powerDensity_over_segments_fooofed(indChannel);
+%power_y    = res_power_bin.table.mean_powerDensity_over_segments_fooofed_periodic(indChannel);
+%power_y    = res_power_bin.table.mean_powerDensity_over_segments_fooofed_periodic_fit(indChannel);
+%power_y    = res_power_bin.table.mean_powerDensity_over_segments_fooofed_aperiodic_fit(indChannel);
 %power_y    = res_power_bins.table.mean_powerDensity_over_segments(indChannel & indFreq);
 % scale the power values on a logarithmic scale, in dB
 % to avoid negative values add 1 to all values to have them >= 1;
-figure;
+power_plot = figure;
 %power_y = sqrt(power_y)
 plot(freq_x,power_y) % raw
 figure;
@@ -604,6 +627,19 @@ power_y_logscale = 10*log10(power_y+1);
 plot(freq_x,power_y_logscale) % db scaled
 figure;
 plot(freq_x,power_y_logscale.*freq_x) % db scaled, 1/freq corrected
+
+cfg = [];
+% cfg.sort_type = 'band'; either 'band' or 'param'
+[power, fooof, freqs, ePeaks, eAperiodics, eStats] = st_fooof(cfg, power_y, freq_x);
+freq_x = freqs(:);
+figure
+hold on
+plot(freq_x,10*log10(power_y)) % original db scaled
+plot(freq_x,10*log10(fooof.fooofed_spectrum)) % standard foofed original db scaled
+plot(freq_x,10*log10(fooof.ap_fit)) % aperioidc part db scaled
+plot(freq_x,10*log10(fooof.peak_fit)) % periodic fitted part db scaled
+plot(freq_x,10*log10(1+power_y'-fooof.ap_fit)) % periodic part db scaled
+hold off
 
 % practice: Try different scaling and normalization, how would this change
 % the results? Can you plot muliple channels at the same time.
@@ -784,8 +820,9 @@ fh = ft_singleplotTFR(cfg,event_freq_ch2);
 %% determine the spindle(s) frequency peak(s) from the power spectrum
 
 cfg = [];
-cfg.peaknum = 1; % either 1 or 2 (default)
-%cfg.powlawnorm = 'yes';
+cfg.peaknum = 2; % either 1 or 2 (default)
+cfg.powlawnorm = 'yes';
+cfg.fooof = 'fooofed_periodic'; % 'no' 'fooofed' 'fooofed_periodic' 'fooofed_periodic_fitted'
 [res_freqpeaks] = st_freqpeak(cfg,res_power_bin);
 
 res_freqpeaks.table
