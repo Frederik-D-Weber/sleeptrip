@@ -1,8 +1,12 @@
 function [rgbcolors labels] = st_epoch_colors(epochs,varargin)
 
-colorscheme = 'bright'; % default
+global st_default
+
+colorscheme = st_default.colorscheme; % default
 if nargin == 2
-    colorscheme = varargin{1};
+    if ~strcmp(varargin{1},'default')
+        colorscheme = varargin{1};
+    end
 end
 if ~iscell(epochs)
     epochs = {epochs};

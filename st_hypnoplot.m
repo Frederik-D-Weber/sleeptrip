@@ -19,8 +19,9 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %                                or 'deepcolorblocks' plots like colorbocks but the deeper non-REM sleep states are taller blocks 
 %                               (default = 'classic')
 %   cfg.colorscheme            = srting, indicating the color schemes:
-%                                       'bright' or 'dark' or 'restless'
-%                                       (default = 'dark')
+%                                'bright' or 'dark' or 'restless' or 'default'
+%                                 (default = 'default') see ST_EPOCH_COLORS
+%                                 for details
 %   cfg.classiccolor           = a 1x3 color vector with 3 RGB values from
 %                                0 to 1 color for the color of the line of
 %                                the cfg.plottype = 'classic' 
@@ -32,12 +33,19 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotlegend             = string, if the legend should be plotted either 'yes' or 'no' (default = 'yes')
 %   cfg.plotsleeponset         = string, plot an indicator of sleep onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotsleepoffset        = string, plot an indicator of sleep offset either 'yes' or 'no' (default = 'yes')
+%   cfg.plotsleepopon          = string, plot an indicator of sleep opportunity onset offset either 'yes' or 'no' (default = 'yes')
+%   cfg.plotsleepopoff         = string, plot an indicator of sleep opportunity off onset either 'yes' or 'no' (default = 'yes')
+%   cfg.plotlightsoff          = string, plot an indicator of lights off either 'yes' or 'no' (default = 'yes')
+%   cfg.plotlightson           = string, plot an indicator of lights on either 'yes' or 'no' (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
 %   cfg.plotexcluded           = string, plot excluded epochs 'yes' or 'no' (default = 'yes')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
 %                                'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
 %                                'N2' or 'N3' or 'SWS' or 'S4' or 'R',
 %                                see ST_SLEEPONSET for details (default = 'N1_XR')
+%   cfg.forcebeforesleepopon = srting, if possible, force sleep onset before sleep
+%                                opportunity (or lights off moment if former is not present) 
+%                                either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
 %   cfg.title                  = string, title of the figure to export the figure
 %   cfg.timeticksdiff          = scalar, time difference in minutes the ticks are places from each other (default = 30);
 %   cfg.timemin                = scalar, minimal time in minutes the ticks 
@@ -195,22 +203,25 @@ cfg.plotlegend              = ft_getopt(cfg, 'plotlegend', 'yes');
 cfg.title                   = ft_getopt(cfg, 'title', '');
 cfg.timeticksdiff           = ft_getopt(cfg, 'timeticksdiff', 30);
 cfg.timemin                 = ft_getopt(cfg, 'timemin', 0);
+cfg.timerange               = ft_getopt(cfg, 'timerange', [], true);
+cfg.timeunitdisplay         = ft_getopt(cfg, 'timeunitdisplay', 'minutes');
 cfg.considerdataoffset      = ft_getopt(cfg, 'considerdataoffset', 'yes');
 cfg.plotsleeponset          = ft_getopt(cfg, 'plotsleeponset', 'yes');
 cfg.plotsleepoffset         = ft_getopt(cfg, 'plotsleepoffset', 'yes');
+cfg.plotsleepopon           = ft_getopt(cfg, 'plotsleepopon', 'yes');
+cfg.plotsleepopoff          = ft_getopt(cfg, 'plotsleepopoff', 'yes');
 cfg.plotlightsoff           = ft_getopt(cfg, 'plotlightsoff', 'yes');
 cfg.plotlightson            = ft_getopt(cfg, 'plotlightson', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 cfg.classiccolor            = ft_getopt(cfg, 'classiccolor', [0 0 0]);
-cfg.colorscheme             = ft_getopt(cfg, 'colorscheme', 'dark');
+cfg.colorscheme             = ft_getopt(cfg, 'colorscheme', 'default');
 cfg.colorblocksconnect      = ft_getopt(cfg, 'colorblocksconnect', 'no');
 
 cfg.eventvaluerangesrnddec  = ft_getopt(cfg, 'eventrangernddec', 2);
-cfg.timerange               = ft_getopt(cfg, 'timerange', [], true);
 
-cfg.timeunitdisplay         = ft_getopt(cfg, 'timeunitdisplay', 'minutes');
+
 
 cfg.figureoutputformat      = ft_getopt(cfg, 'figureoutputformat', 'png');
 cfg.figureoutputunit        = ft_getopt(cfg, 'figureoutputunit', 'inches');
@@ -227,6 +238,11 @@ cfg.eventheight             = ft_getopt(cfg, 'eventheight', 0.4);
 cfg.eventalign              = ft_getopt(cfg, 'eventalign', 'center');
 cfg.eventminscale           = ft_getopt(cfg, 'eventminscale', 0.1);
 cfg.eventsmoothing          = ft_getopt(cfg, 'eventsmoothing', 'no');
+
+
+if (scoring.epochlength ~= round(scoring.epochlength)) && strcmp(cfg.plottype,'classic')
+    ft_error('non-integer numbers not supported for plotting of cfg.plottype = ''classic''. please round the scoring.epochlength or choose another plottype.')
+end
 
 if strcmp(cfg.considerdataoffset, 'yes')
     offsetseconds = scoring.dataoffset;
@@ -476,6 +492,16 @@ if isfield(scoring, 'lightson')
     hasLightsOn = true;
 end
 
+hasSleepOpportunityOn = false;
+if isfield(scoring, 'sleepopon')
+    hasSleepOpportunityOn = true;
+end
+
+hasSleepOpportunityOff = false;
+if isfield(scoring, 'sleepopoff')
+    hasSleepOpportunityOff = true;
+end
+
 fprintf([functionname ' function initialized\n']);
 
 dummySampleRate = 100;
@@ -647,7 +673,7 @@ switch cfg.plottype
         
         labels = scoring.label;
         
-        [lables_colors_topdown labels_ordered] = st_epoch_colors(labels,cfg.colorscheme);
+        [lables_colors_topdown labels_ordered] = st_epoch_colors(labels, cfg.colorscheme);
         idxUsedLabels = [];
         
         incLabel = 1;
@@ -660,7 +686,7 @@ switch cfg.plottype
         
         
         if istrue(cfg.legacymode)
-            [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs,cfg.colorscheme);
+            [epoch_colors labels_ordered] = st_epoch_colors(scoring.epochs, cfg.colorscheme);
             
             for iEpoch = 1:numel(scoring.epochs)
                 
@@ -836,7 +862,7 @@ if strcmp(cfg.plotlightsoff, 'yes')
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
         end
         hold(axh,'on');
-        scatter(axh,lightsoff_time,onset_y_coord,'filled','>','MarkerFaceColor',[0.1 0.1 0.1])
+        scatter(axh,lightsoff_time,onset_y_coord,'filled','s','MarkerFaceColor',[0.38 0.38 0.38],'MarkerEdgeColor',[0 0 0])
     end
 end
 
@@ -855,7 +881,46 @@ if strcmp(cfg.plotlightson, 'yes')
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
         end
         hold(axh,'on');
-        scatter(axh,lightson_time,onset_y_coord,'filled','>','MarkerFaceColor',[1 1 0])
+        scatter(axh,lightson_time,onset_y_coord-0.25,'filled','s','MarkerFaceColor',[1 1 0],'MarkerEdgeColor',[0 0 0])
+    end
+end
+
+
+if strcmp(cfg.plotsleepopon, 'yes')
+    if hasSleepOpportunityOn
+        sleepopon_time = (scoring.sleepopon/60);%in minutes
+        switch cfg.plottype
+            case 'classic'
+                onset_y_coord_offset = 0.2;
+                onset_y_coord = 0+onset_y_coord_offset;
+            case {'colorblocks', 'deepcolorblocks'}
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+            case 'colorbar'
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+        end
+        hold(axh,'on');
+        scatter(axh,sleepopon_time,onset_y_coord-0.25,'filled','>','MarkerFaceColor',[0.38 0.38 0.38],'MarkerEdgeColor',[0 0 0])
+    end
+end
+
+if strcmp(cfg.plotsleepopoff, 'yes')
+    if hasSleepOpportunityOff
+        sleepopoff_time = (scoring.sleepopoff/60);%in minutes
+        switch cfg.plottype
+            case 'classic'
+                onset_y_coord_offset = 0.2;
+                onset_y_coord = 0+onset_y_coord_offset;
+            case {'colorblocks', 'deepcolorblocks'}
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+            case 'colorbar'
+                onset_y_coord_offset = 0.5;
+                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+        end
+        hold(axh,'on');
+        scatter(axh,sleepopoff_time,onset_y_coord,'filled','<','MarkerFaceColor',[0.83 0.83 0.83],'MarkerEdgeColor',[0 0 0])
     end
 end
 
@@ -874,7 +939,7 @@ if strcmp(cfg.plotsleeponset, 'yes')
                 onset_y_coord =  yTick(1)+onset_y_coord_offset;
         end
         hold(axh,'on');
-        scatter(axh,onset_time,onset_y_coord,'filled','v','MarkerFaceColor',[0 1 0]);
+        scatter(axh,onset_time,onset_y_coord-0.1,'filled','v','MarkerFaceColor',[0 1 0],'MarkerEdgeColor',[0 0 0]);
     end
 end
 
@@ -895,7 +960,7 @@ if strcmp(cfg.plotsleepoffset, 'yes')
                 offset_y_coord =  yTick(1)+onset_y_coord_offset;
         end
         hold(axh,'on');
-        scatter(axh,offset_time,offset_y_coord,'filled','^','MarkerFaceColor',[0 0 1]);
+        scatter(axh,offset_time,offset_y_coord+0.1,'filled','^','MarkerFaceColor',[0 0 1],'MarkerEdgeColor',[0 0 0]);
     end
 end
 
@@ -1121,10 +1186,10 @@ set(axh, 'yTickLabel', flip(yTickLabel));
 set(axh,'TickDir','out');
 xTick = [0:cfg.timeticksdiff:(max([max(x_time),cfg.timemin,eventTimeMaxSeconds/60]))];
 set(axh, 'xTick', xTick);
-timeunit = 'min';
+timeunit = cfg.timeunitdisplay;
 switch cfg.timeunitdisplay
     case {'m' 'min' 'minute' 'minutes'}
-        timeunit = 'min';
+        timeunit = 'minutes';
     case {'s' 'sec' 'seconds'}
         set(axh, 'xTickLabel', arrayfun(@num2str,round(xTick*60),'UniformOutput',false)); 
         timeunit = 's';

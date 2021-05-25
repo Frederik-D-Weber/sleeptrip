@@ -293,6 +293,10 @@ cfg.figureoutputformat = 'pdf';
 
 [figure_handle figure_axis_handle] = st_hypnoplot(cfg, scoring);
 % close(figure_handle) close the figure automatically e.g. after exporting
+scoring.sleepopon = 1000;
+scoring.sleepopoff = 2000;
+scoring.lightson = 2500;
+
 
 %practice: play around with the plotting paramters. Export the file as a
 %pdf or a png, change the figure dimensions and resolution, manipulate the
@@ -490,6 +494,8 @@ ylabel('Frequency [Hz]');
 
 
 %%% fooof it
+% before fooofing check that the values are positive by adding the minimal
+% value to it and a 1 for log(1) = 0 for better scaling
 freq_continous_pos = freq_continous;
 minpowerval = + min(freq_continous_pos.powspctrm(:));
 if minpowerval < 0

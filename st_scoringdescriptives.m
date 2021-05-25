@@ -23,7 +23,9 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
 %                        'N2' or 'N3' or 'SWS' or 'S4' or 'R',
 %                        see ST_SLEEPONSET for details (default = 'N1_XR')
-%
+%   cfg.forcebeforesleepopon = srting, if possible, force sleep onset before sleep
+%                        opportunity (or lights off moment if former is not present) 
+%                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
 %  cfg.cycle           = string or integer value from 1 to Inf. 
 %                        If set, then the descriptives is derived from 
 %                        only this cycle.
@@ -86,12 +88,29 @@ if isfield(scoring, 'lightsoff')
         hasLightsOff = true;
         lightsOffMoment = scoring.lightsoff;
     else
-        ft_warning('The lights off moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as lights off, but sleep onset will be NaN.');
+        ft_warning('The lights off moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
     end
 else
-    ft_warning('The lights off moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as lights off, but sleep onset will be NaN.');
+    ft_warning('The lights off moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
 end
 
+hasSleepOpportunityOn = false;
+sleepOpportunityOnMoment = NaN;
+if isfield(scoring, 'sleepopon')
+    if ~isnan(scoring.sleepopon)
+        hasSleepOpportunityOn = true;
+        sleepOpportunityOnMoment = scoring.sleepopon;
+    else
+        ft_warning('The sleep opportunity onset moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset latency will be NaN.');
+    end
+else
+    if hasLightsOff && ~isnan(lightsOffMoment)
+        sleepOpportunityOnMoment = lightsOffMoment;
+    	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
+    else
+    	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset latency will be NaN.');
+    end
+end
 
 scoring_cycles = {scoring};
 cycle_complete = NaN;
@@ -240,7 +259,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
     hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
     hypnEpochsEndsSamples   = (hypnEpochs * epochLengthSamples)';
     
-    [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage] = st_sleeponset(cfg,scoring);
+    [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage forcedbeforesleepopon] = st_sleeponset(cfg,scoring);
     
     if isempty(onsetepoch)
         onsetnumber = NaN;
@@ -261,7 +280,34 @@ for iScoringCycle = 1:numel(scoring_cycles)
         ft_warning('The lights on moment was not provided in the scoring structure.\n The end of sleep is thus assumed as lights on.');
     end
     
-    sleepOnsetTime = (onsetnumber-1)*scoring.epochlength - lightsOffMoment;
+    
+    hasSleepOpportunityOff = false;
+    sleepOpportunityOffMoment = lastsleepstagenumber*scoring.epochlength;
+    sleepOpportunityOnTosleepOpportunityOff = NaN;
+    if isfield(scoring, 'sleepopoff')
+        if ~isnan(scoring.sleepopoff)
+            hasSleepOpportunityOff = true;
+            sleepOpportunityOffMoment = scoring.sleepopoff;
+            sleepOpportunityOnTosleepOpportunityOff = (sleepOpportunityOffMoment-sleepOpportunityOnMoment);
+        else
+            ft_warning('The sleep opportunity off moment was NaN in the scoring structure.\n The end of sleep is thus assumed as sleep opportunity off.');
+        end
+    else
+        if hasLightsOff && ~isnan(lightsOnMoment)
+            sleepOpportunityOffMoment = lightsOnMoment;
+            ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The lights on moment is used instead');
+        else
+            ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n  The end of sleep is thus assumed as sleep opportunity off.');
+        end
+    end
+    
+
+    sleepOnsetTime = (onsetnumber-1)*scoring.epochlength - sleepOpportunityOnMoment;
+    
+    if forcedbeforesleepopon
+        ft_warning('sleep onset was forced to be before sleep opportunity moment and thus sleep onset latency will be NaN.')
+        sleepOnsetTime = NaN;
+    end
     
     N1ind = find(strcmp(hypnStages(:,1),'N1'));
     N2ind = find(strcmp(hypnStages(:,1),'N2'));
@@ -516,6 +562,16 @@ for iScoringCycle = 1:numel(scoring_cycles)
         LongestWakeTimePeriodAfterSleepOnset/60, ...
         LongestWakeTimePeriodAfterSleepOnset_after_so/60, ...
         lightsOnToLightsOff/60, ...
+        sleepOpportunityOnTosleepOpportunityOff/60, ...
+        forcedbeforesleepopon, ...
+        hasSleepOpportunityOn, ...
+        hasSleepOpportunityOff, ...
+        hasLightsOff, ...
+        hasLightsOn, ...
+        sleepOpportunityOnMoment/60, ...
+        sleepOpportunityOffMoment/60, ...
+        lightsOffMoment/60, ...
+        lightsOnMoment/60, ...
         N1_bouts, ...
         N2_bouts, ...
         N3_bouts, ...
@@ -542,7 +598,18 @@ for iScoringCycle = 1:numel(scoring_cycles)
         ,'N1_without_excluded_perc_of_sleep_period','N2_without_excluded_perc_of_sleep_period','N3_without_excluded_perc_of_sleep_period','S4_without_excluded_perc_of_sleep_period','R_without_excluded_perc_of_sleep_period','Wake_after_sleep_onset_without_excluded_perc_of_sleep_period','Movement_Time_without_excluded_perc_of_sleep_period', 'Artifact_without_excluded_perc_of_sleep_period', 'Unknown_without_excluded_perc_of_sleep_period','SWS_without_excluded_perc_of_sleep_period','NR_with_N1_without_excluded_perc_of_sleep_period','NR_without_N1_without_excluded_perc_of_sleep_period'...
         ,'N1_without_excluded_perc_of_sleep_duration','N2_without_excluded_perc_of_sleep_duration','N3_without_excluded_perc_of_sleep_duration','S4_without_excluded_perc_of_sleep_duration','R_without_excluded_perc_of_sleep_duration','Wake_after_sleep_onset_without_excluded_perc_of_sleep_duration','Movement_Time_without_excluded_perc_of_sleep_duration', 'Artifact_without_excluded_perc_of_sleep_duration', 'Unknown_without_excluded_perc_of_sleep_duration','SWS_without_excluded_perc_of_sleep_duration','NR_with_N1_without_excluded_perc_of_sleep_duration','NR_without_N1_without_excluded_perc_of_sleep_duration'...
         ,'N1_before_sleep_onset_min','N2_before_sleep_onset_min','N3_before_sleep_onset_min','S4_before_sleep_onset_min','R_before_sleep_onset_min','Wake_before_sleep_onset_min','Movement_Time_before_sleep_onset_min', 'Artifact_before_sleep_onset_min', 'Unknown_before_sleep_onset_min','SWS_before_sleep_onset_min','NR_before_sleep_onset_without_N1_min'...
-        ,'longest_WASO_period_min','longest_WASO_period_after_latency_after_so_min','lightsoff_to_lightson_min',...
+        ,'longest_WASO_period_min','longest_WASO_period_after_latency_after_so_min',...
+        'lightsoff_to_lightson_min',...
+        'sleep_opportunity_on_to_off_min',...
+        'forced_sleep_onset_before_sleep_opportunity',...
+        'sleep_opportunity_on_present',...
+        'sleep_opportunity_off_present',...
+        'lights_off_present',...
+        'lights_on_present',...
+        'sleep_opportunity_on',...
+        'sleep_opportunity_off',...
+        'lights_off',...
+        'lights_on',...
         'N1_number_of_bouts', ...
         'N2_number_of_bouts', ...
         'N3_number_of_bouts', ...
