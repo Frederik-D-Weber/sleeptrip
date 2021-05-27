@@ -26,7 +26,7 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %   cfg.forcebeforesleepopon = srting, if possible, force sleep onset before sleep
 %                        opportunity (or lights off moment if former is not present) 
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
-%  cfg.cycle           = string or integer value from 1 to Inf. 
+%   cfg.cycle          = string or integer value from 1 to Inf. 
 %                        If set, then the descriptives is derived from 
 %                        only this cycle.
 %                        possible values are:

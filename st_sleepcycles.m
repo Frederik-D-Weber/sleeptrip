@@ -282,7 +282,7 @@ res_cycle.table.NRdeepest_state_min_epochs = NRdeepest_state_min_epochs;
 res_cycle.table.NRdeepest_state = NRdeepest_state;
 
 res_cycle.table.NRdeepest_state_min_epochs(res_cycle.table.durationNRepochs == 0) = NaN;
-res_cycle.table.NRdeepest_state(res_cycle.table.durationNRepochs == 0) = repmat('none',size(res_cycle.table.NRdeepest_state(res_cycle.table.durationNRepochs == 0)));
+res_cycle.table.NRdeepest_state(res_cycle.table.durationNRepochs == 0) = repmat({'none'},size(res_cycle.table.NRdeepest_state(res_cycle.table.durationNRepochs == 0)));
 
 res_cycle.table.NRstartepoch(res_cycle.table.durationNRepochs == 0) = NaN;
 res_cycle.table.NRendepoch(res_cycle.table.durationNRepochs == 0) = NaN;

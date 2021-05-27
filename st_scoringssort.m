@@ -34,6 +34,7 @@ function [scorings_sorted sums_sorted sums_ori idx_ori] = st_scoringssort(cfg, s
 %           'lightsoff': by the time of lights-off if provided
 %        'descriptives': by st_scoringdescriptives output, 
 %                        see cfg.descriptive for details
+%                      (default = 'epochcount')
 %   cfg.sortdir       = string, either 'ascend' or 'descend' (default = 'ascend')
 %                       see 'sort' function documentation for more details
 %   cfg.descriptive   = string, only used if cfg.sortby = 'descriptive' 
@@ -111,6 +112,20 @@ fprintf([functionname ' function initialized\n']);
 
 if ~iscell(scorings)
     scorings = {scorings};
+end
+
+%check consistency
+if numel(scorings) > 1
+    for iScoring = 2:numel(scorings)
+        
+        if (scorings{1}.epochlength ~= scorings{iScoring}.epochlength)
+            ft_error(['epochlength of scoring number ' num2str(iScoring) ' inconsistent and does not match the first one.']);
+        end
+        
+        if ~strcmp(scorings{1}.standard,scorings{iScoring}.standard)
+            ft_warning(['scoring standard of scoring number ' num2str(iScoring) ' inconsistent and does not match the first one.']);
+        end
+    end
 end
 
 if nargin > 2

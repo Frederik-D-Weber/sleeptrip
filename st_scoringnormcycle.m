@@ -1,22 +1,32 @@
-function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cycle, varargin)
+function [scoring, res_events_normed, res_events_modified] = st_scoringnormcycle(cfg, scoring, res_cycle, varargin)
 
 % ST_SCORINGNORMCYCLE aligns a scoring/res_event structure like from
 % ST_READ_SCORING/ST_SPINDLES/ST_SLOWAVES...
 % with detected sleep cycles of this scoring as an output of
 % ST_SLEEPCYCLES in a res_cycle structure to fit a new cycle scheme
 % Use as
-%   [scoring] = st_normcycle(cfg, scoring, res_cycle)
+%   [scoring] = st_scoringnormcycle(cfg, scoring, res_cycle)
 %   [scoring, res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cycle, res_event)
+%   [scoring, res_events_normed res_event_modified] = st_scoringnormcycle(cfg, scoring, res_cycle, res_event)
 %   [scoring, res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cycle, res_event1, res_event2, ...)
+%   [scoring, res_events_normed res_events_modified] = st_scoringnormcycle(cfg, scoring, res_cycle, res_event1, res_event2, ...)
 %   [res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cycle, res_event)
 %   [res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cycle, res_event1, res_event2, ...)
 %
 % Required configuration parameters are:
-%   cfg.newcycledurations = either a string or a Cx1 vector giving the new
+%   cfg.newcycledurations = either a Cx1 vector giving the new
 %                           cycle durations or a Cx2 matrix giving the NR and
 %                           R cycle durations of each C cycle in the rows
 %                           default is a 100x1 vector aligning to 90-min
 %                           cycles
+%
+% Optional configuration parameters
+%
+%  cfg.resorientation =     string, orientation of res_events_normed epochs 
+%                           either 'long' or 'wide' format 
+%                            (default = 'wide')
+%  cfg.considerexclusion =  string, either 'yes' or 'no' if the scoring.exclusion 
+%                           should also be applied to events. (default = 'yes');
 %
 % if one or multiple res_event structures are provided the other optional
 % arguments can be given:
@@ -52,6 +62,12 @@ function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cyc
 %  cfg.defaultvalues      = either a vector or a cell of vectors with the default values of the
 %                           repective cfg.meanColumns, default =
 %                           {nan(1,numel(cfg.meanColumns)), ...}
+%  cfg.retainGroupbyColumns = string, either 'yes' or 'no' if the group
+%                            by columns should still be retained and not only joined under one column.
+%                            (default = 'no')
+%  cfg.groupbyaggregatefunc = function handle for the aggregation function
+%                             to group the values by epoch e.g. @mean or
+%                             @nanmean (default = @mean)
 %  cfg.eventexcludeRNR    = cell of strings defining the exclusion of events that fall in the cycle parts of
 %                           either R or NR for each event structure
 %                           this happens BEFORE interpolation and smoothing
@@ -94,20 +110,13 @@ function [scoring res_events_normed] = st_scoringnormcycle(cfg, scoring, res_cyc
 %                           e.g. 'nearest' or 'linear' or 'pchip' see
 %                           interp1 help for details on further methods
 %                           default = 'linear'
-%
 %  cfg.epochsmoother      = number of epochs being used to smooth values 
 %                           from res_event prior to cycle interpolation;
-%                           default = 1 (i.e. no smoothing)
+%                           (default = 1) (i.e. no smoothing)
 %  cfg.epochsmoothermethd = method of epoch smoother
 %                           e.g. 'moving' or 'lowess' or 'loess' 'rlowess' 'sgolay' see
 %                           smooth function help for details on further methods
-%                           default = 'moving';
-%
-%  cfg.resorientation =     string, orientation of res_events_normed epochs 
-%                           either 'long' or 'wide' format default = 'wide'
-%
-%  cfg.considerexclusion =  string, either 'yes' or 'no' if the scoring.exclusion 
-%                           should also be applied to events. default = 'yes';
+%                           (default = 'moving');
 %
 %
 % See also ST_SLEEPCYCLES, ST_READ_SCORING, ST_SCORINGCONVERT, ST_SLOWAVES,
@@ -167,7 +176,7 @@ end
 % set defaults
 cfg.newcycledurations  = ft_getopt(cfg, 'newcycledurations', repmat(round(90*60/scoring.epochlength),100,1));
 
-eventdatatimecolumn_candidates = {'seconds_trough_max', 'time', 'timepoint' ,'te_seconds_trough_max','test_seconds_trough_max','te_time','te_timepoint', 'ta_seconds_trough_max', 'target_seconds_trough_max', 'ta_time','ta_timepoint'};
+eventdatatimecolumn_candidates = {'seconds_trough_max', 'time', 'timepoint' ,'sp_seconds_trough_max','sw_seconds_trough_max','te_seconds_trough_max','test_seconds_trough_max','te_time','te_timepoint', 'ta_seconds_trough_max', 'target_seconds_trough_max', 'ta_time','ta_timepoint'};
 if Nres>0
     if isfield(cfg,'eventdatatimecolumn')
         if (Nres ~= numel(cfg.eventdatatimecolumn))
@@ -280,11 +289,11 @@ if adjust_res
         cfg.defaultvalues = {cfg.defaultvalues};
     end
     
-    if (Nres == 1) && ~defaultGroupByColumns
+    if (Nres == 1) && ~defaultGroupByColumns && ~iscellstr(cfg.groupbyColumns{1})
         cfg.groupbyColumns = {cfg.groupbyColumns};
     end
     
-    if (Nres == 1) && ~defaultMeanColumns
+    if (Nres == 1) && ~defaultMeanColumns && ~iscellstr(cfg.meanColumns{1})
         cfg.meanColumns = {cfg.meanColumns};
     end
     
@@ -296,6 +305,7 @@ if size(cfg.newcycledurations,2) == 2
     withinCycleAlign = true;
 end
 
+cfg.groupbyaggregatefunc = ft_getopt(cfg, 'groupbyaggregatefunc', @mean);
 
 cfg.eventcycleinterpolmethd = ft_getopt(cfg, 'eventcycleinterpolmethd', 'nearest');
 
@@ -308,7 +318,7 @@ cfg.epochsmoothermethd = ft_getopt(cfg, 'epochsmoothermethd', 'moving');
 cfg.resorientation     = ft_getopt(cfg, 'resorientation', 'wide');
 
 cfg.considerexclusion     = ft_getopt(cfg, 'considerexclusion', 'yes');
-
+cfg.retainGroupbyColumns = ft_getopt(cfg, 'retainGroupbyColumns', 'no');
 
 
 fprintf([functionname ' function initialized\n']);
@@ -317,7 +327,7 @@ fprintf([functionname ' function initialized\n']);
 completeCycleCount = sum(~isnan(res_cycle.table.endepoch));
 
 if completeCycleCount > size(cfg.newcycledurations,1)
-    ft_warning(['There are ' num2str(numel(res_cycle.table.cycle)) ' cycles defined in the res_cycle structure \nbut only the first ' num2str(size(cfg.newcycledurations,1)) ' cfg.newcycledurations will be used.|n Please check if the cycles match up.'])
+    ft_warning(['There are ' num2str(numel(res_cycle.table.cycle)) ' cycles defined in the res_cycle structure \nbut only the first ' num2str(size(cfg.newcycledurations,1)) ' cfg.newcycledurations will be used. Please check if the cycles match up.'])
     completeCycleCount = size(cfg.newcycledurations,1);
 end
 
@@ -433,11 +443,17 @@ scoringnew.standard = 'number';
 
 end
 
+nGroupVars = 0;
 res_events_normed = [];
 if adjust_res
     epochNames = arrayfun(@(s) ['epoch_', num2str(s)], 1:numberofepochsnew, 'UniformOutput', false);
     tempIDnames = cat(2,{'reseventnum'},{'res_ori'},{'res_type'},{'groupby'},{'property'});
-    tempvarnames = [tempIDnames,epochNames];
+    if istrue(cfg.retainGroupbyColumns)
+            tempvarnames = [tempIDnames,cfg.groupbyColumns{1},epochNames];
+    else
+            tempvarnames = [tempIDnames,epochNames];
+    end
+
     res_scorings_cycle_normed_epochs_event_table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 
     %event_values_cycle_adjusted_by_Result_and_Group_and_Column = {};
@@ -448,7 +464,9 @@ if adjust_res
         res_event = varargin{iResEvent};
         
         res_event.table.epochnumber = floor((res_event.table.(cfg.eventdatatimecolumn{iResEvent})+scoring.dataoffset)/scoring.epochlength) + 1;
-        
+        if nargout == 3
+            varargin{iResEvent} = res_event;
+        end
         if any(strcmp(res_event.table.Properties.VariableNames,'resnum'))
             groupBy = cat(2,{'resnum'},cfg.groupbyColumns{iResEvent},{'epochnumber'});
         else
@@ -456,11 +474,17 @@ if adjust_res
         end
         
         meanColumns = cfg.meanColumns{iResEvent};
-        
-        event_count = grpstats(res_event.table(:,cat(2,groupBy,meanColumns)),groupBy,'mean');
-        event_count.Properties.VariableNames(strcmp(event_count.Properties.VariableNames,['GroupCount'])) = {'count'};
-        event_count.Properties.VariableNames((end-numel(meanColumns)+1):end) = meanColumns;
-        
+        %matlab internal function is too slow and uses more memory:
+        %event_count = grpstats(res_event.table(:,cat(2,groupBy,meanColumns)),groupBy,'mean');
+        %event_count.Properties.VariableNames(strcmp(event_count.Properties.VariableNames,['GroupCount'])) = {'count'};
+        %event_count.Properties.VariableNames((end-numel(meanColumns)+1):end) = meanColumns;
+
+        %  this is about two orders of magnitude faster than grpstat and uses less memory:
+        event_count = st_grpstats(res_event.table(:,cat(2,groupBy,meanColumns)),groupBy,cfg.groupbyaggregatefunc);
+        event_count_count = st_grpstats(res_event.table(:,cat(2,groupBy,meanColumns(1))),groupBy,@numel);
+        event_count.count = event_count_count{:,end};
+        event_count_count = [];
+                
         if istrue(cfg.considerexclusion)
             event_count(ismember(event_count.epochnumber,find(scoring.excluded)'),:) = [];
         end
@@ -497,6 +521,9 @@ if adjust_res
         for iGroup = 1:size(event_count_group,1)
             
             groupValues = event_count_group(iGroup,:);
+            if istrue(cfg.retainGroupbyColumns)
+                nGroupVars = size(nGroupVars,2);
+            end
             
             matchIndicator = logical(ones(size(event_count,1),1));
             
@@ -591,10 +618,18 @@ if adjust_res
                 
   
         groupNameJoined = strjoin(cellfun(@num2str,table2cell(groupValues),'UniformOutput',false),' + ');
-        res_scorings_cycle_normed_epochs_event_table = ...
-        cat(1,res_scorings_cycle_normed_epochs_event_table,...
-              cat(2,table(iResEvent,{res_event.ori},{res_event.type},{groupNameJoined},{adjust_column},'VariableNames',tempIDnames),...
-                    array2table(event_values_cycle_adjusted,'VariableNames',epochNames)));
+        if istrue(cfg.retainGroupbyColumns)
+            res_scorings_cycle_normed_epochs_event_table = ...
+                cat(1,res_scorings_cycle_normed_epochs_event_table,...
+                cat(2,table(iResEvent,{res_event.ori},{res_event.type},{groupNameJoined},{adjust_column},'VariableNames',tempIDnames),...
+                groupValues,...
+                array2table(event_values_cycle_adjusted,'VariableNames',epochNames)));
+        else
+            res_scorings_cycle_normed_epochs_event_table = ...
+                cat(1,res_scorings_cycle_normed_epochs_event_table,...
+                cat(2,table(iResEvent,{res_event.ori},{res_event.type},{groupNameJoined},{adjust_column},'VariableNames',tempIDnames),...
+                array2table(event_values_cycle_adjusted,'VariableNames',epochNames)));
+        end
 
                 
                 
@@ -610,7 +645,8 @@ if adjust_res
     end
     
 if strcmp(cfg.resorientation,'long')
-res_scorings_cycle_normed_epochs_event_table = stack(res_scorings_cycle_normed_epochs_event_table,6:size(res_scorings_cycle_normed_epochs_event_table,2),...
+    
+res_scorings_cycle_normed_epochs_event_table = stack(res_scorings_cycle_normed_epochs_event_table,(6+nGroupVars):size(res_scorings_cycle_normed_epochs_event_table,2),...
           'NewDataVariableName','value',...
           'IndexVariableName','epoch');
 end
@@ -633,6 +669,14 @@ else
 end
 
 
+if nargout == 3
+    if Nres == 1
+        res_events_modified = varargin{1};
+    end
+    if Nres > 1
+        res_events_modified = varargin;
+    end
+end
 
 
 fprintf([functionname ' function finished\n']);
