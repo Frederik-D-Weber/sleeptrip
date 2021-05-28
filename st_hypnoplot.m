@@ -43,7 +43,7 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %                                'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
 %                                'N2' or 'N3' or 'SWS' or 'S4' or 'R',
 %                                see ST_SLEEPONSET for details (default = 'N1_XR')
-%   cfg.forcebeforesleepopon = srting, if possible, force sleep onset before sleep
+%   cfg.allowsleeponsetbeforesleepopon   = srting, if possible, allow sleep onset before sleep
 %                                opportunity (or lights off moment if former is not present) 
 %                                either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
 %   cfg.title                  = string, title of the figure to export the figure

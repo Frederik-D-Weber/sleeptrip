@@ -188,13 +188,18 @@ if isfield(cfg,'scoremap') && isfield(cfg,'standard')
     end
 end
 
-if isfield(cfg,'scoremap') && ~isfield(cfg,'standard')
-    ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
-    cfg.standard = 'custom';
+if isfield(cfg,'scoremap')
+    if isfield(cfg,'standard') && ~strcmp(cfg.standard,'custom')
+        ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
+        cfg.standard = 'custom';
+    elseif ~isfield(cfg,'standard')
+        ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
+        cfg.standard = 'custom';
+    end
 end
 
 if isfield(cfg,'scoremap')
-    ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
+   % ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
     if ~isfield(cfg,'to')
         ft_warning('You might want to define cfg.to as well to be explicit to which standard you want to convert to.');
     end
