@@ -41,7 +41,7 @@ end
 
 % FIXME it would be nice to also implement the efficient reading of the
 % selected channels for the other file formats but at the moment only the
-% implementation of the binary multiplexed formats is smart enough.
+% implementation of the binary multiplexed and vectorized formats is smart enough.
 
 if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexed') && any(strcmpi(hdr.BinaryFormat, {'int_16', 'int_32', 'ieee_float_32'}))
   
@@ -63,36 +63,32 @@ if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexe
     % read all the channels
     fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1), 'cof');
     dat = fread(fid, [hdr.NumberOfChannels, (endsample-begsample+1)], sampletype);
-    % compute real microvolts using the calibration factor (resolution)
-    % calib = diag(hdr.resolution);
-    % % using a sparse multiplication speeds it up
-    % dat = full(sparse(calib) * dat);
-    calib = reshape(hdr.resolution,[],1);
-    for k = 1:size(dat,2)
-      dat(:,k) = calib.*dat(:,k);
-    end
-    
   else
+    numsamples = (endsample-begsample+1);
     % read only the selected channels
-    dat = zeros(length(chanindx), endsample-begsample+1,'single');
+    dat = zeros(length(chanindx), numsamples,'single');
     for chan = length(chanindx):-1:1
       fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1) + (chanindx(chan)-1)*samplesize, 'bof');
-      dat(chan,:) = fread(fid, [1, (endsample-begsample+1)], [sampletype '=>float32'], (hdr.NumberOfChannels-1)*samplesize);
+      dat(chan,:) = fread(fid, [1, numsamples], [sampletype '=>float32'], (hdr.NumberOfChannels-1)*samplesize);
     end
-    % compute real microvolts using the calibration factor (resolution)
-    % calib = diag(hdr.resolution(chanindx));
-    % % using a sparse multiplication speeds it up
-    % dat = full(sparse(calib) * dat);
-    calib = reshape(hdr.resolution(chanindx),[],1);
-    for k = 1:size(dat,2)
-      dat(:,k) = calib.*dat(:,k);
-    end
+
     
     % don't do the channel selection again at the end of the function
     chanindx = [];
   end
-  dat = double(dat);
+  
   fclose(fid);
+  
+      % compute real microvolts using the calibration factor (resolution)
+    % calib = diag(hdr.resolution(chanindx));
+    % % using a sparse multiplication speeds it up
+    % dat = full(sparse(calib) * dat);
+    if ~all(hdr.resolution(chanindx) == 1) && ~all(isnan(hdr.resolution(chanindx)))
+    calib = reshape(hdr.resolution(chanindx),[],1);
+    for k = 1:size(dat,2)
+      dat(:,k) = calib.*dat(:,k);
+    end
+    end
   
 elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vectorized') && strcmpi(hdr.BinaryFormat, 'ieee_float_32')
   switch lower(hdr.BinaryFormat)
@@ -110,17 +106,69 @@ elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vector
   fid = fopen_or_error(filename, 'rb', 'ieee-le');
   fseek(fid, 0, 'eof');
   hdr.nSamples = ftell(fid)/(samplesize*hdr.NumberOfChannels);
-  fseek(fid, 0, 'bof');
+  
   numsamples = (endsample-begsample+1);
-  dat = zeros(numsamples, hdr.NumberOfChannels,'single');
-  for chan=1:hdr.NumberOfChannels
-    fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
-    dat(:,chan) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
-    fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
-  end
+  
+ 
+  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+% read all channels first and do NOT set chanindx = [];   
+%   fseek(fid, 0, 'bof');
+%   dat = zeros(hdr.NumberOfChannels,numsamples,'single');
+%   for chan=1:hdr.NumberOfChannels
+%     fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
+%     dat(chan,:) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
+%     fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
+%   end
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%   % read only the selected channels   
+%   dat = zeros(length(chanindx), numsamples,'single');
+%   for chan=1:length(chanindx)
+%    	fseek(fid, (begsample - 1) * hdr.NumberOfChannels * samplesize + (chanindx(chan) - 1) * samplesize, 'bof');
+%     dat(chan, :) = fread(fid, [1, numsamples], [sampletype '=>float32'], (hdr.NumberOfChannels - 1) * samplesize);
+%   end
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% this is the fastest version and sparse in memory
+fseek(fid, 0, 'bof');
+if isempty(chanindx) && (endsample == hdr.nSamples) && (begsample == 1)% Read entire file
+    dat = fread(fid, [hdr.nSamples, hdr.NumberOfChannels], [sampletype '=>float32']).';
+else
+    if isempty(chanindx) % Read all channels
+        chanindx = 1:hdr.NumberOfChannels;
+    end
+    
+    dat = zeros(length(chanindx), numsamples,'single');
+    ich = 0;
+    for chan=1:hdr.NumberOfChannels
+        fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
+        if ismember(chan,chanindx)
+            ich = ich + 1;
+            dat(ich,:) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
+        else
+            fseek(fid, numsamples, 'cof');
+        end
+        fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
+    end
+    
+end
+  
+
+  
   fclose(fid);
-  % transpose the data
-  dat = double(dat');
+  
+  if ~all(hdr.resolution(chanindx) == 1) && ~all(isnan(hdr.resolution(chanindx)))
+      calib = reshape(hdr.resolution(chanindx),[],1);
+      for k = 1:size(dat,2)
+          dat(:,k) = calib.*dat(:,k);
+      end
+  end
+  
+  % don't do the channel selection again at the end of the function
+  chanindx = [];
   
 elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'multiplexed')
   fid = fopen_or_error(filename, 'rt');
@@ -185,8 +233,17 @@ else
 end
 
 if ~isempty(chanindx)
-  % for the the multiplexed binary formats the channel selection was
+  % for the the multiplexed and vectorized binary formats the channel selection was
   % already done in the code above, for the other formats the selection
   % still has to be done here
   dat = dat(chanindx,:);
 end
+
+% Convert to double 
+% for MATLAB < R14
+%if str2double(version('-release')) < 14
+if ~isa(dat,'double')
+    dat = double(dat);
+end
+end
+
