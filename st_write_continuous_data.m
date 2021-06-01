@@ -132,7 +132,7 @@ switch cfg.format
         ft_error('cfg.format = %s is unknown', cfg.format)
 end
 
-if strcmp(cfg.compress, 'zip')
+if strcmp(cfg.compress, 'zip') || istrue(cfg.compress)
     %zip the files take up only ~70% of space
     fprintf('compressing the data in .zip and deleting uncompressed original.')
     zipfilepaths = filepaths;

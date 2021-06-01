@@ -100,13 +100,16 @@ elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vector
   hdr.nSamples = ftell(fid)/(4*hdr.NumberOfChannels);
   fseek(fid, 0, 'bof');
   numsamples = (endsample-begsample+1);
+  dat = zeros(numsamples, hdr.NumberOfChannels);
   for chan=1:hdr.NumberOfChannels
     fseek(fid, (begsample-1)*4, 'cof');                 % skip the first N samples
     [tmp, siz] = fread(fid, numsamples, 'float32');     % read these samples
     fseek(fid, (hdr.nSamples-endsample)*4, 'cof');      % skip the last M samples
-    dat(chan,:) = tmp(:)';
+    dat(:,chan) = tmp;
   end
   fclose(fid);
+  % transpose the data
+  dat = dat';
   
 elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'multiplexed')
   fid = fopen_or_error(filename, 'rt');

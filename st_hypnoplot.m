@@ -1,6 +1,12 @@
 function [fh axh] = st_hypnoplot(cfg, scoring)
 
 % ST_HYPNOPLOT plots a hypnogram from the scoring
+% 
+%   Note that for Matlab versions of 2014b to 2017a (but not later or
+%   earlier versions) there will appear artifact lines in pdf and eps
+%   vector graphics export. This is a 'Matlab bug' (https://www.mathworks.com/matlabcentral/answers/162257-problem-with-patch-graphics-in-2014b-splits-in-two-along-diagonal) of those versions in plotting.
+%   Please use earlier or later versions to export plots properly or see
+%   https://github.com/Conclusio/matlab-epsclean
 %
 % Use as
 %   [fh axh] = st_hypnoplot(cfg,scoring)
