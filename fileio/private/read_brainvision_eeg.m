@@ -74,10 +74,10 @@ if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexe
     
   else
     % read only the selected channels
-    dat = zeros(length(chanindx), endsample-begsample+1);
+    dat = zeros(length(chanindx), endsample-begsample+1,'single');
     for chan = length(chanindx):-1:1
       fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1) + (chanindx(chan)-1)*samplesize, 'bof');
-      dat(chan,:) = fread(fid, [1, (endsample-begsample+1)], sampletype, (hdr.NumberOfChannels-1)*samplesize);
+      dat(chan,:) = fread(fid, [1, (endsample-begsample+1)], [sampletype '=>float32'], (hdr.NumberOfChannels-1)*samplesize);
     end
     % compute real microvolts using the calibration factor (resolution)
     % calib = diag(hdr.resolution(chanindx));
@@ -91,25 +91,36 @@ if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexe
     % don't do the channel selection again at the end of the function
     chanindx = [];
   end
-  
+  dat = double(dat);
   fclose(fid);
   
 elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vectorized') && strcmpi(hdr.BinaryFormat, 'ieee_float_32')
+  switch lower(hdr.BinaryFormat)
+    case 'int_16'
+      sampletype = 'int16';
+      samplesize = 2;
+    case 'int_32'
+      sampletype = 'int32';
+      samplesize = 4;
+    case 'ieee_float_32'
+      sampletype = 'float32';
+      samplesize = 4;
+  end % case
+    
   fid = fopen_or_error(filename, 'rb', 'ieee-le');
   fseek(fid, 0, 'eof');
-  hdr.nSamples = ftell(fid)/(4*hdr.NumberOfChannels);
+  hdr.nSamples = ftell(fid)/(samplesize*hdr.NumberOfChannels);
   fseek(fid, 0, 'bof');
   numsamples = (endsample-begsample+1);
-  dat = zeros(numsamples, hdr.NumberOfChannels);
+  dat = zeros(numsamples, hdr.NumberOfChannels,'single');
   for chan=1:hdr.NumberOfChannels
-    fseek(fid, (begsample-1)*4, 'cof');                 % skip the first N samples
-    [tmp, siz] = fread(fid, numsamples, 'float32');     % read these samples
-    fseek(fid, (hdr.nSamples-endsample)*4, 'cof');      % skip the last M samples
-    dat(:,chan) = tmp;
+    fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
+    dat(:,chan) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
+    fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
   end
   fclose(fid);
   % transpose the data
-  dat = dat';
+  dat = double(dat');
   
 elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'multiplexed')
   fid = fopen_or_error(filename, 'rt');
@@ -125,11 +136,11 @@ elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'multipl
     % read first lines and discard the data in them
     str = fgets(fid);
   end
-  dat = zeros(endsample-begsample+1, hdr.NumberOfChannels);
+  dat = zeros(endsample-begsample+1, hdr.NumberOfChannels,'single');
   for line=1:(endsample-begsample+1)
     str = fgets(fid);         % read a single line with Nchan samples
     str(str==',') = '.';      % replace comma with point
-    dat(line,:) = str2num(str);
+    dat(line,:) = str2double(str);
   end
   fclose(fid);
   % transpose the data
@@ -164,7 +175,7 @@ elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'vectori
     
     % convert the string into numbers and copy the desired samples over
     % into the data matrix
-    tmp = str2num(str);
+    tmp = str2double(str);
     dat(chan,:) = tmp(skipColumns+begsample:skipColumns+endsample);
   end
   fclose(fid);
