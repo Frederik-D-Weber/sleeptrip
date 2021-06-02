@@ -36,7 +36,8 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                      (default = 'no')
 %
 % The following configuration options are supported:
-%   cfg.signallinewidth         =  the line width of the signals to draw (default = 0.5);
+%   cfg.signallinewidth         = the line width of the signals to draw (default = 0.5);
+%   cfg.precision               = the precision that the data is stored in, either 'single' (32bit float) or 'double' (64bit float) or 'original' (unchanged) (default = 'single')
 %   cfg.events                  = a table or events with the columns named: event start stop duration channel
 %                                 ... with the columns giving:
 %                                 event: the name of the event type, note
@@ -222,6 +223,11 @@ cfg.datainteractive = ft_getopt(cfg, 'datainteractive', 'no');
 cfg.signallinewidth = ft_getopt(cfg, 'signallinewidth', 0.5);
 cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'snake+box');
 cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
+cfg.precision = ft_getopt(cfg, 'precision', 'single');
+
+if hasData
+    
+end
 
 if istrue(cfg.datainteractive)
     ask_again = true;
@@ -257,7 +263,11 @@ if istrue(cfg.datainteractive)
                 else
                     cfg_pp.dataset = cfg_dhms.datafile;
                 end
+                if ismember(cfg.precision,{'single','double'})
+                    cfg_pp.precision = 'single';
+                end
                 data = st_preprocessing(cfg_pp);
+
                 hasdata = true;
                 
                 if ~isempty(cfg_dhms.datagrammerfile)
@@ -338,6 +348,16 @@ end
 if ~hasdata && ~istrue(cfg.datainteractive)
     data = st_preprocessing(cfg);
     hasdata = true;
+end
+
+if hasdata
+    switch cfg.precision
+        case 'original'
+        case 'single'
+            data = ft_struct2single(data);
+        case 'double'
+            data = ft_struct2double(data);
+    end
 end
 
 cfg.channel         = ft_getopt(cfg, 'channel', 'all', 1);

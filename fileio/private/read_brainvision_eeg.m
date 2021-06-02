@@ -239,11 +239,11 @@ if ~isempty(chanindx)
   dat = dat(chanindx,:);
 end
 
-% Convert to double 
-% for MATLAB < R14
+% Convert to double, not necessary, as this is typically done higher order in ft_preprocessing 
+% ...for MATLAB < R14
 %if str2double(version('-release')) < 14
-if ~isa(dat,'double')
-    dat = double(dat);
-end
+%if ~isa(dat,'double')
+%    dat = double(dat);
+%end
 end
 
