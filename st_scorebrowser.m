@@ -231,6 +231,7 @@ cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
 cfg.precision = ft_getopt(cfg, 'precision', 'single');
 
 cfg.eventchannelmatching  = ft_getopt(cfg, 'eventchannelmatching', 'exact');
+cfg.eventsplothypnogram = ft_getopt(cfg, 'eventsplothypnogram', 'no');
 
 %if hasdata
 %   
@@ -4280,7 +4281,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 %             end
             
 
-            if isfield(cfg,'times_ind_per_channel_evtypes')
+            if isfield(cfg,'times_ind_per_channel_evtypes') && istrue(cfg.eventsplothypnogram)
                         ylim(axh,[cfg.plot_MA_offset (cfg.nEventTypes-1)*ev_step+ev_offset+ev_halfhight*2])
 
                 for iEventType = 1:cfg.nEventTypes
