@@ -417,6 +417,8 @@ end
     cfg.EventTypes = [];
 
     if isfield(cfg,'events')
+        fprintf(['events being processed\n']);
+
         nDataSamples = size(data.trial{1},2);
         cfg.events.stop((cfg.events.stop-cfg.events.start) < cfg.eventminduration) = cfg.events.start((cfg.events.stop-cfg.events.start) < cfg.eventminduration) + cfg.eventminduration;
         eventssamples = cfg.events;
@@ -447,13 +449,20 @@ end
         cfg.begin_end_per_channel_evtypes = {};
         for iEventTypes = 1:cfg.nEventTypes
             eventType = cfg.EventTypes{iEventTypes};
+            fprintf(['event type: ' num2str(iEventTypes) ' ' eventType '\n']);
+
             for iCh = 1:length(data.label)
+                fprintf(['event type: ' num2str(iEventTypes) ' ' eventType ' ' 'ch: ' num2str(iCh) '\n']);
+
                 cfg.times_ind_per_channel_evtypes{iEventTypes, iCh} = [];
                 cfg.begin_end_per_channel_evtypes{iEventTypes, iCh} = [];
                 ch = data.label{iCh};
                 
                 idx_evt = strcmp(cfg.eventssamples.event,eventType);
-                idx_ch = ~logical(cellfun(@isempty,cellfun(@(chs) ft_channelselection(chs, ch),cfg.eventssamples.channel,'UniformOutput',false)));
+                
+                %idx_ch = ~logical(cellfun(@isempty,cellfun(@(chs) ft_channelselection(chs, ch),cfg.eventssamples.channel,'UniformOutput',false)));
+                 idx_ch = logical(strcmp(cfg.eventssamples.channel,ch));
+
                 
                 curr_begins_ends = table2array(cfg.eventssamples(idx_evt & idx_ch,{'start','stop'}));
                 if ~isempty(curr_begins_ends)
