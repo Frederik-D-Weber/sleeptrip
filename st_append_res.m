@@ -78,9 +78,19 @@ nRes = numel(varargin);
 resIDs = cell(nargin,1);
 
 
-r = varargin{1};
-o = r.ori;
-t = r.type;
+resnonempt = false;
+res = [];
+for iRes = 1:nRes
+    if ~isempty(varargin{iRes})
+        res = varargin{iRes};
+        resnonempt = true;
+        break;
+    end
+end
+
+if resnonempt
+o = res.ori;
+t = res.type;
 
 allAppended = true;
 anyAppended = false;
@@ -116,6 +126,7 @@ for iRes = 1:nRes
         iResnum = iResnum + 1;
         continue;
     end
+   
     %if ~isempty(r)
     wasAppended = false;
     if isfield(r,'appended')
@@ -144,6 +155,7 @@ end
 resIDs = cat(1, resIDs{:});
 resIDs = table(resIDs,'VariableNames',{'resnum'});
 
+%restabs = restabs(~cellfun(@isempty,restabs,'UniformOutput',true));
 restab = cat(1, restabs{:});
 
 % % for debugging:
@@ -160,10 +172,13 @@ restab = cat(1, restabs{:});
 
 restab = cat(2, resIDs ,restab);
 
-res = r;
-if isfield(res, 'cfg'); res = rmfield(res,'cfg'); end
-res.appended = true;
-res.table = restab;
+%res = r;
+
+  if isfield(res, 'cfg'); res = rmfield(res,'cfg'); end
+  res.appended = true;
+  res.table = restab;  
+end
+
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)

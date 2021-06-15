@@ -148,10 +148,10 @@ for iStart = 1:numel(startEpochs)
         time_start = (snipStart-1) * scoring.epochlength + scoring.dataoffset;
         time_stop = max(snipIndex) * scoring.epochlength + scoring.dataoffset;
         if isfield(scoring, 'arousals')
-            scoring.arousals = scoring.arousals((scoring.arousals.start >= time_start) & (scoring.arousals.start < time_stop),:);
+            snip.arousals = scoring.arousals((scoring.arousals.start >= time_start) & (scoring.arousals.start < time_stop),:);
         end
         if isfield(scoring, 'events')
-            scoring.events = scoring.events((scoring.events.start >= time_start) & (scoring.events.start < time_stop),:);
+            snip.events = scoring.events((scoring.events.start >= time_start) & (scoring.events.start < time_stop),:);
         end
 
         snip.dataoffset = time_start;

@@ -114,15 +114,28 @@ if ~iscell(scorings)
     scorings = {scorings};
 end
 
+iNonEmpty = find(~cellfun(@isempty,scorings,'UniformOutput',true),1,'first');
+
+
+
+if isempty(iNonEmpty)
+    scorings_sorted = scorings;
+    sums_sorted = NaN;
+    sums_ori = NaN;
+    idx_ori = 1:numel(scorings);
+else
+scoring_nonempty = scorings{iNonEmpty};
 %check consistency
 if numel(scorings) > 1
-    for iScoring = 2:numel(scorings)
-        
-        if (scorings{1}.epochlength ~= scorings{iScoring}.epochlength)
+    for iScoring = 1:numel(scorings)
+        if isempty(scorings{iScoring})
+            continue
+        end
+        if (scoring_nonempty.epochlength ~= scorings{iScoring}.epochlength)
             ft_error(['epochlength of scoring number ' num2str(iScoring) ' inconsistent and does not match the first one.']);
         end
         
-        if ~strcmp(scorings{1}.standard,scorings{iScoring}.standard)
+        if ~strcmp(scoring_nonempty.standard,scorings{iScoring}.standard)
             ft_warning(['scoring standard of scoring number ' num2str(iScoring) ' inconsistent and does not match the first one.']);
         end
     end
@@ -144,11 +157,14 @@ elseif nargin <= 2
     if strcmp(cfg.sortby,'cycles')
         ft_error('cannot sort by cycles if no res_cycles cell structure is provided as input.\nPlease provide a res_cycle structure like the output from ST_SLEEPCYCLES')
     end
-    cfg.sortby = 'epochcount';
+    %cfg.sortby = 'epochcount';
 end
 
 sums_ori = nan(1,numel(scorings));
 for iScoring = 1:numel(scorings)
+    if isempty(scorings{iScoring})
+            continue
+    end
     scoring = scorings{iScoring};
     switch cfg.sortby
         case 'cycles'
@@ -223,7 +239,7 @@ for iScoring = 1:numel(scorings)
         case 'descriptives'
             res_desc = st_scoringdescriptives(cfg,scoring);
             value = res_desc.table(:,cfg.descriptive);
-            sums_ori(iScoring) = sum(value);
+            sums_ori(iScoring) = nansum(nansum(table2array(value)));
         otherwise
             ft_error('cfg.sortby = %s is unknown, see the help for valid options.', cfg.sortby)
     end
@@ -231,7 +247,7 @@ end
 [sums_sorted, idx_ori] = sort(sums_ori,cfg.sortdir);
 scorings_sorted = scorings(idx_ori);
 
-
+end
 fprintf([functionname ' function finished\n']);
 toc(ttic)
 memtoc(mtic)

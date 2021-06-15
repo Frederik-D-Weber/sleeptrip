@@ -1,10 +1,11 @@
-function [filename, waited_seconds] = st_wait_exists(cfg, filename)
+function [filename, avail, waited_seconds] = st_wait_exists(cfg, filename)
 
 % ST_WAIT_EXISTS pauses program until filename exists
 %
 % Use as
-%   [filename]                 = st_wait_exists(cfg, filename)
-%   [filename, waited_seconds] = st_wait_exists(cfg, filename)
+%   [filename]                        = st_wait_exists(cfg, filename)
+%   [filename, avail]                 = st_wait_exists(cfg, filename)
+%   [filename, avail, waited_seconds] = st_wait_exists(cfg, filename)
 %
 %   cfg can be empty (i.e., cfg = [];)
 %

@@ -214,7 +214,9 @@ if isFreqInput
         for iTime = 1:nTime
             ft_progress(((iChannel-1)*iTime+iTime)/(nChannel*nTime), ['progress: channel %d/%d timepoint %d/%d'], iChannel, nChannel, iTime, nTime);
             power = squeeze(freq.powspctrm(iChannel,:,iTime));
-            
+            if all(isnan(power))
+                power = power;
+            else
             [freqs, fooof] = FOOOF_matlab_power(power, freqs, cfg, hasOptimTools);
             
             switch cfg.fooof
@@ -228,6 +230,7 @@ if isFreqInput
                     power = fooof.peak_fit;
                 otherwise
                     %power = power;
+            end
             end
             freq.powspctrm(iChannel,:,iTime) = power;
         end

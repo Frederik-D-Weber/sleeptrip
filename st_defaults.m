@@ -47,6 +47,7 @@ try
 
 end
 
-
+% avoid using the dsp toolbox from 2021-06-03 on
+% toggleToolbox('dsp','off')
 
 %addpath(fullfile(fileparts(which('ft_defaults')), 'sleep'));

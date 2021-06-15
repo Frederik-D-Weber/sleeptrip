@@ -225,9 +225,9 @@ cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'snake+box');
 cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
 cfg.precision = ft_getopt(cfg, 'precision', 'single');
 
-if hasData
-    
-end
+%if hasdata
+%   
+%end
 
 if istrue(cfg.datainteractive)
     ask_again = true;
