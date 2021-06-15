@@ -49,10 +49,15 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 stop: stop of the event in seconds since data start
 %                                 duration: duration of the event in seconds since data start
 %                                 channel: a string with the channels that
-%                                          match each event e.g. 'C*' to match all
+%                                          match each event. either matching is exaclt (fast version,cfg.eventchannelmatching = 'exact')
+%                                          of uses wildcards if cfg.eventchannelmatching = 'wildcard' e.g. 'C*' to match all
 %                                          channels that start with C, or 'all' to
 %                                          match all channels, SEE FT_CHANNELSELECTION for details. 
-%   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' (default = 'snake+box');
+%   cfg.eventchannelmatching    = either match channels of events to the
+%                                 one in the data using a 'wildcard' or be 'exact' (default = 'exact').
+%                                 Note that using 'wildcard' can be much
+%                                 much slower that 'exact' approach.
+%   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' or 'boxdimple' or 'boxdimple+snake'(default = 'box');
 %   cfg.eventminduration        = the minimal duration in seconds of an
 %                                 event to better display it e.g. if duration is 0 seconds then
 %                                 this will be changed to
@@ -221,9 +226,11 @@ cfg.viewmode        = ft_getopt(cfg, 'viewmode', 'vertical');
 cfg.startepoch      = ft_getopt(cfg, 'startepoch', 1);
 cfg.datainteractive = ft_getopt(cfg, 'datainteractive', 'no');
 cfg.signallinewidth = ft_getopt(cfg, 'signallinewidth', 0.5);
-cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'snake+box');
+cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'box');
 cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
 cfg.precision = ft_getopt(cfg, 'precision', 'single');
+
+cfg.eventchannelmatching  = ft_getopt(cfg, 'eventchannelmatching', 'exact');
 
 %if hasdata
 %   
@@ -426,10 +433,12 @@ end
         eventssamples.stop  = st_times2samples(data,cfg.events.stop);
         eventssamples.duration = st_times2samples(data,cfg.events.start+cfg.events.duration)-eventssamples.start;
 
+        eventssamples(isnan(eventssamples.start),:) = [];
+        eventssamples(isnan(eventssamples.stop),:) = [];
         
         eventssamples(eventssamples.start > nDataSamples,:) = [];
         eventssamples(eventssamples.stop < 1,:) = [];
-
+        
         ind_exeding = eventssamples.stop > nDataSamples;
         eventssamples.stop(ind_exeding) = nDataSamples;
         eventssamples.duration(ind_exeding) = eventssamples.stop(ind_exeding) - eventssamples.start(ind_exeding);
@@ -459,12 +468,17 @@ end
                 ch = data.label{iCh};
                 
                 idx_evt = strcmp(cfg.eventssamples.event,eventType);
+                switch cfg.eventchannelmatching
+                    case 'wildcard'
+                    	idx_ch = ~logical(cellfun(@isempty,cellfun(@(chs) ft_channelselection(chs, ch),cfg.eventssamples.channel(idx_evt),'UniformOutput',false)));
+                    case 'exact'
+                    	idx_ch = logical(strcmp(cfg.eventssamples.channel(idx_evt),ch));
+                    otherwise
+                        ft_error('cfg.eventchannelmatching unknown.')
+                end
                 
-                %idx_ch = ~logical(cellfun(@isempty,cellfun(@(chs) ft_channelselection(chs, ch),cfg.eventssamples.channel,'UniformOutput',false)));
-                 idx_ch = logical(strcmp(cfg.eventssamples.channel,ch));
-
-                
-                curr_begins_ends = table2array(cfg.eventssamples(idx_evt & idx_ch,{'start','stop'}));
+                curr_begins_ends = table2array(cfg.eventssamples(idx_evt,{'start','stop'}));
+                curr_begins_ends = curr_begins_ends(idx_ch,:);
                 if ~isempty(curr_begins_ends)
                 curr_times_ind = logical(zeros(1,nDataSamples));
                     for iEv = 1:size(curr_begins_ends,1)
@@ -5587,10 +5601,12 @@ if strcmp(cfg.displayEvents,'yes')
             set(h,'DefaultLegendAutoUpdate','off');
         end
         switch cfg.eventhighlighting
-                        case {'box','snake+box'}
+                        case {'box','snake+box','boxdimple','boxdimple+snake'}
         for iEventTypes = 1:cfg.nEventTypes
             eventcolor = cfg.event_begin_end_color(iEventTypes, :);
             eventdarkercolor = brighten(eventcolor, -0.2);
+            boxcordtemp = nan(1000,4);
+            iEvcount = 0;
             for iChannel = 1:length(chanindx)
                 if isempty(cfg.times_ind_per_channel_evtypes{iEventTypes, chanindx(iChannel)});
                     continue
@@ -5599,21 +5615,62 @@ if strcmp(cfg.displayEvents,'yes')
                 evbeg = find(tmp==+1);
                 evend = find(tmp==-1) - 1;
                 % plot big rectangle
+                 iChEvcount = iEvcount;
                 for k=1:numel(evbeg)
+                    iEvcount = iEvcount + 1;
+                    if iEvcount > size(boxcordtemp,1)
+                     	boxcordtemp = [boxcordtemp; nan(1000,4)];
+                    end
                     %the time course of channels
                     switch cfg.eventhighlighting
-                        case {'box','snake+box'}
+                        case {'box'}
+                        	boxcordtemp(iEvcount,:) = [tim(evbeg(k)) tim(evend(k)) -0.8 0.8];
+                        case {'snake+box','boxdimple','boxdimple+snake'}
                             ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
                             'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.width, 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', [-1 1]);
+                           
+                            
                     end
                     switch cfg.eventhighlighting
-                        case {'snake','snake+box'}
+                        case {'snake','snake+box','boxdimple+snake'}
                     ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', eventdarkercolor, 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*10,...
                         'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.laytime.width(iChannel), 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', opt.vlim);
                     end
                 end
                 switch cfg.eventhighlighting
-                        case {'box','snake+box'}
+                    case {'box'}
+                        if numel(evbeg) > 0
+                        hpos = opt.laytime.pos(iChannel,1);
+                        vpos = opt.laytime.pos(iChannel,2);
+                        width = opt.width;
+                        height = opt.laytime.height(iChannel);
+                        hlim = opt.hlim;
+                        vlim = [-1 1];
+                        
+                        
+                        % first shift the horizontal axis to zero
+                        boxcordtemp((iChEvcount+1):iEvcount,1:2) = boxcordtemp((iChEvcount+1):iEvcount,1:2) - (hlim(1)+hlim(2))/2;
+                        % then scale to length 1
+                        boxcordtemp((iChEvcount+1):iEvcount,1:2) = boxcordtemp((iChEvcount+1):iEvcount,1:2) ./ (hlim(2)-hlim(1));
+                        % then scale to the new width
+                        boxcordtemp((iChEvcount+1):iEvcount,1:2) = boxcordtemp((iChEvcount+1):iEvcount,1:2) .* width;
+                        % then shift to the new horizontal position
+                        boxcordtemp((iChEvcount+1):iEvcount,1:2) = boxcordtemp((iChEvcount+1):iEvcount,1:2) + hpos;
+                        
+                        % first shift the vertical axis to zero
+                        boxcordtemp((iChEvcount+1):iEvcount,3:4) = boxcordtemp((iChEvcount+1):iEvcount,3:4) - (vlim(1)+vlim(2))/2;
+                        % then scale to length 1
+                        boxcordtemp((iChEvcount+1):iEvcount,3:4) = boxcordtemp((iChEvcount+1):iEvcount,3:4) ./ (vlim(2)-vlim(1));
+                        % then scale to the new width
+                        boxcordtemp((iChEvcount+1):iEvcount,3:4) = boxcordtemp((iChEvcount+1):iEvcount,3:4) .* height;
+                        % then shift to the new vertical position
+                        boxcordtemp((iChEvcount+1):iEvcount,3:4) = boxcordtemp((iChEvcount+1):iEvcount,3:4) + vpos;
+                        end
+               end
+                
+                
+                switch cfg.eventhighlighting
+                        case {'boxdimple','boxdimple+snake'}
                 % plot little indicator rectangle on top
                 evbegend_ind = cfg.begin_end_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(((cfg.begin_end_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(:,1) >= begsample) & (cfg.begin_end_per_channel_evtypes{iEventTypes, chanindx(iChannel)}(:,1) <= endsample)),:);
                 evbeg_ind = evbegend_ind(:,1);
@@ -5631,6 +5688,14 @@ if strcmp(cfg.displayEvents,'yes')
                     
                 end
                 end
+            end
+            switch cfg.eventhighlighting
+                case {'box'}
+                    if iEvcount > 0
+                        boxcordtemp = boxcordtemp';
+                        
+                        ft_plot_box_multi(boxcordtemp(1:2,:),boxcordtemp(3:4,:),'facealpha',0.38, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end');
+                    end
             end
         end
         end

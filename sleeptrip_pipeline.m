@@ -47,16 +47,19 @@
 pathToSleepTrip = uigetdir('','choose SleepTrip path, e.g. D:\sleeptrip-main');
 addpath(pathToSleepTrip)
 
+%%% load all the defaults of SleepTrip and FieldTrip
+st_defaults
+
+% do not use the DSP toolbox as it is limited in many environments
+toggleToolbox('dsp','off')
+
 %%% disable some toolboxes if necessary and check if 
 %%% 'signal_toolbox', 'signal_blocks' are available 
 %%% because they are helpful to have.
 % toggleToolbox('names')
-% toggleToolbox('dsp','off')
+% toggleToolbox('dsp','on')
 % toggleToolbox('all','query')
 % license('inuse')
-
-%%% load all the defaults of SleepTrip and FieldTrip
-st_defaults
 
 
 %% create a montage
@@ -465,19 +468,34 @@ cfg = [];
 cfg.approach = 'spectrogram'; % 'spectrogram' 'mtmfft_segments' 'mtmconvol_memeff'
 %cfg.approach = 'mtmfft_segments';
 cfg.taper  = 'dpss'; % 'hanning' 'hanning_proportion' 'dpss'
-cfg.transform  = 'log10'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
-cfg.channel = subject.eegchannels;
+cfg.transform  = 'none'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
+cfg.channel = subject.eegchannels{1};
 cfg.powvalue = 'power';
 freq_continous = st_tfr_continuous(cfg, data);
 
+%transform posthoc
+switch 'log10(p+1)'
+    case 'db'
+        freq_continous.powspctrm(:) = 10*log10(freq_continous.powspctrm(:));
+    case 'db(p+1)'
+        freq_continous.powspctrm(:) = freq_continous.powspctrm(:)+1;
+        freq_continous.powspctrm(:) = 10*log10(freq_continous.powspctrm(:));
+    case  'log10'
+        freq_continous.powspctrm(:) = log10(freq_continous.powspctrm(:));
+    case  'log10(p+1)'
+        freq_continous.powspctrm(:) = freq_continous.powspctrm(:)+1;
+        freq_continous.powspctrm(:) = log10(freq_continous.powspctrm(:));
+end
+
 cfg = [];
-cfg.zlim           = [-3 0];
+%cfg.zlim           = [-3 0]; %log(10)
+cfg.zlim           = [0 0.5]; % log10(p+1)
 cfg.colormap       = jet(256); % still a good colormap, however not for some forms of colorblindness
 % cfg.layout         = ...
 % ft_multiplotTFR(cfg, freq_continous);
-
 cfg.channel        = subject.eegchannels{1};
 ft_singleplotTFR(cfg, freq_continous);
+
 
 %%% to make this a bit prettier and in hours as units
 set(gca,'TickDir','out');
@@ -502,12 +520,16 @@ if minpowerval < 0
 freq_continous_pos.powspctrm = freq_continous_pos.powspctrm + abs(minpowerval) + 1;
 end
 cfg = [];
-freq_continous_fooofed = st_fooof(cfg,freq_continous_pos);
+freq_continous_pos_fooofed = st_fooof(cfg,freq_continous_pos);
+%freq_continous_fooofed = st_fooof(cfg,freq_continous);
 figure
 cfg = [];
 cfg.zlim           = [-4 1];
+%cfg.zlim           = [-100 8];
 cfg.colormap       = jet(256); 
-ft_singleplotTFR(cfg, freq_continous_fooofed);
+ft_singleplotTFR(cfg, freq_continous_pos_fooofed);
+%ft_singleplotTFR(cfg, freq_continous_fooofed);
+
 
 
 %practice: compare the results of cfg.approach = 'mtmfft_segments' with

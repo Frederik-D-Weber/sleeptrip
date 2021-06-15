@@ -1,4 +1,4 @@
-function [varargout] = ft_plot_box(position, varargin)
+function [varargout] = ft_plot_box_multi(X, Y, varargin)
 
 % FT_PLOT_BOX plots the outline of a box that is specified by its lower
 % left and upper right corner
@@ -76,12 +76,13 @@ end
 
 % convert the two cornerpoints into something that the patch function understands
 % the box position is represented just like the argument to the AXIS function
-x1 = position(1);
-x2 = position(2);
-y1 = position(3);
-y2 = position(4);
-X = [x1 x2 x2 x1];
-Y = [y1 y1 y2 y2];
+if size(X,1) ~= 2
+    ft_error('size of X is not a 2xN matrix')
+end
+if size(Y,1) ~= 2
+    ft_error('size of Y is not a 2xN matrix')
+end
+
 
 if isempty(hlim) && isempty(vlim) && isempty(hpos) && isempty(vpos) && isempty(height) && isempty(width)
   % no scaling is needed, the input X and Y are already fine
@@ -144,7 +145,8 @@ end % shortcut
 % use an arbitrary color, which will be replaced by the correct color a few lines down
 C = 0;
 
-h = patch(X, Y, C);
+h = patch([X(1,:); X(2,:); X(2,:); X(1,:)], [Y(1,:); Y(1,:); Y(2,:); Y(2,:)], C);
+%h = patch(X, Y, C);
 set(h, 'FaceAlpha', facealpha)
 set(h, 'FaceColor', facecolor)
 set(h, 'EdgeColor', edgecolor)
