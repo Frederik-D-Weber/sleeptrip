@@ -363,7 +363,13 @@ if ~hasdata && ~istrue(cfg.datainteractive)
     hasdata = true;
 end
 
+cfg.channel         = ft_getopt(cfg, 'channel', 'all', 1);
+
 if hasdata
+    cfg_sd = [];
+    cfg_sd.channel = cfg.channel;
+    data = ft_selectdata(cfg_sd,data);
+    
     switch cfg.precision
         case 'original'
         case 'single'
@@ -373,7 +379,6 @@ if hasdata
     end
 end
 
-cfg.channel         = ft_getopt(cfg, 'channel', 'all', 1);
 
 if isfield(cfg,'scoring')
     cfg.blocksize = cfg.scoring.epochlength;
@@ -989,6 +994,7 @@ if hasdata
     % check if the input data is valid for this function
     data = ft_checkdata(data, 'datatype', {'raw', 'comp'}, 'feedback', 'yes', 'hassampleinfo', 'yes');
     % fetch the header from the data structure in memory
+    
     hdr = ft_fetch_header(data);
     
     if isfield(data, 'cfg') && ~isempty(ft_findcfg(data.cfg, 'origfs'))
