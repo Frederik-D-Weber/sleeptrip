@@ -57,7 +57,12 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 one in the data using a 'wildcard' or be 'exact' (default = 'exact').
 %                                 Note that using 'wildcard' can be much
 %                                 much slower that 'exact' approach.
+%   cfg.eventsplothypnogram     = if events should be plotted also in the
+%                                 hypnogram, either 'yes' or 'no' (default = 'no')
 %   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' or 'boxdimple' or 'boxdimple+snake'(default = 'box');
+%   cfg.eventcolors             = a Nx3 RGB color matrix of the different N events types as (alphabetically) ordered by matlab 'unique' function, missing colors for the number of event types will be complemented;
+%                                 (default = flipud(brighten(lines(N_EventTypes))) )
+%   cfg.eventcolorsalpha        = the alpha value (non-transparency) of the event colors (default = 0.38)
 %   cfg.eventminduration        = the minimal duration in seconds of an
 %                                 event to better display it e.g. if duration is 0 seconds then
 %                                 this will be changed to
@@ -495,7 +500,14 @@ end
   
     end
     
-    cfg.event_begin_end_color = flipud(brighten(lines(cfg.nEventTypes), .8));
+    cfg.eventcolors = ft_getopt(cfg, 'eventcolors',flipud(brighten(lines(cfg.nEventTypes), .8)));
+    cfg.eventcolorsalpha = ft_getopt(cfg, 'eventcolorsalpha',0.38);
+
+    if size(cfg.eventcolors,1) < cfg.nEventTypes
+        evcol = flipud(brighten(lines(cfg.nEventTypes-size(cfg.eventcolors,1)), .8));
+         cfg.eventcolors(size(cfg.eventcolors,1):cfg.nEventTypes,:) = evcol;
+
+    end
     %cfg.event_begin_end_color2 = [0 0 1];
     
     
@@ -4284,6 +4296,8 @@ if strcmp(cfg.doSleepScoring,'yes')
             if isfield(cfg,'times_ind_per_channel_evtypes') && istrue(cfg.eventsplothypnogram)
                         ylim(axh,[cfg.plot_MA_offset (cfg.nEventTypes-1)*ev_step+ev_offset+ev_halfhight*2])
 
+%                 xy = nan(numel(cfg.begin_end_per_channel_evtypes),2);
+%                 iEvcount = 0;
                 for iEventType = 1:cfg.nEventTypes
                 	ev_y = (iEventType-1)*ev_step+ev_offset;
                     yTick = [ev_y yTick];
@@ -4298,14 +4312,23 @@ if strcmp(cfg.doSleepScoring,'yes')
                                 %color = opt.chancolors(chanindx(i),:);
                                 color = opt.chancolors(chanindx(ich),:);
                             end
-
+                            %fprintf([ num2str(iEvcount) '\n'] )
+%                             xy((iEvcount+1):(iEvcount + size(curr_begins_ends,1)),1) = curr_begins_ends(:,1);
+%                             xy((iEvcount+1):(iEvcount + size(curr_begins_ends,1)),2) = repmat(ev_y,size(curr_begins_ends,1),1);
+%                             iEvcount = iEvcount + size(curr_begins_ends,1);
+%                             
                             temp_x = (curr_begins_ends(:,1)/opt.fsample)/60;
                             temp_y = repmat(ev_y,size(curr_begins_ends,1),1);
                             plot(axh,[temp_x temp_x]',[temp_y-ev_halfhight temp_y+ev_halfhight]','Color',color)
-                            %scatter(axh,(curr_begins_ends(:,1)/opt.fsample)/60,repmat(ev1_offset,1,size(curr_begins_ends,1)),'MarkerEdgeColor',color)
+%                             %scatter(axh,(curr_begins_ends(:,1)/opt.fsample)/60,repmat(ev1_offset,1,size(curr_begins_ends,1)),'MarkerEdgeColor',color)
                         end
                     end
                 end
+%                 if ~isempty(xy)
+%                     temp_x = (xy(:,1)/opt.fsample)/60;
+%                     plot(axh,[temp_x temp_x]',[xy(:,2)-ev_halfhight xy(:,2)+ev_halfhight]')
+% 
+%                 end
             end
             
         end
@@ -4804,7 +4827,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                 h_so_event_begin_end = temp_ax;
                 for k=1:numel(evbeg)
                     
-                    h_so_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) temp_so_y_offset1 temp_so_y_offset2],'facealpha',0.38, 'facecolor', cfg.slowoscillation_mark_color, 'edgecolor', 'none', 'tag', 'mark_slowosci',  ...
+                    h_so_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) temp_so_y_offset1 temp_so_y_offset2],'facealpha',cfg.eventcolorsalpha, 'facecolor', cfg.slowoscillation_mark_color, 'edgecolor', 'none', 'tag', 'mark_slowosci',  ...
                         'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'axis', h_so_event_begin_end);
                     
                 end
@@ -5224,7 +5247,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                         
                         h_sp_event_begin_end = temp_ax;
                         for k=1:numel(evbeg)
-                            h_sp_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) temp_sp_y_offset1 temp_sp_y_offset2],'facealpha',0.38, 'facecolor', cfg.spindle_mark_color, 'edgecolor', 'none', 'tag', 'mark_spind',  ...
+                            h_sp_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) temp_sp_y_offset1 temp_sp_y_offset2],'facealpha',cfg.eventcolorsalpha, 'facecolor', cfg.spindle_mark_color, 'edgecolor', 'none', 'tag', 'mark_spind',  ...
                                 'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1],'axis',h_sp_event_begin_end);
                         end
                         temp_ax = h_sp_event_begin_end;
@@ -5604,7 +5627,7 @@ if strcmp(cfg.displayEvents,'yes')
         switch cfg.eventhighlighting
                         case {'box','snake+box','boxdimple','boxdimple+snake'}
         for iEventTypes = 1:cfg.nEventTypes
-            eventcolor = cfg.event_begin_end_color(iEventTypes, :);
+            eventcolor = cfg.eventcolors(iEventTypes, :);
             eventdarkercolor = brighten(eventcolor, -0.2);
             boxcordtemp = nan(1000,4);
             iEvcount = 0;
@@ -5627,7 +5650,7 @@ if strcmp(cfg.displayEvents,'yes')
                         case {'box'}
                         	boxcordtemp(iEvcount,:) = [tim(evbeg(k)) tim(evend(k)) -0.8 0.8];
                         case {'snake+box','boxdimple','boxdimple+snake'}
-                            ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+                            ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',cfg.eventcolorsalpha, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
                             'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.width, 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', [-1 1]);
                            
                             
@@ -5684,7 +5707,7 @@ if strcmp(cfg.displayEvents,'yes')
                 evend_ind = evend_ind-(begsample-1);
                 
                 for k=1:numel(evbeg_ind)
-                    ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', eventdarkercolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+                    ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',cfg.eventcolorsalpha, 'facecolor', eventdarkercolor, 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
                         'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.width, 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', [-1 1]);
                     
                 end
@@ -5695,7 +5718,7 @@ if strcmp(cfg.displayEvents,'yes')
                     if iEvcount > 0
                         boxcordtemp = boxcordtemp';
                         
-                        ft_plot_box_multi(boxcordtemp(1:2,:),boxcordtemp(3:4,:),'facealpha',0.38, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end');
+                        ft_plot_box_multi(boxcordtemp(1:2,:),boxcordtemp(3:4,:),'facealpha',cfg.eventcolorsalpha, 'facecolor', eventcolor, 'edgecolor', 'none', 'tag', 'event_begin_end');
                     end
             end
         end
@@ -5712,7 +5735,7 @@ end
 %             evend = find(tmp==-1) - 1;
 %             
 %             for k=1:numel(evbeg)
-%                 h_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color(iEventType,:), 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+%                 h_event_begin_end = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',cfg.eventcolorsalpha, 'facecolor', cfg.eventcolors(iEventType,:), 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
 %                     'hpos', opt.laytime.pos(ich,1), 'vpos', opt.laytime.pos(ich,2), 'width', opt.width, 'height', opt.laytime.height(ich), 'hlim', opt.hlim, 'vlim', [-1 1]);
 %             end
 %             
@@ -5727,7 +5750,7 @@ end
 %             evend_ind = evend_ind-(begsample-1);
 %             
 %             for k=1:numel(evbeg_ind)
-%                 h_event_begin_end_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color(iEventType,:), 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
+%                 h_event_begin_end_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',cfg.eventcolorsalpha, 'facecolor', cfg.eventcolors(iEventType,:), 'edgecolor', 'none', 'tag', 'event_begin_end',  ...
 %                     'hpos', opt.laytime.pos(ich,1), 'vpos', opt.laytime.pos(ich,2), 'width', opt.width, 'height', opt.laytime.height(ich), 'hlim', opt.hlim, 'vlim', [-1 1]);
 %                 
 %             end
@@ -5743,7 +5766,7 @@ end
 %             evend = find(tmp==-1) - 1;
 %             
 %             for k=1:numel(evbeg)
-%                 h_event_begin_end2 = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
+%                 h_event_begin_end2 = ft_plot_box([tim(evbeg(k)) tim(evend(k)) -0.8 0.8],'facealpha',cfg.eventcolorsalpha, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
 %                     'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
 %                 
 %             end
@@ -5759,7 +5782,7 @@ end
 %             evend_ind = evend_ind-(begsample-1);
 %             
 %             for k=1:numel(evbeg_ind)
-%                 h_event_begin_end2_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',0.38, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
+%                 h_event_begin_end2_ind = ft_plot_box([tim(evbeg_ind(k)) tim(evend_ind(k)) 0.8 1],'facealpha',cfg.eventcolorsalpha, 'facecolor', cfg.event_begin_end_color2, 'edgecolor', 'none', 'tag', 'event_begin_end2',  ...
 %                     'hpos', opt.laytime.pos(channelIndex,1), 'vpos', opt.laytime.pos(channelIndex,2), 'width', opt.width, 'height', opt.laytime.height(channelIndex), 'hlim', opt.hlim, 'vlim', [-1 1]);
 %                 
 %             end
@@ -6246,7 +6269,7 @@ if isfield(cfg,'times_ind_per_channel_evtypes')
     lines_handle_vector = [];
     evtypes_name = {};
     for iEventTypes = 1:cfg.nEventTypes
-        line_handle = plot([NaN,NaN], 'color', cfg.event_begin_end_color(iEventTypes, :));
+        line_handle = plot([NaN,NaN], 'color', cfg.eventcolors(iEventTypes, :));
         lines_handle_vector(iEventTypes) = line_handle;
     end
     hold off;
