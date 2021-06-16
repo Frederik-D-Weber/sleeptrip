@@ -53,6 +53,8 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                          of uses wildcards if cfg.eventchannelmatching = 'wildcard' e.g. 'C*' to match all
 %                                          channels that start with C, or 'all' to
 %                                          match all channels, SEE FT_CHANNELSELECTION for details. 
+%   cfg.highlightscoringchannels = either 'yes' or 'no' if the scoring channels
+%                                 should be highlighted (default = 'yes')
 %   cfg.eventchannelmatching    = either match channels of events to the
 %                                 one in the data using a 'wildcard' or be 'exact' (default = 'exact').
 %                                 Note that using 'wildcard' can be much
@@ -237,6 +239,7 @@ cfg.precision = ft_getopt(cfg, 'precision', 'single');
 
 cfg.eventchannelmatching  = ft_getopt(cfg, 'eventchannelmatching', 'exact');
 cfg.eventsplothypnogram = ft_getopt(cfg, 'eventsplothypnogram', 'no');
+cfg.highlightscoringchannels = ft_getopt(cfg, 'highlightscoringchannels', 'yes');
 
 %if hasdata
 %   
@@ -2625,9 +2628,13 @@ switch key
             cfg.plot_stage_signatures = 'yes';
         end
         if strcmp(cfg.highlight_scoring_channels,'yes')
-            cfg.highlight_scoring_channels = 'no';
-        else
-            cfg.highlight_scoring_channels = 'yes';
+            if istrue(cfg.highlightscoringchannels)
+                cfg.highlight_scoring_channels = 'no';
+            else
+                if istrue(cfg.highlightscoringchannels)
+                    cfg.highlight_scoring_channels = 'yes';
+                end
+            end
         end
 
         setappdata(h, 'opt', opt);
