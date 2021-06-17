@@ -77,7 +77,9 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 cutting the data up (default = 30)
 %   cfg.trl                     = structure that defines the data segments of interest, only applicable for trial-based data
 %   cfg.continuous              = 'yes' or 'no' whether the data should be interpreted as continuous or trial-based
-%   cfg.channel                 = cell-array with channel labels, see FT_CHANNELSELECTION
+%   cfg.channel                 = cell-array with channel labels to use for the data, see FT_CHANNELSELECTION
+%   cfg.channeldisplayed        = cell-array with channel labesl to be
+%                                 selected for displaying (while still retaining the other channels available)
 %   cfg.plotlabels              = 'yes' (default), 'no', 'some'; whether
 %                                 to plot channel labels in vertical viewmode ('some' plots one in every ten
 %                                 labels; useful when plotting a large number of channels at a time)
@@ -367,6 +369,7 @@ if ~hasdata && ~istrue(cfg.datainteractive)
 end
 
 cfg.channel         = ft_getopt(cfg, 'channel', 'all', 1);
+cfg.channeldisplayed = ft_getopt(cfg, 'channeldisplayed', cfg.channel);
 
 if hasdata
     cfg_sd = [];
@@ -1435,7 +1438,7 @@ else
     cfg.displayEvents = 'no';
 end
 
-cfg.browserversion = '3.1.0';
+cfg.browserversion = '3.1.5';
 
 if strcmp(cfg.doSleepScoring,'yes')
     
@@ -1452,8 +1455,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     cfg.underlayAlphaSignal = 'no';
     cfg.underlaySOSignal = 'no';
 
-    
-    
+    cfg.channel = ft_channelselection(cfg.channeldisplayed,opt.orgdata.label);
     
     cfg.spindle_mark_color = [0 1 0];
     cfg.slowoscillation_mark_color = [1 0 0];
@@ -1575,6 +1577,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     
     cfg.display_time_frequency = 'no';
     
+    cfg.plotsignal = 'yes';
     
     cfg.artifact_export_delimiter = ',';
     
@@ -1709,11 +1712,19 @@ if strcmp(cfg.doSleepScoring,'yes')
     uicontrol('tag', 'scoptbuttons_zoom', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'zoom','position', [0.7, temp_lower_line_y+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'z')
     uicontrol('tag', 'scoptbuttons_grid', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'grid','position', [0.725, temp_lower_line_y+0.08/3+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'g')
     uicontrol('tag', 'scoptbuttons_ruler', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'ruler','position', [0.725, temp_lower_line_y+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'e')
-    if strcmp(cfg.displayEvents,'yes')
-        uicontrol('tag', 'scoptbuttons_EvDisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'events','position', [0.7, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'v')
+    if strcmp(cfg.plotsignal,'yes')
+        uicontrol('tag', 'scoptbuttons_SigDisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'SIG','position', [0.7, temp_lower_line_y , 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'control+s')
     else
-        uicontrol('tag', 'scoptbuttons_EvDisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'EVENTS','position', [0.7, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'v')
+        uicontrol('tag', 'scoptbuttons_SigDisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'sig','position', [0.7, temp_lower_line_y , 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'control+s')
     end
+    
+    if strcmp(cfg.displayEvents,'yes')
+        uicontrol('tag', 'scoptbuttons_EvDisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'EVT','position', [0.725, temp_lower_line_y , 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'v')
+    else
+        uicontrol('tag', 'scoptbuttons_EvDisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'evt','position', [0.725, temp_lower_line_y , 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'v')
+    end
+
+
     uicontrol('tag', 'scoptbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'save','position', [0.75, temp_lower_line_y2 , 0.05, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'shift+s')
     uicontrol('tag', 'scoptbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'open','position', [0.75, temp_lower_line_y , 0.05, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'shift+o')
     
@@ -1778,6 +1789,7 @@ if strcmp(cfg.doSleepScoring,'yes');
         ft_uilayout(h, 'tag', 'scoptbuttons_HRdisp', 'style', 'pushbutton', 'callback', @keyboard_cb);
     end
     ft_uilayout(h, 'tag', 'scoptbuttons_ALdisp', 'style', 'pushbutton', 'callback', @keyboard_cb);
+    ft_uilayout(h, 'tag', 'scoptbuttons_SigDisp', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_mark', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons_zoom', 'style', 'pushbutton', 'callback', @keyboard_cb);
@@ -2300,6 +2312,7 @@ helptext = [ ...
     '  M: enable/disable marking, cummulative time \n'...
     '  N: enable/disable spindle signal display (EEG filtered in spindle band) \n'...
     '  V: enable/disable display of pre-readin Events, if processed already \n'...
+    '  CTRL+S: enable/disable display of signal lines \n'...
     '  Q: delete previously made marking \n'...
     '  E: enable/disable Ruler (aka "the Score-ship") \n'...
     '  J: enable/disable spindle marking \n'...
@@ -2627,14 +2640,14 @@ switch key
         else
             cfg.plot_stage_signatures = 'yes';
         end
-        if strcmp(cfg.highlight_scoring_channels,'yes')
-            if istrue(cfg.highlightscoringchannels)
+        if istrue(cfg.highlightscoringchannels)
+            if strcmp(cfg.highlight_scoring_channels,'yes')
                 cfg.highlight_scoring_channels = 'no';
             else
-                if istrue(cfg.highlightscoringchannels)
-                    cfg.highlight_scoring_channels = 'yes';
-                end
+                cfg.highlight_scoring_channels = 'yes';
             end
+        else
+            cfg.highlight_scoring_channels = 'no';
         end
 
         setappdata(h, 'opt', opt);
@@ -3230,6 +3243,21 @@ switch key
             setappdata(h, 'cfg', cfg);
             redraw_cb(h, eventdata);
         end
+    case 'control+s'
+        %if strcmp(cfg.doSleepScoring,'yes')
+            if ~isfield(cfg,'plotsignal')
+                cfg.plotsignal = 'yes';
+            else
+                if strcmp(cfg.plotsignal,'yes')
+                    cfg.plotsignal = 'no';
+                else
+                    cfg.plotsignal = 'yes';
+                end
+            end
+            setappdata(h, 'opt', opt);
+            setappdata(h, 'cfg', cfg);
+            redraw_cb(h, eventdata);
+        %end
     case 'v'
         if strcmp(cfg.doSleepScoring,'yes')
             if ~isfield(cfg,'displayEvents')
@@ -3977,20 +4005,26 @@ if strcmp(cfg.doSleepScoring,'yes')
         ft_uilayout(h, 'tag', 'scoptbuttons_HRdisp', 'FontWeight', 'normal')
         ft_uilayout(h, 'tag', 'scoptbuttons_HRdisp', 'BackgroundColor', [0.5 0.5 0.5]);
     end
-    
+    if strcmp(cfg.plotsignal,'yes')
+        ft_uilayout(h, 'tag', 'scoptbuttons_SigDisp', 'FontWeight', 'bold');
+        ft_uilayout(h, 'tag', 'scoptbuttons_SigDisp', 'string', 'SIG');
+    else
+        ft_uilayout(h, 'tag', 'scoptbuttons_SigDisp', 'FontWeight', 'normal');
+        ft_uilayout(h, 'tag', 'scoptbuttons_SigDisp', 'string', 'sig');
+    end
     
     if strcmp(cfg.displayEvents,'yes')
         %ft_uilayout(h, 'tag', 'scoptbuttons_SPdisp', 'BackgroundColor', cfg.underlaySpindleSignal_color);
         ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'FontWeight', 'bold');
-        ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'string', 'EVENTS');
+        ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'string', 'EVT');
         
     else
         %ft_uilayout(h, 'tag', 'scoptbuttons_SPdisp', 'BackgroundColor', [0.5 0.5 0.5]);
         ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'FontWeight', 'normal');
-        ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'string', 'events');
+        ft_uilayout(h, 'tag', 'scoptbuttons_EvDisp', 'string', 'evt');
         
     end
-    
+        
     if strcmp(opt.zoomstatus,'on')
         ft_uilayout(h, 'tag', 'scoptbuttons_zoom', 'string', ['zOOm']);
     else
@@ -5934,6 +5968,7 @@ delete(findobj(h,'tag', 'ecg_HR_peaks_markers'));
 
 
 
+if istrue(cfg.plotsignal)
 
 if strcmp(cfg.viewmode, 'butterfly')
     set(gca,'ColorOrder',opt.chancolors(chanindx,:)) % plot vector does not clear axis, therefore this is possible
@@ -6124,6 +6159,8 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
 else
     error('unknown viewmode "%s"', cfg.viewmode);
 end % if strcmp viewmode
+
+end
 
 
 nticks = 11;
