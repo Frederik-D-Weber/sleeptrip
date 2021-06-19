@@ -30,13 +30,13 @@ function [dat] = read_brainvision_eeg(filename, hdr, begsample, endsample, chani
 % $Id$
 
 if nargin<5
-  % read all channels
-  chanindx = [];
+    % read all channels
+    chanindx = [];
 end
 
 if isequal(chanindx(:)', 1:hdr.NumberOfChannels);
-  % read all channels
-  chanindx = [];
+    % read all channels
+    chanindx = [];
 end
 
 % FIXME it would be nice to also implement the efficient reading of the
@@ -44,202 +44,215 @@ end
 % implementation of the binary multiplexed and vectorized formats is smart enough.
 
 if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexed') && any(strcmpi(hdr.BinaryFormat, {'int_16', 'int_32', 'ieee_float_32'}))
-  
-  switch lower(hdr.BinaryFormat)
-    case 'int_16'
-      sampletype = 'int16';
-      samplesize = 2;
-    case 'int_32'
-      sampletype = 'int32';
-      samplesize = 4;
-    case 'ieee_float_32'
-      sampletype = 'float32';
-      samplesize = 4;
-  end % case
-  
-  fid = fopen_or_error(filename, 'rb', 'ieee-le');
-  
-  if isempty(chanindx)
-    % read all the channels
-    fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1), 'cof');
-    dat = fread(fid, [hdr.NumberOfChannels, (endsample-begsample+1)], sampletype);
-  else
-    numsamples = (endsample-begsample+1);
-    % read only the selected channels
-    dat = zeros(length(chanindx), numsamples,'single');
-    for chan = length(chanindx):-1:1
-      fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1) + (chanindx(chan)-1)*samplesize, 'bof');
-      dat(chan,:) = fread(fid, [1, numsamples], [sampletype '=>float32'], (hdr.NumberOfChannels-1)*samplesize);
-    end
-
     
-    % don't do the channel selection again at the end of the function
-    chanindx = [];
-  end
-  
-  fclose(fid);
-  
-      % compute real microvolts using the calibration factor (resolution)
+    switch lower(hdr.BinaryFormat)
+        case 'int_16'
+            sampletype = 'int16';
+            samplesize = 2;
+        case 'int_32'
+            sampletype = 'int32';
+            samplesize = 4;
+        case 'ieee_float_32'
+            sampletype = 'float32';
+            samplesize = 4;
+    end % case
+    
+    fid = fopen_or_error(filename, 'rb', 'ieee-le');
+    
+    if isempty(chanindx)
+        % read all the channels
+        fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1), 'cof');
+        dat = fread(fid, [hdr.NumberOfChannels, (endsample-begsample+1)], [sampletype '=>float32']);
+    else
+        numsamples = (endsample-begsample+1);
+        % read only the selected channels
+        dat = zeros(length(chanindx), numsamples,'single');
+        for chan = length(chanindx):-1:1
+            fseek(fid, hdr.NumberOfChannels*samplesize*(begsample-1) + (chanindx(chan)-1)*samplesize, 'bof');
+            dat(chan,:) = fread(fid, [1, numsamples], [sampletype '=>float32'], (hdr.NumberOfChannels-1)*samplesize);
+        end
+        
+        
+        
+    end
+    
+    fclose(fid);
+    
+    % compute real microvolts using the calibration factor (resolution)
     % calib = diag(hdr.resolution(chanindx));
     % % using a sparse multiplication speeds it up
     % dat = full(sparse(calib) * dat);
-    if ~all(hdr.resolution(chanindx) == 1) && ~all(isnan(hdr.resolution(chanindx)))
-    calib = reshape(hdr.resolution(chanindx),[],1);
-    for k = 1:size(dat,2)
-      dat(:,k) = calib.*dat(:,k);
+    if isempty(chanindx)
+        chanindxres = 1:size(dat,1);
+    else
+        chanindxres = chanindx;
     end
-    end
-  
-elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vectorized') && strcmpi(hdr.BinaryFormat, 'ieee_float_32')
-  switch lower(hdr.BinaryFormat)
-    case 'int_16'
-      sampletype = 'int16';
-      samplesize = 2;
-    case 'int_32'
-      sampletype = 'int32';
-      samplesize = 4;
-    case 'ieee_float_32'
-      sampletype = 'float32';
-      samplesize = 4;
-  end % case
-    
-  fid = fopen_or_error(filename, 'rb', 'ieee-le');
-  fseek(fid, 0, 'eof');
-  hdr.nSamples = ftell(fid)/(samplesize*hdr.NumberOfChannels);
-  
-  numsamples = (endsample-begsample+1);
-  
- 
-  
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-% read all channels first and do NOT set chanindx = [];   
-%   fseek(fid, 0, 'bof');
-%   dat = zeros(hdr.NumberOfChannels,numsamples,'single');
-%   for chan=1:hdr.NumberOfChannels
-%     fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
-%     dat(chan,:) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
-%     fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
-%   end
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % read only the selected channels   
-%   dat = zeros(length(chanindx), numsamples,'single');
-%   for chan=1:length(chanindx)
-%    	fseek(fid, (begsample - 1) * hdr.NumberOfChannels * samplesize + (chanindx(chan) - 1) * samplesize, 'bof');
-%     dat(chan, :) = fread(fid, [1, numsamples], [sampletype '=>float32'], (hdr.NumberOfChannels - 1) * samplesize);
-%   end
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%% this is the fastest version and sparse in memory
-fseek(fid, 0, 'bof');
-if isempty(chanindx) && (endsample == hdr.nSamples) && (begsample == 1)% Read entire file
-    dat = fread(fid, [hdr.nSamples, hdr.NumberOfChannels], [sampletype '=>float32']).';
-else
-    if isempty(chanindx) % Read all channels
-        chanindx = 1:hdr.NumberOfChannels;
-    end
-    
-    dat = zeros(length(chanindx), numsamples,'single');
-    ich = 0;
-    for chan=1:hdr.NumberOfChannels
-        fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
-        if ismember(chan,chanindx)
-            ich = ich + 1;
-            dat(ich,:) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
-        else
-            fseek(fid, numsamples, 'cof');
+    if ~all(hdr.resolution(chanindxres) == 1) && ~all(isnan(hdr.resolution(chanindxres)))
+        calib = reshape(hdr.resolution(chanindxres),[],1);
+        for k = 1:size(dat,2)
+            dat(:,k) = calib.*dat(:,k);
         end
-        fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
     end
-    
-end
-  
+    chanindxres = [];
 
-  
-  fclose(fid);
-  
-  if ~all(hdr.resolution(chanindx) == 1) && ~all(isnan(hdr.resolution(chanindx)))
-      calib = reshape(hdr.resolution(chanindx),[],1);
-      for k = 1:size(dat,2)
-          dat(:,k) = calib.*dat(:,k);
-      end
-  end
-  
-  % don't do the channel selection again at the end of the function
-  chanindx = [];
-  
+    % don't do the channel selection again at the end of the function
+    chanindx = [];
+elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vectorized') && strcmpi(hdr.BinaryFormat, 'ieee_float_32')
+    switch lower(hdr.BinaryFormat)
+        case 'int_16'
+            sampletype = 'int16';
+            samplesize = 2;
+        case 'int_32'
+            sampletype = 'int32';
+            samplesize = 4;
+        case 'ieee_float_32'
+            sampletype = 'float32';
+            samplesize = 4;
+    end % case
+    
+    fid = fopen_or_error(filename, 'rb', 'ieee-le');
+    fseek(fid, 0, 'eof');
+    hdr.nSamples = ftell(fid)/(samplesize*hdr.NumberOfChannels);
+    
+    numsamples = (endsample-begsample+1);
+    
+    
+    
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%
+    % read all channels first and do NOT set chanindx = [];
+    %   fseek(fid, 0, 'bof');
+    %   dat = zeros(hdr.NumberOfChannels,numsamples,'single');
+    %   for chan=1:hdr.NumberOfChannels
+    %     fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
+    %     dat(chan,:) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
+    %     fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
+    %   end
+    %%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%
+    %   % read only the selected channels
+    %   dat = zeros(length(chanindx), numsamples,'single');
+    %   for chan=1:length(chanindx)
+    %    	fseek(fid, (begsample - 1) * hdr.NumberOfChannels * samplesize + (chanindx(chan) - 1) * samplesize, 'bof');
+    %     dat(chan, :) = fread(fid, [1, numsamples], [sampletype '=>float32'], (hdr.NumberOfChannels - 1) * samplesize);
+    %   end
+    %%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%% this is the fastest version and sparse in memory
+    fseek(fid, 0, 'bof');
+    if isempty(chanindx) && (endsample == hdr.nSamples) && (begsample == 1)% Read entire file
+        dat = fread(fid, [hdr.nSamples, hdr.NumberOfChannels], [sampletype '=>float32']).';
+    else
+        if isempty(chanindx) % Read all channels
+            chanindx = 1:hdr.NumberOfChannels;
+        end
+        
+        dat = zeros(length(chanindx), numsamples,'single');
+        ich = 0;
+        for chan=1:hdr.NumberOfChannels
+            fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples
+            if ismember(chan,chanindx)
+                ich = ich + 1;
+                dat(ich,:) = fread(fid, numsamples, [sampletype '=>float32']);     % read these samples
+            else
+                fseek(fid, numsamples, 'cof');
+            end
+            fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
+        end
+        
+    end
+    
+    
+    
+    fclose(fid);
+    
+    if isempty(chanindx)
+        chanindxres = 1:size(dat,2);
+    else
+        chanindxres = chanindx;
+    end
+    if ~all(hdr.resolution(chanindxres) == 1) && ~all(isnan(hdr.resolution(chanindxres)))
+        calib = reshape(hdr.resolution(chanindxres),[],1);
+        for k = 1:size(dat,2)
+            dat(:,k) = calib.*dat(:,k);
+        end
+    end
+    chanindxres = [];
+    
+    % don't do the channel selection again at the end of the function
+    chanindx = [];
+    
 elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'multiplexed')
-  fid = fopen_or_error(filename, 'rt');
-  
-  % skip lines if hdr.skipLines is set and not zero
-  if isfield(hdr,'skipLines') && hdr.skipLines > 0
-    for line=1:hdr.skipLines
-      str = fgets(fid);
+    fid = fopen_or_error(filename, 'rt');
+    
+    % skip lines if hdr.skipLines is set and not zero
+    if isfield(hdr,'skipLines') && hdr.skipLines > 0
+        for line=1:hdr.skipLines
+            str = fgets(fid);
+        end
     end
-  end
-  
-  for line=1:(begsample-1)
-    % read first lines and discard the data in them
-    str = fgets(fid);
-  end
-  dat = zeros(endsample-begsample+1, hdr.NumberOfChannels,'single');
-  for line=1:(endsample-begsample+1)
-    str = fgets(fid);         % read a single line with Nchan samples
-    str(str==',') = '.';      % replace comma with point
-    dat(line,:) = str2double(str);
-  end
-  fclose(fid);
-  % transpose the data
-  dat = dat';
-  
+    
+    for line=1:(begsample-1)
+        % read first lines and discard the data in them
+        str = fgets(fid);
+    end
+    dat = zeros(endsample-begsample+1, hdr.NumberOfChannels,'single');
+    for line=1:(endsample-begsample+1)
+        str = fgets(fid);         % read a single line with Nchan samples
+        str(str==',') = '.';      % replace comma with point
+        dat(line,:) = str2double(str);
+    end
+    fclose(fid);
+    % transpose the data
+    dat = dat';
+    
 elseif strcmpi(hdr.DataFormat, 'ascii') && strcmpi(hdr.DataOrientation, 'vectorized')
-  % this is a very inefficient fileformat to read data from, since it requires to
-  % read in all the samples of each channel and then select only the samples of interest
-  fid = fopen_or_error(filename, 'rt');
-  dat = zeros(hdr.NumberOfChannels, endsample-begsample+1);
-  skipColumns = 0;
-  for chan=1:hdr.NumberOfChannels
-    % this is very slow, so better give some feedback to indicate that something is happening
-    fprintf('reading channel %d from ascii file to get data from sample %d to %d\n', chan, begsample, endsample);
-    
-    % check whether columns have to be skipped
-    if isfield(hdr,'skipColumns'); skipColumns = hdr.skipColumns; end
-    
-    str = fgets(fid);             % read all samples of a single channel
-    str(str==',') = '.';          % replace comma with point
-    
-    if ~isempty(regexp(str(1:10), '[a-zA-Z]', 'once'))
-      % the line starts with letters, not numbers: probably it is a channel label
-      % find the first number and remove the preceding part
-      sel   = regexp(str(1:10), ' [-0-9]');   % find the first number, or actually the last space before the first number
-      label = str(1:(sel));                   % this includes the space
-      str   = str((sel+1):end);               % keep only the numbers
-      
-      % as heading columns are already removed, set skipColumns to zero
-      skipColumns = 0;
+    % this is a very inefficient fileformat to read data from, since it requires to
+    % read in all the samples of each channel and then select only the samples of interest
+    fid = fopen_or_error(filename, 'rt');
+    dat = zeros(hdr.NumberOfChannels, endsample-begsample+1);
+    skipColumns = 0;
+    for chan=1:hdr.NumberOfChannels
+        % this is very slow, so better give some feedback to indicate that something is happening
+        fprintf('reading channel %d from ascii file to get data from sample %d to %d\n', chan, begsample, endsample);
+        
+        % check whether columns have to be skipped
+        if isfield(hdr,'skipColumns'); skipColumns = hdr.skipColumns; end
+        
+        str = fgets(fid);             % read all samples of a single channel
+        str(str==',') = '.';          % replace comma with point
+        
+        if ~isempty(regexp(str(1:10), '[a-zA-Z]', 'once'))
+            % the line starts with letters, not numbers: probably it is a channel label
+            % find the first number and remove the preceding part
+            sel   = regexp(str(1:10), ' [-0-9]');   % find the first number, or actually the last space before the first number
+            label = str(1:(sel));                   % this includes the space
+            str   = str((sel+1):end);               % keep only the numbers
+            
+            % as heading columns are already removed, set skipColumns to zero
+            skipColumns = 0;
+        end
+        
+        % convert the string into numbers and copy the desired samples over
+        % into the data matrix
+        tmp = str2double(str);
+        dat(chan,:) = tmp(skipColumns+begsample:skipColumns+endsample);
     end
+    fclose(fid);
     
-    % convert the string into numbers and copy the desired samples over
-    % into the data matrix
-    tmp = str2double(str);
-    dat(chan,:) = tmp(skipColumns+begsample:skipColumns+endsample);
-  end
-  fclose(fid);
-  
 else
-  ft_error('unsupported sub-fileformat');
+    ft_error('unsupported sub-fileformat');
 end
 
 if ~isempty(chanindx)
-  % for the the multiplexed and vectorized binary formats the channel selection was
-  % already done in the code above, for the other formats the selection
-  % still has to be done here
-  dat = dat(chanindx,:);
+    % for the the multiplexed and vectorized binary formats the channel selection was
+    % already done in the code above, for the other formats the selection
+    % still has to be done here
+    dat = dat(chanindx,:);
 end
 
-% Convert to double, not necessary, as this is typically done higher order in ft_preprocessing 
+% Convert to double, not necessary, as this is typically done higher order in ft_preprocessing
 % ...for MATLAB < R14
 %if str2double(version('-release')) < 14
 %if ~isa(dat,'double')

@@ -91,6 +91,8 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
 %                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
 %   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
+%   cfg.channelmaxlabels        = maximal number of channels to print
+%                                 labels (default = 64)
 %   cfg.selfun                  = string, name of function which is evaluated using the right-click context menu
 %                                  The selected data and cfg.selcfg are passed on to this function.
 %   cfg.selcfg                  = configuration options for function in cfg.selfun
@@ -199,7 +201,7 @@ cfg = ft_checkconfig(cfg, 'renamedval', {'selectmode', 'mark', 'markartifact'});
 cfg = ft_checkconfig(cfg, 'createsubcfg',  {'preproc'});
 
 % set the defaults
-if ~isfield(cfg, 'ylim'),            cfg.ylim = 'maxabs';                 end
+cfg.ylim        = ft_getopt(cfg, 'ylim', 'maxabs');
 if ~isfield(cfg, 'artfctdef'),       cfg.artfctdef = struct;              end
 if ~isfield(cfg, 'selectfeature'),   cfg.selectfeature = 'visual';        end % string or cell-array
 if ~isfield(cfg, 'selectmode'),      cfg.selectmode = 'markartifact';     end
@@ -207,7 +209,6 @@ if ~isfield(cfg, 'blocksize'),       cfg.blocksize = [];                  end % 
 if ~isfield(cfg, 'preproc'),         cfg.preproc = [];                    end % see preproc for options
 if ~isfield(cfg, 'selfun'),          cfg.selfun = [];                     end % default functions: 'simpleFFT','multiplotER','topoplotER','topoplotVAR','movieplotER'
 if ~isfield(cfg, 'selcfg'),          cfg.selcfg = [];                     end % defaulting done below, requires layouts/etc to be processed
-if ~isfield(cfg, 'colorgroups'),     cfg.colorgroups = 'sequential';      end
 if ~isfield(cfg, 'channelcolormap'), cfg.channelcolormap = [0.75 0 0;0 0 1;0 1 0;0.44 0.19 0.63;0 0.13 0.38;0.5 0.5 0.5;1 0.75 0;1 0 0;0.89 0.42 0.04;0.85 0.59 0.58;0.57 0.82 0.31;0 0.69 0.94;1 0 0.4;0 0.69 0.31;0 0.44 0.75];   end
 if ~isfield(cfg, 'eegscale'),        cfg.eegscale = [];                   end
 if ~isfield(cfg, 'eogscale'),        cfg.eogscale = [];                   end
@@ -226,6 +227,9 @@ if ~isfield(cfg, 'ploteventlabels'), cfg.ploteventlabels = 'type=value';  end
 cfg.zlim           = ft_getopt(cfg, 'zlim',          'maxmin');
 cfg.compscale      = ft_getopt(cfg, 'compscale',     'global');
 
+%cfg.colorgroups = 'jet';
+cfg.colorgroups       = ft_getopt(cfg, 'colorgroups', 'allblack');
+    
 cfg.standard        = ft_getopt(cfg, 'standard', 'aasm');
 cfg.renderer        = ft_getopt(cfg, 'renderer');
 cfg.epochlength     = ft_getopt(cfg, 'epochlength', 30);
@@ -242,6 +246,7 @@ cfg.precision = ft_getopt(cfg, 'precision', 'single');
 cfg.eventchannelmatching  = ft_getopt(cfg, 'eventchannelmatching', 'exact');
 cfg.eventsplothypnogram = ft_getopt(cfg, 'eventsplothypnogram', 'no');
 cfg.highlightscoringchannels = ft_getopt(cfg, 'highlightscoringchannels', 'yes');
+cfg.channelmaxlabels = ft_getopt(cfg, 'channelmaxlabels', 64);
 
 %if hasdata
 %   
@@ -433,9 +438,7 @@ end
     %cfg_datbrow.channel = 6:8;
     %cfg_datbrow.chanscale = cfg_datbrow.chanscale(cfg_datbrow.channel);
     
-    %cfg.colorgroups = 'jet';
-    cfg.colorgroups       = ft_getopt(cfg, 'colorgroups', 'allblack');
-    
+
     %%% columns:  event      start      stop     duration      channel  
     cfg.nEventTypes = 0;
     cfg.EventTypes = [];
@@ -476,7 +479,7 @@ end
         for iEventTypes = 1:cfg.nEventTypes
             eventType = cfg.EventTypes{iEventTypes};
             fprintf(['event type: ' num2str(iEventTypes) ' ' eventType '\n']);
-
+            idx_evt = strcmp(cfg.eventssamples.event,eventType);
             for iCh = 1:length(data.label)
                 fprintf(['event type: ' num2str(iEventTypes) ' ' eventType ' ' 'ch: ' num2str(iCh) '\n']);
 
@@ -484,7 +487,6 @@ end
                 cfg.begin_end_per_channel_evtypes{iEventTypes, iCh} = [];
                 ch = data.label{iCh};
                 
-                idx_evt = strcmp(cfg.eventssamples.event,eventType);
                 switch cfg.eventchannelmatching
                     case 'wildcard'
                     	idx_ch = ~logical(cellfun(@isempty,cellfun(@(chs) ft_channelselection(chs, ch),cfg.eventssamples.channel(idx_evt),'UniformOutput',false)));
@@ -494,7 +496,7 @@ end
                         ft_error('cfg.eventchannelmatching unknown.')
                 end
                 
-                curr_begins_ends = table2array(cfg.eventssamples(idx_evt,{'start','stop'}));
+                curr_begins_ends = [cfg.eventssamples.start(idx_evt), cfg.eventssamples.stop(idx_evt)];
                 curr_begins_ends = curr_begins_ends(idx_ch,:);
                 if ~isempty(curr_begins_ends)
                 curr_times_ind = logical(zeros(1,nDataSamples));
@@ -1386,7 +1388,9 @@ opt.eventtypescolors = [0 0 0; 1 0 0; 0 0 1; 0 1 0; 1 0 1; 0.5 0.5 0.5; 0 1 1; 1
 opt.eventtypecolorlabels = {'black', 'red', 'blue', 'green', 'cyan', 'grey', 'light blue', 'yellow'};
 opt.nanpaddata  = []; % this is used to allow horizontal scaling to be constant (when looking at last segment continous data, or when looking at segmented/zoomed-out non-continous data)
 opt.trllock     = []; % this is used when zooming into trial based data
-    
+opt.changedBGcolor = false;
+opt.changedBGcolor2 = false;
+opt.changedBGcolor3 = false;
 % save original layout when viewmode = component
 if strcmp(cfg.viewmode,'component')
     opt.layorg    = cfg.layout;
@@ -1416,8 +1420,11 @@ if ~isempty(cfg.renderer)
     end
 end
 
-if strcmp(cfg.bgcolor,'dark')
+if strcmp(cfg.bgcolor,'dark') && ~opt.changedBGcolor2
+    opt.changedBGcolor2 = true;
     whitebg(h,'k');
+end
+if strcmp(cfg.bgcolor,'dark')
     opt.chancolors = 1-opt.chancolors;
 end
 set(h,'MenuBar','none');
@@ -4145,8 +4152,10 @@ offset    = opt.trlvis(opt.trlop, 3);
 chanindx  = match_str(opt.hdr.label, cfg.channel);
 
 
+
 % FW begin
-if strcmp(cfg.bgcolor,'dark')
+if strcmp(cfg.bgcolor,'dark') && ~opt.changedBGcolor
+    opt.changedBGcolor = true;
     whitebg(h,'k');
 end
 
@@ -4172,12 +4181,14 @@ if strcmp(cfg.doSleepScoring,'yes')
         end
 
 
-        
-        if strcmp(cfg.bgcolor,'dark')
-            whitebg(cfg.hhyp,'k');
-            set(cfg.hhyp,'color',[0 0 0]);
-        else
-            set(cfg.hhyp,'color',[1 1 1]);
+        if ~opt.changedBGcolor3
+            if strcmp(cfg.bgcolor,'dark')
+                whitebg(cfg.hhyp,'k');
+                set(cfg.hhyp,'color',[0 0 0]);
+            else
+                set(cfg.hhyp,'color',[1 1 1]);
+            end
+            opt.changedBGcolor3 = true;
         end
         
         
@@ -5968,13 +5979,12 @@ delete(findobj(h,'tag', 'ecg_HR_peaks_markers'));
 
 
 
-if istrue(cfg.plotsignal)
-
 if strcmp(cfg.viewmode, 'butterfly')
     set(gca,'ColorOrder',opt.chancolors(chanindx,:)) % plot vector does not clear axis, therefore this is possible
+    if istrue(cfg.plotsignal)
     ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
         'hpos', opt.laytime.pos(1,1), 'vpos', opt.laytime.pos(1,2), 'width', opt.laytime.width(1), 'height', opt.laytime.height(1), 'hlim', opt.hlim, 'vlim', opt.vlim);
-    
+    end
     
     % two ticks per channel
     yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height/2); ...
@@ -5990,22 +6000,70 @@ if strcmp(cfg.viewmode, 'butterfly')
     
 elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
     
+    if istrue(cfg.plotsignal)
+
     % determine channel indices into data outside of loop
     laysels = match_str(opt.laytime.label, opt.hdr.label);
     
+    % only plot labels when current chanlabel objects are less then the total number of channels (see bug 2065)
+    % this is a cheap quick fix. If it causes error in plotting components, do this conditional on viewmode
+    chanob = findobj(h,'tag', 'chanlabel');
+    if numel(chanob)<numel(chanindx)
+        needredrawchanlabel = true;
+    else
+        needredrawchanlabel = false;
+    end
+    if (cfg.channelmaxlabels <= length(chanindx))
+        delete(chanob);
+        needredrawchanlabel = false;
+    end
+    colors = zeros(length(chanindx),3);
     for i = 1:length(chanindx)
         if strcmp(cfg.viewmode, 'component')
-            color = 'k';
+            colors(i,:) = [0 0 0];
         else
-            color = opt.chancolors(chanindx(i),:);
+            colors(i,:) = opt.chancolors(chanindx(i),:);
         end
+    end
+    hasSameColors = false;
+    if ~isempty(colors)
+        if all((colors(1,1) == colors(:,1)) & (colors(1,2) == colors(:,2)) & (colors(1,3) == colors(:,3)));
+         	hasSameColors = true;
+        end
+    end
+    if hasSameColors
+        hlim = opt.hlim;
+        vlim = opt.vlim;
+        hpos = opt.laytime.pos(1,1);
+        width = opt.laytime.width(1);
+
+        % first shift the horizontal axis to zero
+        timx = tim;
+        if any(hlim)
+            timx = timx - (hlim(1)+hlim(2))/2;
+            % then scale to length 1
+            if (hlim(2)-hlim(1))~=0
+                timx = timx ./ (hlim(2)-hlim(1));
+            else
+                timx = timx / hlim(1);
+            end
+            % then scale to the new width
+            timx = timx .* width;
+        end
+        % then shift to the new horizontal position
+        timx = timx + hpos;
+    end
+    for i = 1:length(chanindx)
+%         if strcmp(cfg.viewmode, 'component')
+%             color = 'k';
+%         else
+%             color = opt.chancolors(chanindx(i),:);
+%         end
         datsel = i;
         laysel = laysels(i);
         if ~isempty(datsel) && ~isempty(laysel)
             
-            % only plot labels when current chanlabel objects are less then the total number of channels (see bug 2065)
-            % this is a cheap quick fix. If it causes error in plotting components, do this conditional on viewmode
-            if numel(findobj(h,'tag', 'chanlabel'))<numel(chanindx)
+          if needredrawchanlabel 
                 if opt.plotLabelFlag == 1 || (opt.plotLabelFlag == 2 && mod(i,10)==0)
 
                     h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 0.025, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
@@ -6016,94 +6074,126 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                     
                     %ft_plot_text(labelx(laysel), labely(laysel), opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'HorizontalAlignment', 'right','interpreter','none','FontUnits','normalized','FontSize',0.9/2/numel(chanindx));
                 end
-            end
+          end
             
-            if strcmp(cfg.doSleepScoring,'yes')
-                
-                if laysel == find(chanindx == cfg.score_channel_eeg_number);
-                    
-                    if strcmp(cfg.underlaySpindleSignal,'yes')
-                        if isfield(cfg,'spindsignal_envelope_display')
-                            ft_plot_vector(tim(1:numel(cfg.spindsignal_envelope_display)), cfg.spindsignal_envelope_display, 'box', false, 'color', cfg.underlaySpindleSignal_color, 'tag', 'spindle_timecourse', ...
-                                'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                            ft_plot_vector(tim(1:numel(cfg.spindsignal_envelope_display)), -cfg.spindsignal_envelope_display, 'box', false, 'color', cfg.underlaySpindleSignal_color, 'tag', 'spindle_timecourse', ...
-                                'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                            
-                        end
-                        
-                        if isfield(cfg,'spindsignal_display')
-                            ft_plot_vector(tim(1:numel(cfg.spindsignal_display)), cfg.spindsignal_display , 'box', false, 'color', [0.75 0.75 0.75], 'tag', 'spindle_timecourse', ...
-                                'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                        end
-                    end
-                end
-                
-                
-                if laysel == find(chanindx == cfg.score_channel_eeg_occipital_number);
-                    
-                    if strcmp(cfg.underlayAlphaSignal,'yes')
-                        
-                        if isfield(cfg,'alphasignal_display')
-                            ft_plot_vector(tim(1:numel(cfg.alphasignal_display)), cfg.alphasignal_display , 'box', false, 'color', [0.75 0.75 0.75], 'tag', 'alpha_timecourse', ...
-                                'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                        end
-                    end
-                end
-                
-                if laysel == find(chanindx == cfg.score_channel_eeg_frontal_number);
+          if strcmp(cfg.doSleepScoring,'yes')
+              
+              if laysel == find(chanindx == cfg.score_channel_eeg_number);
+                  
+                  if strcmp(cfg.underlaySpindleSignal,'yes')
+                      if isfield(cfg,'spindsignal_envelope_display')
+                          ft_plot_vector(tim(1:numel(cfg.spindsignal_envelope_display)), cfg.spindsignal_envelope_display, 'box', false, 'color', cfg.underlaySpindleSignal_color, 'tag', 'spindle_timecourse', ...
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                          ft_plot_vector(tim(1:numel(cfg.spindsignal_envelope_display)), -cfg.spindsignal_envelope_display, 'box', false, 'color', cfg.underlaySpindleSignal_color, 'tag', 'spindle_timecourse', ...
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                          
+                      end
+                      
+                      if isfield(cfg,'spindsignal_display')
+                          ft_plot_vector(tim(1:numel(cfg.spindsignal_display)), cfg.spindsignal_display , 'box', false, 'color', [0.75 0.75 0.75], 'tag', 'spindle_timecourse', ...
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                      end
+                  end
+              end
+              
+              
+              if laysel == find(chanindx == cfg.score_channel_eeg_occipital_number);
+                  
+                  if strcmp(cfg.underlayAlphaSignal,'yes')
+                      
+                      if isfield(cfg,'alphasignal_display')
+                          ft_plot_vector(tim(1:numel(cfg.alphasignal_display)), cfg.alphasignal_display , 'box', false, 'color', [0.75 0.75 0.75], 'tag', 'alpha_timecourse', ...
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                      end
+                  end
+              end
+              
+              if laysel == find(chanindx == cfg.score_channel_eeg_frontal_number);
                   if strcmp(cfg.underlaySOSignal,'yes')
-                        if isfield(cfg,'so_signal_display')
-                            ft_plot_vector(tim(1:numel(cfg.so_signal_display)), cfg.so_signal_display , 'box', false, 'color', cfg.underlaySOSignal_color, 'tag', 'so_timecourse', ...
-                                'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                        end
-                        
-                    end
-                end
-                
-            end
-            
-            %the time course of channels
-            ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', color, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
-                'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-            
-            
-            if strcmp(cfg.doSleepScoring,'yes')
-                if cfg.has_ECG
-                    
-                    if laysel == find(chanindx == cfg.score_channel_ecg_number);
-                        
-                        if strcmp(cfg.markECG,'yes')
-                            
-                            %                             %rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin, min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
-                            %                             %rgb_ind(isnan(rgb_ind)) = 1;
-                            %                             %rgb = flip(autumn(128),1);
-                            %                             %ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', rgb(rgb_ind,:), 'tag', 'ecg_HR_timecourse', ...
-                            %                             ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', 'k', 'tag', 'ecg_HR_timecourse', ...
-                            %                             'linewidth', 1.5, ...
-                            %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                            %
-                            if ~isempty(cfg.ECG_instHRsmin_SignalPeaksSamples)
-                                rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples), min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
-                                rgb_ind(isnan(rgb_ind)) = 1;
-                                rgb = flip(autumn(128),1);
-                                for iECGpeak = 1:numel(cfg.ECG_instHRsmin_SignalPeaksSamples)
-                                    %ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', [0.2 0.2 0.2], ...
-                                    ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', rgb(rgb_ind(iECGpeak),:), ...
-                                        'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                                end
-                                %                             ft_plot_vector(tim(cfg.ECG_instHRsmin_SignalPeaksSamples), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples), 'box', false, 'color', 'none', 'marker', 'o', 'markerfacecolor', [1 90/255 0], 'tag', 'ecg_HR_peaks_markers', ...
-                                %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
-                            end
-                        end
-                    end
-                    
-                end
-                
-            end
-            
+                      if isfield(cfg,'so_signal_display')
+                          ft_plot_vector(tim(1:numel(cfg.so_signal_display)), cfg.so_signal_display , 'box', false, 'color', cfg.underlaySOSignal_color, 'tag', 'so_timecourse', ...
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                      end
+                      
+                  end
+              end
+              
+          end
+          
+          if hasSameColors
+              
+              vpos = opt.laytime.pos(laysel,2);
+              height = opt.laytime.height(laysel);
+              
+              if vlim(1)==vlim(2)
+                  % vertical scaling cannot be determined, behave consistent to the plot() function
+                  vlim = [-1 1];
+              end
+              
+              
+              
+              if any(vlim)
+                  % first shift the vertical axis to zero
+                  dat(datsel,:) = dat(datsel,:) - (vlim(1)+vlim(2))/2;
+                  % then scale to length 1
+                  dat(datsel,:) = dat(datsel,:) / (vlim(2)-vlim(1));
+                  % then scale to the new height
+                  dat(datsel,:) = dat(datsel,:) .* height;
+              end
+              % then shift to the new vertical position
+              dat(datsel,:) = dat(datsel,:) + vpos;
+              
+              
+          else
+              %the time course of channels
+              ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', colors(i,:), 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
+                  'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+              
+          end
+          
         end
     end
+
+    if hasSameColors
+        ft_plot_vector(timx, dat(1:length(chanindx), :), 'box', false, 'color', colors(1,:), 'tag', 'timecourse', 'linewidth', cfg.signallinewidth);
+    end
     
+    if strcmp(cfg.doSleepScoring,'yes')
+        if cfg.has_ECG
+            for i = 1:length(chanindx)
+                
+                laysel = laysels(i);
+                if laysel == find(chanindx == cfg.score_channel_ecg_number);
+                    
+                    if strcmp(cfg.markECG,'yes')
+                        
+                        %                             %rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin, min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
+                        %                             %rgb_ind(isnan(rgb_ind)) = 1;
+                        %                             %rgb = flip(autumn(128),1);
+                        %                             %ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', rgb(rgb_ind,:), 'tag', 'ecg_HR_timecourse', ...
+                        %                             ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', 'k', 'tag', 'ecg_HR_timecourse', ...
+                        %                             'linewidth', 1.5, ...
+                        %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                        %
+                        if ~isempty(cfg.ECG_instHRsmin_SignalPeaksSamples)
+                            rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples), min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
+                            rgb_ind(isnan(rgb_ind)) = 1;
+                            rgb = flip(autumn(128),1);
+                            for iECGpeak = 1:numel(cfg.ECG_instHRsmin_SignalPeaksSamples)
+                                %ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', [0.2 0.2 0.2], ...
+                                ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', rgb(rgb_ind(iECGpeak),:), ...
+                                    'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                            end
+                            %                             ft_plot_vector(tim(cfg.ECG_instHRsmin_SignalPeaksSamples), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples), 'box', false, 'color', 'none', 'marker', 'o', 'markerfacecolor', [1 90/255 0], 'tag', 'ecg_HR_peaks_markers', ...
+                            %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                        end
+                    end
+                    break
+                end
+            end
+        end
+    end
+    end
     if length(chanindx)>19
         % no space for yticks
         yTick = [];
@@ -6159,8 +6249,6 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
 else
     error('unknown viewmode "%s"', cfg.viewmode);
 end % if strcmp viewmode
-
-end
 
 
 nticks = 11;

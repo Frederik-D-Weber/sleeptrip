@@ -48,7 +48,7 @@ function [varargout] = ft_plot_box_multi(X, Y, varargin)
 %
 % $Id$
 
-ws = warning('on', 'MATLAB:divideByZero');
+%ws = warning('on', 'MATLAB:divideByZero');
 
 % get the optional input arguments
 hpos        = ft_getopt(varargin, 'hpos');
@@ -161,5 +161,5 @@ if nargout == 1
   varargout{1} = h;
 end
 
-warning(ws); % revert to original state
+%warning(ws); % revert to original state
 

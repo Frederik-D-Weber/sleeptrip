@@ -42,7 +42,7 @@ function h = ft_plot_line(X, Y, varargin)
 %
 % $Id$
 
-ws = warning('on', 'MATLAB:divideByZero');
+%ws = warning('on', 'MATLAB:divideByZero');
 
 % get the optional input arguments
 hpos        = ft_getopt(varargin, 'hpos');
@@ -125,4 +125,4 @@ end % shortcut
 h = line(X, Y, 'Color', color, 'LineStyle', linestyle, 'LineWidth', linewidth);
 set(h, 'tag', tag);
 
-warning(ws); % revert to original state
+%warning(ws); % revert to original state
