@@ -89,9 +89,10 @@ if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexe
     end
     if ~all(hdr.resolution(chanindxres) == 1) && ~all(isnan(hdr.resolution(chanindxres)))
         calib = reshape(hdr.resolution(chanindxres),[],1);
-        for k = 1:size(dat,2)
-            dat(:,k) = calib.*dat(:,k);
-        end
+        dat = diag(calib) * dat;
+        %for k = 1:size(dat,1)
+        %    dat(k,:) = calib(k).*dat(k,:);
+        %end
     end
     chanindxres = [];
 
@@ -168,15 +169,16 @@ elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vector
     fclose(fid);
     
     if isempty(chanindx)
-        chanindxres = 1:size(dat,2);
+        chanindxres = 1:size(dat,1);
     else
         chanindxres = chanindx;
     end
     if ~all(hdr.resolution(chanindxres) == 1) && ~all(isnan(hdr.resolution(chanindxres)))
         calib = reshape(hdr.resolution(chanindxres),[],1);
-        for k = 1:size(dat,2)
-            dat(:,k) = calib.*dat(:,k);
-        end
+        dat = diag(calib) * dat;
+        %for k = 1:size(dat,1)
+        %    dat(k,:) = calib(k).*dat(k,:);
+        %end
     end
     chanindxres = [];
     
