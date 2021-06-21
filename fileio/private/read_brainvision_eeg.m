@@ -89,10 +89,14 @@ if strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'multiplexe
     end
     if ~all(hdr.resolution(chanindxres) == 1) && ~all(isnan(hdr.resolution(chanindxres)))
         calib = reshape(hdr.resolution(chanindxres),[],1);
-        dat = diag(calib) * dat;
-        %for k = 1:size(dat,1)
-        %    dat(k,:) = calib(k).*dat(k,:);
-        %end
+        %this is slower, and sparse multiplication is not supported with
+        %single input:
+        % dat = diag(calib) * dat;
+        %this is faster
+        for k = 1:size(dat,1)
+            dat(k,:) = calib(k) .* dat(k,:);
+        end
+        
     end
     chanindxres = [];
 
@@ -168,6 +172,10 @@ elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vector
     
     fclose(fid);
     
+    % compute real microvolts using the calibration factor (resolution)
+    % calib = diag(hdr.resolution(chanindx));
+    % % using a sparse multiplication speeds it up
+    % dat = full(sparse(calib) * dat);
     if isempty(chanindx)
         chanindxres = 1:size(dat,1);
     else
@@ -175,10 +183,14 @@ elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vector
     end
     if ~all(hdr.resolution(chanindxres) == 1) && ~all(isnan(hdr.resolution(chanindxres)))
         calib = reshape(hdr.resolution(chanindxres),[],1);
-        dat = diag(calib) * dat;
-        %for k = 1:size(dat,1)
-        %    dat(k,:) = calib(k).*dat(k,:);
-        %end
+        %this is slower, and sparse multiplication is not supported with
+        %single input:
+        % dat = diag(calib) * dat;
+        %this is faster
+        for k = 1:size(dat,1)
+            dat(k,:) = calib(k) .* dat(k,:);
+        end
+        
     end
     chanindxres = [];
     
