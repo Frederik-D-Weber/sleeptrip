@@ -37,7 +37,8 @@ function [cfg] = st_scorebrowser(cfg, data)
 %
 % The following configuration options are supported:
 %   cfg.signallinewidth         = the line width of the signals to draw (default = 0.5);
-%   cfg.precision               = the precision that the data is stored in, either 'single' (32bit float) or 'double' (64bit float) or 'original' (unchanged) (default = 'single')
+%   cfg.precision               = the precision that the data is stored in, either 'single' or 'single_trial' (32bit float) or 'double' or 'double_trial' (64bit float) or 'original' (unchanged). 
+%                                 Note that 'single_trial' and 'double_trial' only convert the data.trial to the desired precision (default = 'single_trial')
 %   cfg.events                  = a table or events with the columns named: event start stop duration channel
 %                                 ... with the columns giving:
 %                                 event: the name of the event type, note
@@ -241,7 +242,7 @@ cfg.datainteractive = ft_getopt(cfg, 'datainteractive', 'no');
 cfg.signallinewidth = ft_getopt(cfg, 'signallinewidth', 0.5);
 cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'box');
 cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
-cfg.precision = ft_getopt(cfg, 'precision', 'single');
+cfg.precision = ft_getopt(cfg, 'precision', 'single_trial');
 
 cfg.eventchannelmatching  = ft_getopt(cfg, 'eventchannelmatching', 'exact');
 cfg.eventsplothypnogram = ft_getopt(cfg, 'eventsplothypnogram', 'no');
@@ -387,6 +388,10 @@ if hasdata
             data = ft_struct2single(data);
         case 'double'
             data = ft_struct2double(data);
+        case 'single_trial'
+            data.trial = ft_struct2single(data.trial);
+        case 'double_trial'
+            data.trial = ft_struct2double(data.trial);
     end
 end
 
