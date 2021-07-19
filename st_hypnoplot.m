@@ -43,7 +43,7 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotsleepopoff         = string, plot an indicator of sleep opportunity off onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotlightsoff          = string, plot an indicator of lights off either 'yes' or 'no' (default = 'yes')
 %   cfg.plotlightson           = string, plot an indicator of lights on either 'yes' or 'no' (default = 'yes')
-%   cfg.plotinicatorssoutsidescoringtimes = string, plot the indicators (lightsoff, lightson, sleepopon, sleepopoff) outside of the scoring if necessary
+%   cfg.plotinicatorssoutsidescoringtimes = string, plot the indicators (lightsoff, lightson, sleepopon, sleepopoff) outside of the scoring if necessary (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
 %   cfg.plotexcluded           = string, plot excluded epochs 'yes' or 'no' (default = 'yes')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
