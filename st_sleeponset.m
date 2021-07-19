@@ -100,49 +100,49 @@ end
 switch cfg.sleeponsetdef
      case 'NR'
         for iOnset = 1:numel(scoring.epochs)
-            if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
         end  
      case 'N2'
         for iOnset = 1:numel(scoring.epochs)
-            if ( strcmp(hypnStages(iOnset,1),'N2') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if ( strcmp(hypnStages(iOnset,1),'N2') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
         end 
       case 'N3'
         for iOnset = 1:numel(scoring.epochs)
-            if ( strcmp(hypnStages(iOnset,1),'N3') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if ( strcmp(hypnStages(iOnset,1),'N3') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
         end  
      case 'S4'
         for iOnset = 1:numel(scoring.epochs)
-            if ( strcmp(hypnStages(iOnset,1),'S4') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if ( strcmp(hypnStages(iOnset,1),'S4') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
         end 
     case 'R'
         for iOnset = 1:numel(scoring.epochs)
-            if ( strcmp(hypnStages(iOnset,1),'R') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if ( strcmp(hypnStages(iOnset,1),'R') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
         end  
     case 'SWS'
         for iOnset = 1:numel(scoring.epochs)
-            if ( strcmp(hypnStages(iOnset,1),'N3') || strcmp(hypnStages(iOnset,1),'S4') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if ( strcmp(hypnStages(iOnset,1),'N3') || strcmp(hypnStages(iOnset,1),'S4') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
         end  
     case 'N2R'
         for iOnset = 1:numel(scoring.epochs)
-            if strcmp(hypnStages(iOnset,3),'NR') && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if strcmp(hypnStages(iOnset,3),'NR') && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
@@ -150,7 +150,7 @@ switch cfg.sleeponsetdef
 
      case 'X2R'
         for iOnset = 1:numel(scoring.epochs)
-            if (strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if (strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
@@ -158,7 +158,7 @@ switch cfg.sleeponsetdef
         
     case {'XR' 'AASM'}
         for iOnset = 1:numel(scoring.epochs)
-            if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment)  || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
@@ -169,7 +169,7 @@ switch cfg.sleeponsetdef
         consecN1 = 0;
         hasN1 = logical(0);
         for iOnset = 1:numel(scoring.epochs)
-            if strcmp(hypnStages(iOnset,1),'N1') && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+            if strcmp(hypnStages(iOnset,1),'N1') && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 hasN1 = logical(1);
                 consecN1 = consecN1 + 1;
                 if ((onsetnumber+consecN1) ~= iOnset)
@@ -181,7 +181,7 @@ switch cfg.sleeponsetdef
                 end
             elseif ( strcmp(cfg.sleeponsetdef,'N1_XR') && (strcmp(hypnStages(iOnset,3),'NR') || strcmp(hypnStages(iOnset,3),'R')) ) ...
                     || ( strcmp(cfg.sleeponsetdef,'N1_NR') && (strcmp(hypnStages(iOnset,3),'NR')) ) ...
-                    && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) && ~allowedsleeponsetbeforesleepopon)
+                    && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 if ~hasN1
                     onsetnumber = iOnset;
                 end

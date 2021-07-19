@@ -43,6 +43,7 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotsleepopoff         = string, plot an indicator of sleep opportunity off onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotlightsoff          = string, plot an indicator of lights off either 'yes' or 'no' (default = 'yes')
 %   cfg.plotlightson           = string, plot an indicator of lights on either 'yes' or 'no' (default = 'yes')
+%   cfg.plotinicatorssoutsidescoringtimes = string, plot the indicators (lightsoff, lightson, sleepopon, sleepopoff) outside of the scoring if necessary
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
 %   cfg.plotexcluded           = string, plot excluded epochs 'yes' or 'no' (default = 'yes')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
@@ -218,6 +219,7 @@ cfg.plotsleepopon           = ft_getopt(cfg, 'plotsleepopon', 'yes');
 cfg.plotsleepopoff          = ft_getopt(cfg, 'plotsleepopoff', 'yes');
 cfg.plotlightsoff           = ft_getopt(cfg, 'plotlightsoff', 'yes');
 cfg.plotlightson            = ft_getopt(cfg, 'plotlightson', 'yes');
+cfg.plotinicatorssoutsidescoringtimes = ft_getopt(cfg, 'plotinicatorssoutsidescoringtimes', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
@@ -537,7 +539,7 @@ hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
 
 %onsetCandidateIndex = getSleepOnsetEpoch(hypnStages,hypnEpochsBeginsSamples,lightsOffSample,cfg.sleeponsetdef);
 
-[onsetCandidateIndex lastsleepstagenumber onsetepoch] = st_sleeponset(cfg,scoring);
+[onsetCandidateIndex, lastsleepstagenumber, onsetepoch, lastsleepstage, allowedsleeponsetbeforesleepopon] = st_sleeponset(cfg,scoring);
 
 if isempty(lastsleepstagenumber)
     lastsleepstagenumber = nEpochs;
@@ -853,6 +855,7 @@ switch cfg.plottype
 end
 
 
+lightsoff_time = NaN;
 if strcmp(cfg.plotlightsoff, 'yes')
     if hasLightsOff
         lightsoff_time = (scoring.lightsoff/60);%in minutes
@@ -872,6 +875,7 @@ if strcmp(cfg.plotlightsoff, 'yes')
     end
 end
 
+lightson_time = NaN;
 if strcmp(cfg.plotlightson, 'yes')
     if hasLightsOn
         lightson_time = (scoring.lightson/60);%in minutes
@@ -892,6 +896,7 @@ if strcmp(cfg.plotlightson, 'yes')
 end
 
 
+sleepopon_time = NaN;
 if strcmp(cfg.plotsleepopon, 'yes')
     if hasSleepOpportunityOn
         sleepopon_time = (scoring.sleepopon/60);%in minutes
@@ -911,6 +916,7 @@ if strcmp(cfg.plotsleepopon, 'yes')
     end
 end
 
+sleepopoff_time = NaN;
 if strcmp(cfg.plotsleepopoff, 'yes')
     if hasSleepOpportunityOff
         sleepopoff_time = (scoring.sleepopoff/60);%in minutes
@@ -1181,7 +1187,11 @@ end
 if ~isempty(cfg.timerange)
     xlim(axh,[min(cfg.timerange) max(cfg.timerange)]);
 else
-    xlim(axh,[0 (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))]);
+    if istrue(cfg.plotinicatorssoutsidescoringtimes)
+        xlim(axh,[min([0 lightsoff_time, lightson_time, sleepopon_time, sleepopoff_time]) (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time, lightsoff_time, lightson_time, sleepopon_time, sleepopoff_time]))]);
+    else
+        xlim(axh,[min([0]) (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))]);
+    end
 end
 
 ylabel(axh,'Stages');
