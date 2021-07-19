@@ -43,7 +43,7 @@ function [fh axh] = st_hypnoplot(cfg, scoring)
 %   cfg.plotsleepopoff         = string, plot an indicator of sleep opportunity off onset either 'yes' or 'no' (default = 'yes')
 %   cfg.plotlightsoff          = string, plot an indicator of lights off either 'yes' or 'no' (default = 'yes')
 %   cfg.plotlightson           = string, plot an indicator of lights on either 'yes' or 'no' (default = 'yes')
-%   cfg.plotinicatorssoutsidescoringtimes = string, plot the indicators (lightsoff, lightson, sleepopon, sleepopoff) outside of the scoring if necessary (default = 'yes')
+%   cfg.plotindicatorssoutsidescoringtimes = string, plot the indicators (lightsoff, lightson, sleepopon, sleepopoff) outside of the scoring if necessary (default = 'yes')
 %   cfg.plotunknown            = string, plot unscored/unkown epochs or not either 'yes' or 'no' (default = 'yes')
 %   cfg.plotexcluded           = string, plot excluded epochs 'yes' or 'no' (default = 'yes')
 %   cfg.sleeponsetdef          = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
@@ -219,7 +219,7 @@ cfg.plotsleepopon           = ft_getopt(cfg, 'plotsleepopon', 'yes');
 cfg.plotsleepopoff          = ft_getopt(cfg, 'plotsleepopoff', 'yes');
 cfg.plotlightsoff           = ft_getopt(cfg, 'plotlightsoff', 'yes');
 cfg.plotlightson            = ft_getopt(cfg, 'plotlightson', 'yes');
-cfg.plotinicatorssoutsidescoringtimes = ft_getopt(cfg, 'plotinicatorssoutsidescoringtimes', 'yes');
+cfg.plotindicatorssoutsidescoringtimes = ft_getopt(cfg, 'plotindicatorssoutsidescoringtimes', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
@@ -1185,22 +1185,32 @@ if isfield(cfg,'plotexcluded')
 end
 
 if ~isempty(cfg.timerange)
-    xlim(axh,[min(cfg.timerange) max(cfg.timerange)]);
+    xlim_range = [min(cfg.timerange) max(cfg.timerange)];
 else
-    if istrue(cfg.plotinicatorssoutsidescoringtimes)
-        xlim(axh,[min([0 lightsoff_time, lightson_time, sleepopon_time, sleepopoff_time]) (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time, lightsoff_time, lightson_time, sleepopon_time, sleepopoff_time]))]);
+    if istrue(cfg.plotindicatorssoutsidescoringtimes)
+        xlim_range = [min([0 lightsoff_time, lightson_time, sleepopon_time, sleepopoff_time]) (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time, lightsoff_time, lightson_time, sleepopon_time, sleepopoff_time]))];
     else
-        xlim(axh,[min([0]) (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))]);
+        xlim_range = [min([0]) (max([max(x_time), cfg.timemin, eventTimeMaxSeconds/60, offset_time]))];
     end
 end
+
+xlim(axh,xlim_range)
 
 ylabel(axh,'Stages');
 ylim(axh,[temp_min_y temp_max_y])
 
 set(axh, 'yTick', flip(yTick));
 set(axh, 'yTickLabel', flip(yTickLabel));
-set(axh,'TickDir','out');
-xTick = [0:cfg.timeticksdiff:(max([max(x_time),cfg.timemin,eventTimeMaxSeconds/60]))];
+set(axh, 'TickDir','out');
+
+negext = [];
+if xlim_range(1) < 0 
+    negext = 0:-cfg.timeticksdiff:xlim_range(1);
+    negext(1) = [];
+    negext = flip(negext);
+end
+xTick = [negext 0:cfg.timeticksdiff:(max([max(x_time),cfg.timemin,eventTimeMaxSeconds/60]))];
+
 set(axh, 'xTick', xTick);
 timeunit = cfg.timeunitdisplay;
 switch cfg.timeunitdisplay
