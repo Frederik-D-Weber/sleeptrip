@@ -8,6 +8,9 @@ if nargin == 2
         colorscheme = varargin{1};
     end
 end
+if strcmp(colorscheme,'standard') || strcmp(colorscheme,'default')
+    colorscheme = st_default.colorscheme; % default
+end
 if ~iscell(epochs)
     epochs = {epochs};
 end

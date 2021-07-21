@@ -88,7 +88,7 @@ if hasLightsOff
                 break;
             end
         end  
-        if iOnset*scoring.epochlength < sleepOpportunityOnMoment
+        if (iOnset-1)*scoring.epochlength < sleepOpportunityOnMoment
                 if istrue(cfg.allowsleeponsetbeforesleepopon)
                     allowedsleeponsetbeforesleepopon = true;
                     ft_warning('There were sleep stages scored at epoch %d BEFORE the sleep opportunity onset (which might have defaulted to ligths off moment) at %f s!\n BUT sleep onset is allowed to start before sleep opportunity onset!',iOnset,sleepOpportunityOnMoment);
