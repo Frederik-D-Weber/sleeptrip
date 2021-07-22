@@ -26,17 +26,24 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
 %                        opportunity (or lights off moment if former is not present) 
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
+%   cfg.fixindicatorstoepochlength = string, either 'no', 'start', 'end', and 'snap' to put the 
+%                       indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring 
+%                       to the start or end of their epoch or snap them to either the start or end on which whatever is closer (default = 'no')
 %   cfg.cycle          = string or integer value from 1 to Inf. 
 %                        If set, then the descriptives is derived from 
 %                        only this cycle.
 %                        possible values are:
 %                          'presleep' = prior to first cycle
-%                          1 = first cycle
-%                          2 = second cycle
+%                          0 = presleep cycle
+%                          1 = first cycle in sleep
+%                          2 = second cycle in slepp
+%                          3 = third cycle in sleep
+%                          [1 3] = first and third cycle in sleep
 %                          ... 
-%                          'last' = last complete cycle
-%                          'postsleep' = post last complete cycle
-%                          'all' = post last complete cycle
+%                          'last' = last cycle (even uncomplete) in sleep%
+%                          'last' = last complete cycle in sleep
+%                          'postsleep' = post last cycle (after last)
+%                          'all' = all sleep cycles (presleep,1,....,last,postsleep)
 %                        See ST_SLEEPCYCLES for futher
 %                        parameters that are passed on to it.
 %
@@ -76,6 +83,52 @@ fprintf([functionname ' function started\n']);
 
 % set the defaults
 cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+
+cfg.fixindicatorstoepochlength  = ft_getopt(cfg, 'fixindicatorstoepochlength', 'no');
+
+if ~strcmp(cfg.fixindicatorstoepochlength,'no')
+    ft_warning('trying to fix the indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring to whole epochs with ''%s''.',cfg.fixindicatorstoepochlength)
+if isfield(scoring, 'lightsoff')
+    switch cfg.fixindicatorstoepochlength
+        case 'snap'
+            scoring.lightsoff = round(scoring.lightsoff/scoring.epochlength);
+        case 'start'
+            scoring.lightsoff = floor(scoring.lightsoff/scoring.epochlength);
+        case 'begin'
+            scoring.lightsoff = ceil(scoring.lightsoff/scoring.epochlength);
+    end
+end
+if isfield(scoring, 'lightson')
+   switch cfg.fixindicatorstoepochlength
+        case 'snap'
+            scoring.lightson = round(scoring.lightson/scoring.epochlength);
+        case 'start'
+            scoring.lightson = floor(scoring.lightson/scoring.epochlength);
+        case 'begin'
+            scoring.lightson = ceil(scoring.lightson/scoring.epochlength);
+   end
+end
+if isfield(scoring, 'sleepopon')
+   switch cfg.fixindicatorstoepochlength
+        case 'snap'
+            scoring.sleepopon = round(scoring.sleepopon/scoring.epochlength);
+        case 'start'
+            scoring.sleepopon = floor(scoring.sleepopon/scoring.epochlength);
+        case 'begin'
+            scoring.sleepopon = ceil(scoring.sleepopon/scoring.epochlength);
+   end
+end
+if isfield(scoring, 'sleepopoff')
+   switch cfg.fixindicatorstoepochlength
+        case 'snap'
+            scoring.sleepopoff = round(scoring.sleepopoff/scoring.epochlength);
+        case 'start'
+            scoring.sleepopoff = floor(scoring.sleepopoff/scoring.epochlength);
+        case 'begin'
+            scoring.sleepopoff = ceil(scoring.sleepopoff/scoring.epochlength);
+   end
+end
+end
 
 
 % assumes there is at least
@@ -153,23 +206,42 @@ if isfield(cfg,'cycle')
     
     scoring_duration_min = (cfg2.end - cfg2.start + 1)*scoring.epochlength/60;
     
-    indcycle = cfg.cycle;
-    switch cfg.cycle
-        case 'last'
-            indcycle = strcmp(cycle_labels,'last');
-        case 'presleep'
-            indcycle = strcmp(cycle_labels,'presleep');
-        case 'postsleep'
-            indcycle = strcmp(cycle_labels,'postsleep');
-        case 'complete'
-            indcycle = cycle_complete;
-        case 'all'
-            indcycle = 1:numel(scoring_cycles);
+    indcycle = [];
+    if isnumeric(cfg.cycle)
+        if numel(cfg.cycle) > 1
+            if any(strcmp(cycle_labels,'presleep'))
+                indcycle = cfg.cycle+1;
+            else
+                indcycle = cfg.cycle;
+            end
+        else
+            if cfg.cycle == 0
+                indcycle = strcmp(cycle_labels,'presleep');
+            else
+                indcycle = ismember(cycle_labels,arrayfun(@num2str,cfg.cycle,'UniformOutput',false));
+            end
+        end
+    else
+        switch cfg.cycle
+            case 'last'
+                indcycle = logical(zeros(numel(cycle_complete),1));
+                indcycle(find(~cellfun(@isempty,(cellfun(@str2num,cycle_labels,'UniformOutput',false))),1,'last')) = true;
+            case 'lastcomplete'
+                indcycle = logical(zeros(numel(cycle_complete),1));
+                indcycle(find(cycle_complete,1,'last')) = true;
+            case 'presleep'
+                indcycle = strcmp(cycle_labels,'presleep');
+            case 'postsleep'
+                indcycle = strcmp(cycle_labels,'postsleep');
+            case 'complete'
+                indcycle = cycle_complete;
+            case 'all'
+                indcycle = 1:numel(scoring_cycles);
+            otherwise
+                ft_error('cfg.cycle is unknown, please redefine')
+        end
     end
-    scoring_cycles = scoring_cycles(indcycle);
-    cycle_complete = cycle_complete(indcycle);
-    cycle_labels = cycle_labels(indcycle);
-    scoring_duration_min = scoring_duration_min(indcycle);
+
     
     data_offset_min_cycle = nan(1,numel(cfg2.end));
     for iSc = 1:numel(cfg2.end)
@@ -177,6 +249,11 @@ if isfield(cfg,'cycle')
             data_offset_min_cycle(iSc) = data_offset_min + sum(scoring_duration_min(1:(iSc-1)));
         end
     end
+    
+    scoring_cycles = scoring_cycles(indcycle);
+    cycle_complete = cycle_complete(indcycle);
+    cycle_labels = cycle_labels(indcycle);
+    scoring_duration_min = scoring_duration_min(indcycle);
     data_offset_min = data_offset_min_cycle(indcycle);
 end
 
@@ -310,12 +387,12 @@ for iScoringCycle = 1:numel(scoring_cycles)
     
     hasSleepOpportunityOff = false;
     sleepOpportunityOffMoment = lastsleepstagenumber*scoring.epochlength;
-    sleepOpportunityOnTosleepOpportunityOff = NaN;
+    sleepOpportunityOnToSleepOpportunityOff = NaN;
     if isfield(scoring, 'sleepopoff')
         if ~isnan(scoring.sleepopoff)
             hasSleepOpportunityOff = true;
             sleepOpportunityOffMoment = scoring.sleepopoff;
-            sleepOpportunityOnTosleepOpportunityOff = (sleepOpportunityOffMoment-sleepOpportunityOnMoment);
+            sleepOpportunityOnToSleepOpportunityOff = (sleepOpportunityOffMoment-sleepOpportunityOnMoment);
         else
             ft_warning('The sleep opportunity off moment was NaN in the scoring structure.\n The end of sleep is thus assumed as sleep opportunity off.');
         end
@@ -332,8 +409,9 @@ for iScoringCycle = 1:numel(scoring_cycles)
     sleepOnsetTime = (onsetnumber-1)*scoring.epochlength - sleepOpportunityOnMoment;
     
     if allowedsleeponsetbeforesleepopon
-        ft_warning('sleep onset was allowed to be before sleep opportunity moment and thus sleep onset latency will be NaN.')
+        ft_warning('sleep onset was allowed to be before sleep opportunity moment and thus sleep onset latency and sleep opportunity duration will be NaN.')
         sleepOnsetTime = NaN;
+        sleepOpportunityOnToSleepOpportunityOff = NaN;
     end
     
     N1ind = find(strcmp(hypnStages(:,1),'N1'));
@@ -527,13 +605,18 @@ for iScoringCycle = 1:numel(scoring_cycles)
     
     
     sleepEfficiency_SP_percent = 100*((totalSleepPeriod-WakeTime)/totalSleepPeriod);
-    sleepEfficiency_SOP_percent = 100*((totalSleepPeriod-WakeTime)/(sleepOpportunityOnTosleepOpportunityOff));
+    sleepEfficiency_SOP_percent = 100*((totalSleepPeriod-WakeTime)/(sleepOpportunityOnToSleepOpportunityOff));
 
     
     table_tmp = table(...
         {scoringfile}, ...
         {scoring.standard}, ...
+        {cfg.sleeponsetdef}, ...
         scoring.epochlength, ...
+        data_offset_min(iScoringCycle), ...
+        scoring_duration_min(iScoringCycle), ...
+        sleepOpportunityOnToSleepOpportunityOff/60, ...
+        lightsOnToLightsOff/60, ...
         totalSleepPeriod/60, ...
         (totalSleepPeriod-WakeTime)/60, ...
         sleepEfficiency_SP_percent, ...
@@ -641,8 +724,6 @@ for iScoringCycle = 1:numel(scoring_cycles)
         NRtimePreOnset/60, ...
         LongestWakeTimePeriodAfterSleepOnset/60, ...
         LongestWakeTimePeriodAfterSleepOnset_after_so/60, ...
-        lightsOnToLightsOff/60, ...
-        sleepOpportunityOnTosleepOpportunityOff/60, ...
         allowedsleeponsetbeforesleepopon, ...
         hasSleepOpportunityOn, ...
         hasSleepOpportunityOff, ...
@@ -681,20 +762,21 @@ for iScoringCycle = 1:numel(scoring_cycles)
         nArousalsByStage(6)/(WakeTime/60), ...
         cycle_labels(iScoringCycle), ...
         cycle_complete(iScoringCycle), ...
-        scoring_duration_min(iScoringCycle),...
-        data_offset_min(iScoringCycle),...
-        'VariableNames',{'scoringfile','standard','epoch_length_seconds','total_sleep_period_duration_min','total_sleep_duration_in_sleep_period_min','sleep_eff_total_sleep_dur_in_sleep_prd_perc_of_sleep_prd','sleep_eff_total_sleep_dur_in_sleep_prd_perc_of_sleep_opport','sleep_onset_min','N1_delay_min','N2_delay_min','SWS_delay_min','S4_delay_min','R_delay_min'...
-        ,'N1_of_sleep_period_min','N2_of_sleep_period_min','N3_of_sleep_period_min','S4_of_sleep_period_min','R_of_sleep_period_min','Wake_after_sleep_onset_of_sleep_period_min','Movement_Time_of_sleep_period_min','Artifact_of_sleep_period_min','Unknown_of_sleep_period_min','SWS_of_sleep_period_min','NR_with_N1_of_sleep_period_min','NR_without_N1_of_sleep_period_min'...
-        ,'N1_all_scoring_min','N2_all_scoring_min','N3_all_scoring_min','S4_all_scoring_min','R_all_scoring_min','Wake_all_scoring_min','Movement_Time_all_scoring_min','Artifact_all_scoring_min','Unknown_all_scoring_min','SWS_all_scoring_min','NR_with_N1_all_scoring_min','NR_without_N1_all_scoring_min'...
-        ,'N1_perc_of_sleep_period','N2_perc_of_sleep_period','N3_perc_of_sleep_period','S4_perc_of_sleep_period','R_perc_of_sleep_period','Wake_after_sleep_onset_perc_of_sleep_period','Movement_Time_perc_of_sleep_period','Artifact_perc_of_sleep_period','Unknown_perc_of_sleep_period','SWS_perc_of_sleep_period','NR_with_N1_perc_of_sleep_period','NR_without_N1_perc_of_sleep_period'...
-        ,'N1_perc_of_slp_prd_sleep_duration','N2_perc_of_slp_prd_sleep_duration','N3_perc_of_slp_prd_sleep_duration','S4_perc_of_slp_prd_sleep_duration','R_perc_of_slp_prd_sleep_duration','Wake_after_sleep_onset_perc_of_slp_prd_sleep_duration','Movement_Time_perc_of_slp_prd_sleep_duration','Artifact_perc_of_slp_prd_sleep_duration','Unknown_perc_of_slp_prd_sleep_duration','SWS_perc_of_slp_prd_sleep_duration','NR_with_N1_perc_of_slp_prd_sleep_duration','NR_without_N1_perc_of_slp_prd_sleep_duration'...
-        ,'N1_without_excluded_min','N2_without_excluded_min','N3_without_excluded_min','S4_without_excluded_min','R_without_excluded_min','Wake_after_sleep_onset_without_excluded_min','Movement_Time_without_excluded_min', 'Artifact_without_excluded_min', 'Unknown_without_excluded_min', 'SWS_without_excluded_min', 'NR_with_N1_without_excluded_min','NR_without_N1_without_excluded_min'...
-        ,'N1_without_excluded_perc_of_sleep_period','N2_without_excluded_perc_of_sleep_period','N3_without_excluded_perc_of_sleep_period','S4_without_excluded_perc_of_sleep_period','R_without_excluded_perc_of_sleep_period','Wake_after_sleep_onset_without_excluded_perc_of_sleep_period','Movement_Time_without_excluded_perc_of_sleep_period', 'Artifact_without_excluded_perc_of_sleep_period', 'Unknown_without_excluded_perc_of_sleep_period','SWS_without_excluded_perc_of_sleep_period','NR_with_N1_without_excluded_perc_of_sleep_period','NR_without_N1_without_excluded_perc_of_sleep_period'...
-        ,'N1_without_excluded_perc_of_slp_prd_sleep_duration','N2_without_excluded_perc_of_slp_prd_sleep_duration','N3_without_excluded_perc_of_slp_prd_sleep_duration','S4_without_excluded_perc_of_slp_prd_sleep_duration','R_without_excluded_perc_of_slp_prd_sleep_duration','Wake_after_SO_without_excluded_perc_of_slp_prd_slp_duration','Movement_Time_without_excluded_perc_of_slp_prd_sleep_duration', 'Artifact_without_excluded_perc_of_slp_prd_sleep_duration', 'Unknown_without_excluded_perc_of_slp_prd_sleep_duration','SWS_without_excluded_perc_of_slp_prd_sleep_duration','NR_with_N1_without_excluded_perc_of_slp_prd_sleep_duration','NR_without_N1_without_excluded_perc_of_slp_prd_sleep_duration'...
-        ,'N1_before_sleep_onset_min','N2_before_sleep_onset_min','N3_before_sleep_onset_min','S4_before_sleep_onset_min','R_before_sleep_onset_min','Wake_before_sleep_onset_min','Movement_Time_before_sleep_onset_min', 'Artifact_before_sleep_onset_min', 'Unknown_before_sleep_onset_min','SWS_before_sleep_onset_min','NR_before_sleep_onset_without_N1_min'...
-        ,'longest_WASO_period_of_sleep_period_min','longest_WASO_period_after_latency_after_SlpOn_min',...
-        'lightsoff_to_lightson_min',...
+        'VariableNames',{'scoringfile','standard','sleep_onset_definition','epoch_length_seconds',...
+        'data_offset_min',...
+        'scoring_duration_min',...
         'sleep_opportunity_on_to_off_min',...
+        'lightsoff_to_lightson_min',...
+        'total_sleep_period_duration_min','total_sleep_duration_in_sleep_period_min','sleep_eff_total_sleep_dur_in_sleep_prd_perc_of_sleep_prd','sleep_eff_total_sleep_dur_in_sleep_prd_perc_of_sleep_opport','sleep_onset_min','N1_delay_min','N2_delay_min','SWS_delay_min','S4_delay_min','R_delay_min',...
+        'N1_of_sleep_period_min','N2_of_sleep_period_min','N3_of_sleep_period_min','S4_of_sleep_period_min','R_of_sleep_period_min','Wake_after_sleep_onset_of_sleep_period_min','Movement_Time_of_sleep_period_min','Artifact_of_sleep_period_min','Unknown_of_sleep_period_min','SWS_of_sleep_period_min','NR_with_N1_of_sleep_period_min','NR_without_N1_of_sleep_period_min',...
+        'N1_all_scoring_min','N2_all_scoring_min','N3_all_scoring_min','S4_all_scoring_min','R_all_scoring_min','Wake_all_scoring_min','Movement_Time_all_scoring_min','Artifact_all_scoring_min','Unknown_all_scoring_min','SWS_all_scoring_min','NR_with_N1_all_scoring_min','NR_without_N1_all_scoring_min',...
+        'N1_perc_of_sleep_period','N2_perc_of_sleep_period','N3_perc_of_sleep_period','S4_perc_of_sleep_period','R_perc_of_sleep_period','Wake_after_sleep_onset_perc_of_sleep_period','Movement_Time_perc_of_sleep_period','Artifact_perc_of_sleep_period','Unknown_perc_of_sleep_period','SWS_perc_of_sleep_period','NR_with_N1_perc_of_sleep_period','NR_without_N1_perc_of_sleep_period',...
+        'N1_perc_of_slp_prd_sleep_duration','N2_perc_of_slp_prd_sleep_duration','N3_perc_of_slp_prd_sleep_duration','S4_perc_of_slp_prd_sleep_duration','R_perc_of_slp_prd_sleep_duration','Wake_after_sleep_onset_perc_of_slp_prd_sleep_duration','Movement_Time_perc_of_slp_prd_sleep_duration','Artifact_perc_of_slp_prd_sleep_duration','Unknown_perc_of_slp_prd_sleep_duration','SWS_perc_of_slp_prd_sleep_duration','NR_with_N1_perc_of_slp_prd_sleep_duration','NR_without_N1_perc_of_slp_prd_sleep_duration',...
+        'N1_without_excluded_min','N2_without_excluded_min','N3_without_excluded_min','S4_without_excluded_min','R_without_excluded_min','Wake_after_sleep_onset_without_excluded_min','Movement_Time_without_excluded_min', 'Artifact_without_excluded_min', 'Unknown_without_excluded_min', 'SWS_without_excluded_min', 'NR_with_N1_without_excluded_min','NR_without_N1_without_excluded_min',...
+        'N1_without_excluded_perc_of_sleep_period','N2_without_excluded_perc_of_sleep_period','N3_without_excluded_perc_of_sleep_period','S4_without_excluded_perc_of_sleep_period','R_without_excluded_perc_of_sleep_period','Wake_after_sleep_onset_without_excluded_perc_of_sleep_period','Movement_Time_without_excluded_perc_of_sleep_period', 'Artifact_without_excluded_perc_of_sleep_period', 'Unknown_without_excluded_perc_of_sleep_period','SWS_without_excluded_perc_of_sleep_period','NR_with_N1_without_excluded_perc_of_sleep_period','NR_without_N1_without_excluded_perc_of_sleep_period',...
+        'N1_without_excluded_perc_of_slp_prd_sleep_duration','N2_without_excluded_perc_of_slp_prd_sleep_duration','N3_without_excluded_perc_of_slp_prd_sleep_duration','S4_without_excluded_perc_of_slp_prd_sleep_duration','R_without_excluded_perc_of_slp_prd_sleep_duration','Wake_after_SO_without_excluded_perc_of_slp_prd_slp_duration','Movement_Time_without_excluded_perc_of_slp_prd_sleep_duration', 'Artifact_without_excluded_perc_of_slp_prd_sleep_duration', 'Unknown_without_excluded_perc_of_slp_prd_sleep_duration','SWS_without_excluded_perc_of_slp_prd_sleep_duration','NR_with_N1_without_excluded_perc_of_slp_prd_sleep_duration','NR_without_N1_without_excluded_perc_of_slp_prd_sleep_duration',...
+        'N1_before_sleep_onset_min','N2_before_sleep_onset_min','N3_before_sleep_onset_min','S4_before_sleep_onset_min','R_before_sleep_onset_min','Wake_before_sleep_onset_min','Movement_Time_before_sleep_onset_min', 'Artifact_before_sleep_onset_min', 'Unknown_before_sleep_onset_min','SWS_before_sleep_onset_min','NR_before_sleep_onset_without_N1_min',...
+        'longest_WASO_period_of_sleep_period_min','longest_WASO_period_after_latency_after_SlpOn_min',...
         'allowed_sleep_onset_before_sleep_opportunity',...
         'sleep_opportunity_on_present',...
         'sleep_opportunity_off_present',...
@@ -732,9 +814,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
         'arousals_density_per_min_R',...
         'arousals_density_per_min_WASO', ...
         'cycle_label',...
-        'cycle_complete',...
-        'scoring_duration_min',...
-        'data_offset_min'}...
+        'cycle_complete'}...
         );
     
     if iScoringCycle == 1

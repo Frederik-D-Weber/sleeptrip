@@ -41,7 +41,8 @@ function [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage allowedslee
 
 % set the defaults
 cfg.sleeponsetdef  = upper(ft_getopt(cfg, 'sleeponsetdef', 'N1_XR'));
-cfg.allowsleeponsetbeforesleepopon  = upper(ft_getopt(cfg, 'allowsleeponsetbeforesleepopon', 'no'));
+cfg.allowsleeponsetbeforesleepopon  = ft_getopt(cfg, 'allowsleeponsetbeforesleepopon', 'no');
+
 
 hasLightsOff = false;
 lightsOffMoment = 0;
