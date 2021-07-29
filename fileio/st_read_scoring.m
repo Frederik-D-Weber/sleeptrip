@@ -246,6 +246,23 @@ switch  cfg.scoringformat
         cfg.columndelimimter = ',';
         cfg.ignorelines      = {'LOUT','LON'};
         cfg.columnnum        = 4;
+    case 'zmax_autoscored'
+        % ZMax exported one column text from autoscoring
+        scoremap = [];
+        scoremap.labelold  = {'5', '1', '2', '3', '4', ' U'};
+        switch cfg.standard
+            case 'aasm'
+                scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'R', '?'};
+            case 'rk'
+                ft_warning('the zmax data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.');
+                scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'R', '?'};
+        end
+        scoremap.unknown   = '?';
+        
+        %cfg.scoremap         = scoremap;
+        cfg.columndelimimter = ',';
+        %cfg.ignorelines      = {'LOUT','LON'};
+        cfg.columnnum        = 1;
         
     case {'somnomedics_english', 'somnomedics'}
         % Somnomedics english version exported profile txt
