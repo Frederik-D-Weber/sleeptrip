@@ -127,7 +127,10 @@ for iRes = 1:nRes
         end
     end
         
-    rt = cat(2,table(repmat(iRes,numel(descriptor),1),repmat({r.ori},numel(descriptor),1),repmat({r.type},numel(descriptor),1),descriptor,'VariableNames',{'resstacknum','res_ori','res_type','descriptor'}),r.table(:,find(numericVars)));
+    if ~iscell(descriptor)
+        descriptor = {descriptor};
+    end
+    rt = cat(2,table(repmat(iRes,size(descriptor,1),1),repmat({r.ori},size(descriptor,1),1),repmat({r.type},size(descriptor,1),1),descriptor,'VariableNames',{'resstacknum','res_ori','res_type','descriptor'}),r.table(:,find(numericVars)));
     rt = stack(rt,5:size(rt,2),...
                   'IndexVariableName','property',...
                   'NewDataVariableName','value');

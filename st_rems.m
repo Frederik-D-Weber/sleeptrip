@@ -675,23 +675,31 @@ epochLengthSamples = scoring.epochlength*fsample;
 % maxPeaksOrTroughsPerSpindle = ceil(maxFreq*cfg.maxduration+1);
 
 
-
-
-if isfield(cfg, 'channel')
-    cfg_rod = [];
-    if isnumeric(cfg.channel)
-        cfg_rod.order = cfg.channel(:);
-    else
-        [Lia, Lib ] = ismember(cfg.channel, data.label);
-        cfg_rod.order = Lib(:);
+if isfield(cfg, 'channel') 
+    if ~isempty(cfg.channel)
+        cfg_rod = [];
+        if isnumeric(cfg.channel)
+            cfg_rod.order = cfg.channel(:);
+        else
+            [Lia, Lib ] = ismember(cfg.channel, data.label);
+            if ~any(Lia)
+                ft_error('none of the requrested channels in cfg.channel was in the data.label')
+            end
+            cfg_rod.order = Lib(:);
+        end
+        data = st_reorderdata(cfg_rod, data);
     end
-    data_ord = st_reorderdata(cfg_rod, data);
 end
 
 if numel(data.label) > 2
     ft_error('This funtion expects two channels the left and the right EOG channel that are inversely correlated')
 end
 
+hasNoChannels = false;
+if numel(data.label) < 1
+	ft_warning('at least one channel is required but none was used or the wrong channels have been chosen by cfg.channel')
+    hasNoChannels = true;
+else
 
 hasOnlyOneChannel = false;
 if numel(data.label) == 2
@@ -889,7 +897,7 @@ hypnEpochsBeginsSamples = hypnEpochsBeginsSamples*fsample+1;
     
     nEpochs_REM = sum(scoring.numbers == 5)+sum(scoring.numbers == 51);
     nEpochs_REM_withoutMA = sum(scoring.numbers == 5)-sum((scoring.excluded == 1) & (scoring.numbers == 5));
-    
+end    
     
 res_rems_channel = [];
 res_rems_channel.ori = functionname;
@@ -900,7 +908,7 @@ tempvarnames = {'channel',...
             'count','density_per_REM_epoch','density_per_REM_without_MA_epoch',...
             'mean_duration_seconds','mean_speed_uV_per_second', 'mean_rightness_EOGRdeviation_minus_EOGLdeviation',...
             'used_basic_threshold_factor_of_EOG_noise','used_relaxed_threshold_factor_of_basic_threshold','observed_EOG_noise','observed_basic_threshold_of_EOG_noise','observed_relaxed_threshold_of_basic_threshold'};
-if ~hasREM
+if ~hasREM || hasNoChannels
     res_rems_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 %     res_channel.table = table(...
 %         [channel_label_EOG_left '+' channel_label_EOG_right],...
@@ -931,7 +939,7 @@ tempvarnames = {'channel',...
             'id_within_channel',...
             'stage','stage_alt','stage_alt2'};
         
-if ~hasREM
+if ~hasREM || hasNoChannels
     res_rems_event.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 else
     if isempty(detected)
@@ -1053,7 +1061,7 @@ tempvarnames = {...
         'REMlatencyEpNb','REMepochsNb','standardREMdensityAllNight','REMdensityOf1sMiniEpisodeFromAllNight','allREMdensityAllNight', ...
         'allREMactivity3sMiniEpisode','allREMactivity1sMiniEpisode', 'REMactivityInBurst1sMiniEpisode','REMdensityInBurst1sMiniEpisode','burstsNumber1sMiniEpisode','burstsPrc1sMiniEpisode','NbOfREMsinAVGburst1sMiniEpisode'};
         
-if ~hasREM || failed_summary_calc
+if ~hasREM || failed_summary_calc || hasNoChannels
     res_rems_summary.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 else
     if isempty(detected)

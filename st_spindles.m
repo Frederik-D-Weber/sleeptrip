@@ -678,33 +678,33 @@ maxPeaksOrTroughsPerSpindle = ceil(maxFreq*cfg.maxduration+1);
 
 
 %cell(1,nChannels)
-ch_detectedLengthSamples = [];
-ch_detectedBeginSample = [];
-ch_detectedEndSample = [];
-ch_detectedPeak2Peaks = [];
-ch_detectedPeaksSamples  = [];
-ch_detectedTroughsSamples  = [];
-ch_detectedSignalTroughsSamples = [];
-ch_detectedSignalPeaksSamples = [];
-ch_detectedSDofFilteredSignal = [];
-ch_detectedMergeCount = [];
-ch_nDetected = [];
-ch_nMerged = [];
-ch_densityPerEpoch = [];
-ch_SDfrqBndPssSignal = [];
-ch_detectedEnvelopeMaxs = [];
-ch_detectedEnvelopeMaxSamples = [];
+ch_detectedLengthSamples = {};
+ch_detectedBeginSample = {};
+ch_detectedEndSample = {};
+ch_detectedPeak2Peaks = {};
+ch_detectedPeaksSamples  = {};
+ch_detectedTroughsSamples  = {};
+ch_detectedSignalTroughsSamples = {};
+ch_detectedSignalPeaksSamples = {};
+ch_detectedSDofFilteredSignal = {};
+ch_detectedMergeCount = {};
+ch_nDetected = {};
+ch_nMerged = {};
+ch_densityPerEpoch = {};
+ch_SDfrqBndPssSignal = {};
+ch_detectedEnvelopeMaxs = {};
+ch_detectedEnvelopeMaxSamples = {};
 
-ch_detected_linear_regression_freq_slope = [];
-ch_detected_linear_regression_freq_offset = [];
-ch_detected_linear_regression_freq_R_squared = [];
+ch_detected_linear_regression_freq_slope = {};
+ch_detected_linear_regression_freq_offset = {};
+ch_detected_linear_regression_freq_R_squared = {};
 
-ch_detected_inst_freq_troughs = [];
-ch_detected_inst_freq_peaks = [];
-ch_detectedTroughsPotential = [];
-ch_detectedPeaksPotential = [];
+ch_detected_inst_freq_troughs = {};
+ch_detected_inst_freq_peaks = {};
+ch_detectedTroughsPotential = {};
+ch_detectedPeaksPotential = {};
 
-ch_contigSegment = [];
+ch_contigSegment = {};
 
 %if hasROIs && hasROIs_threshold
 for iChan = 1:nChannels
@@ -1529,17 +1529,19 @@ tempvarnames = {...
     'used_center_freq','mean_SD_of_filtered_signal',...
     'mean_troughs_per_event','mean_peaks_per_event',...
     'mean_linear_regression_freq_slope','mean_linear_regression_freq_offset','mean_linear_regression_freq_R_squared'};
-if isnan(cfg.centerfrequency)
+if isnan(cfg.centerfrequency) || (nChannels < 1)
     res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 else
     % if isempty(output)
     %     res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
     % else
+    stages_col = cellstr(repmat(strjoin(cfg.stages,' '), nRowsCh, 1));
+    threshold_stages_col = cellstr(repmat(strjoin(cfg.thresholdstages,' '), nRowsCh, 1));
     res_channel.table = table(...
         chs,...
         [ch_nDetected{:}]', [ch_densityPerEpoch{:}]', [ch_nDetected{:}]'/(lengthsAcrossROIsSeconds/60), ch_detectedLengthSampless,ch_detectedPeak2Peakss,...
         ch_freqbypeaks,epochlengths,[ch_nMerged{:}]',lengthsAcrossROIsSecondss,...
-        cellstr(repmat(strjoin(cfg.stages,' '), nRowsCh, 1)),cellstr(repmat(strjoin(cfg.thresholdstages,' '), nRowsCh, 1)),[ch_SDfrqBndPssSignal{:}]',...
+        stages_col(1:nRowsCh)',threshold_stages_col(1:nRowsCh)',[ch_SDfrqBndPssSignal{:}]',...
         dataset_factorThresholdBeginEnds,dataset_factorThresholdCriterions,...
         minFreqs,maxFreqs,...
         centerFreqFilters,ch_detectedSDofFilteredSignals,...
@@ -1564,7 +1566,7 @@ tempvarnames = {...
     'linear_regression_freq_slope','linear_regression_freq_offset','linear_regression_freq_R_squared',...
     'number_troughs','number_peaks','lengths_ROI_seconds'};
 
-if isnan(cfg.centerfrequency)
+if isnan(cfg.centerfrequency) || (nChannels < 1)
     res_event.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 else
     if isempty(output)

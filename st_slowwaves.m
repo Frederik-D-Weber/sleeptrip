@@ -548,29 +548,29 @@ minFreqPostFreqBorderBufferLength = round(fsample/minFreq);
 
 nChannels = length(data.label);
 
-ch_detectedLengthSamples = [];
-ch_detectedBeginSample = [];
-ch_detectedEndSample = [];
-ch_detectedSignalMin = [];
-ch_detectedSignalMax = [];
-ch_detectedPeak2Peaks = [];
-ch_detectedPeaksSamples  = [];
-ch_detectedTroughsSamples  = [];
-ch_detectedMaxSlopes  = [];
-ch_detectedMaxSlopesSamples  = [];
-ch_detectedMaxDownSlopes  = [];
-ch_detectedMaxDownSlopesSamples  = [];
-ch_detectedTroughToZeroCrossingSlopes = [];
-ch_detectedTroughToZeroCrossingSlopesSamples = [];
-ch_detectedZeroCrossingToTroughSlopes = [];
-%ch_detectedZeroCrossingToTroughSlopesSamples = [];
-ch_detectedSDofFilteredSignal = [];
-ch_nDetected = [];
-ch_densityPerEpoch = [];
-ch_meanNegativePeak =  [];
-ch_meanPeak2Peak = [];
+ch_detectedLengthSamples = {};
+ch_detectedBeginSample = {};
+ch_detectedEndSample = {};
+ch_detectedSignalMin = {};
+ch_detectedSignalMax = {};
+ch_detectedPeak2Peaks = {};
+ch_detectedPeaksSamples  = {};
+ch_detectedTroughsSamples  = {};
+ch_detectedMaxSlopes  = {};
+ch_detectedMaxSlopesSamples  = {};
+ch_detectedMaxDownSlopes  = {};
+ch_detectedMaxDownSlopesSamples  = {};
+ch_detectedTroughToZeroCrossingSlopes = {};
+ch_detectedTroughToZeroCrossingSlopesSamples = {};
+ch_detectedZeroCrossingToTroughSlopes = {};
+%ch_detectedZeroCrossingToTroughSlopesSamples = {};
+ch_detectedSDofFilteredSignal = {};
+ch_nDetected = {};
+ch_densityPerEpoch = {};
+ch_meanNegativePeak = {};
+ch_meanPeak2Peak = {};
 
-ch_contigSegment = [];
+ch_contigSegment = {};
 
 
 
@@ -1220,9 +1220,15 @@ tempvarnames = {...
         'mean_negative_peak_potential','mean_positive_peak_potential',...
         'used_min_freq','used_max_freq'};
 
+if nChannels < 1
+    res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
+else
 % if isempty(output)
 %     res_channel.table = cell2table(cell(0,numel(tempvarnames)), 'VariableNames', tempvarnames);
 % else
+    stages_col = cellstr(repmat(strjoin(cfg.stages,' '), nRowsCh, 1));
+    threshold_stages_col = cellstr(repmat(strjoin(cfg.thresholdstages,' '), nRowsCh, 1));
+
     res_channel.table = table(...
         chs,...
         [ch_nDetected{:}]', [ch_densityPerEpoch{:}]', [ch_nDetected{:}]'/(lengthsAcrossROIsSeconds/60), ...
@@ -1231,12 +1237,13 @@ tempvarnames = {...
         ch_detectedMaxSlopess,ch_detectedTroughToZeroCrossingSlopess,...
         ch_frequency_by_durations,ch_frequency_by_trough_to_peak_latencys,...
         epochlengths,lengthsAcrossROIsSecondss,...
-        cellstr(repmat(strjoin(cfg.stages,' '), nRowsCh, 1)),cellstr(repmat(strjoin(cfg.thresholdstages,' '), nRowsCh, 1)),ch_meanNegativePeaks,ch_meanPeak2Peaks,...
+        stages_col(1:nRowsCh)',threshold_stages_col(1:nRowsCh)',ch_meanNegativePeaks,ch_meanPeak2Peaks,...
         ch_detectedSDofFilteredSignals,...
         ch_detectedSignalMins,ch_detectedSignalMaxs,...
         minFreqs,maxFreqs,...
         'VariableNames',tempvarnames);
 % end
+end
 
 
 res_event = [];
