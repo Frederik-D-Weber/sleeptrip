@@ -1,0 +1,8 @@
+acc_x,hp 0.5
+acc_y,hp 0.5
+acc_z,hp 0.5
+acc_xyz,hp 0.5
+PPG,hp 0.1 lp 10
+noise,hp 0.1
+EEG*,hp 0.1 lp 35
+EMG*,hp 80

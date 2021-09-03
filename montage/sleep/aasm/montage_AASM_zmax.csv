@@ -1,0 +1,14 @@
+new_channels,EEG L,EEG R,dX,dY,dZ,OXY_IR_AC,OXY_IR_DC,NOISE,LIGHT,BATT,BODY TEMP
+EEG L,1,0,0,0,0,0,0,0,0,0,0
+EEG R,0,1,0,0,0,0,0,0,0,0,0
+EMG,1,-1,0,0,0,0,0,0,0,0,0
+accelerometer_xyz,0,0,1,1,1,0,0,0,0,0,0
+PPG,0,0,0,0,0,1,0,0,0,0,0
+noise_level,0,0,0,0,0,0,0,1,0,0,0
+light_exposure,0,0,0,0,0,0,0,0,1,0,0
+battery_V,0,0,0,0,0,0,0,0,0,1,0
+temperature_skin_C,0,0,0,0,0,0,0,0,0,0,1
+oxygenation,0,0,0,0,0,0,1,0,0,0,0
+acc_x,0,0,1,0,0,0,0,0,0,0,0
+acc_y,0,0,0,1,0,0,0,0,0,0,0
+acc_z,0,0,0,0,1,0,0,0,0,0,0
