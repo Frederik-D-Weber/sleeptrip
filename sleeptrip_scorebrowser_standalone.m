@@ -24,7 +24,7 @@
 
 cfg = [];
 cfg.renderer = 'opengl';
-cfg.bgcolor = 'dark'; %'dark' or 'white'
+cfg.bgcolor = 'white'; %'dark' or 'white'
 cfg.datainteractive = 'yes';
 cfg.colorgroups = 'jet';
 cfg.colorgroups = 'jet';

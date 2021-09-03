@@ -110,6 +110,7 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   cfg.mychanscale             = number, scaling to apply to the channels specified in cfg.mychan
 %   cfg.mychan                  = Nx1 cell-array with selection of channels
 %   cfg.chanscale               = Nx1 vector with scaling factors, one per channel specified in cfg.channel
+%   cfg.chanyrange              = Nx2 vector with y ranges for plotting for each channel, one 1x2 line per channel specified in cfg.channel
 %   cfg.compscale               = string, 'global' or 'local', defines whether the colormap for the topographic scaling is
 %                                  applied per topography or on all visualized components (default 'global')
 %
@@ -219,6 +220,7 @@ if ~isfield(cfg, 'megscale'),        cfg.megscale = [];                   end
 if ~isfield(cfg, 'magscale'),        cfg.magscale = [];                   end
 if ~isfield(cfg, 'gradscale'),       cfg.gradscale = [];                  end
 if ~isfield(cfg, 'chanscale'),       cfg.chanscale = [];                  end
+if ~isfield(cfg, 'chanyrange'),      cfg.chanyrange = [];                  end
 if ~isfield(cfg, 'mychanscale'),     cfg.mychanscale = [];                end
 if ~isfield(cfg, 'layout'),          cfg.layout = [];                     end
 if ~isfield(cfg, 'plotlabels'),      cfg.plotlabels = 'yes';              end
@@ -235,6 +237,15 @@ cfg.standard        = ft_getopt(cfg, 'standard', 'aasm');
 cfg.renderer        = ft_getopt(cfg, 'renderer');
 cfg.epochlength     = ft_getopt(cfg, 'epochlength', 30);
 cfg.bgcolor         = ft_getopt(cfg, 'bgcolor', 'white');
+switch cfg.bgcolor
+    case {'dark', 'black', 'k', 'grey', 'gray', 'night'}
+        cfg.bgcolor = 'dark';
+    case {'white', 'w', 'light', 'day'}
+    	cfg.bgcolor = 'white';
+    otherwise
+        ft_warning('could not find cfg.bgcolor = ''%s'' will use white bg as default',cfg.bgcolor)
+end
+
 cfg.cuttoscoring    = ft_getopt(cfg, 'cuttoscoring', 'no');
 cfg.viewmode        = ft_getopt(cfg, 'viewmode', 'vertical');
 cfg.startepoch      = ft_getopt(cfg, 'startepoch', 1);
@@ -321,12 +332,18 @@ if istrue(cfg.datainteractive)
                 end
             end
             if ~isempty(cfg_dhms.scoringfile)
+                try
                 cfg_rs = [];
                 cfg_rs.scoringfile = cfg_dhms.scoringfile;
                 cfg_rs.scoringformat   = cfg_dhms.scoringformat;
                 cfg_rs.standard = cfg_dhms.scoringstandard;
                 cfg.scoring = st_read_scoring(cfg_rs);
                 cfg.standard = cfg.scoring.standard;
+                catch errr
+                	ft_warning('Reading/importing the scoring file failed! try to import again later within the browser.')
+                    msgbox('Reading/importing the scoring file failed! try to import again later within the browser.' ,'Scoring reading failed','error','modal');
+
+                end
             end
             
             prompt = {'Resample at sampling rate (Hz)'};
@@ -873,6 +890,22 @@ if ~isempty(cfg.chanscale)
         cfg.chanscale = cfg.chanscale';
     end
 end
+
+if ~isempty(cfg.chanyrange)
+    if ~isfield(cfg,'channel')
+        warning('ignoring cfg.chanyrange; this should only be used when an explicit channel selection is being made');
+        cfg.chanyrange = [];
+    elseif numel(cfg.channel) ~= size(cfg.chanyrange,1)
+        error('cfg.chanyrange should have the same number of rows as cfg.channel');
+    end
+    
+    % make sure chanyrange is a 2 column vector
+    if size(cfg.chanyrange,2) ~= 2
+        error('cfg.chanyrange should have 2 columns for the min and maximal y range of each channel');
+    end
+end
+
+
 
 if ~isempty(cfg.mychanscale) && ~isfield(cfg,'mychan')
     warning('ignoring cfg.mychanscale; no channels specified in cfg.mychan');
@@ -1454,10 +1487,7 @@ cfg.browserversion = '3.1.5';
 
 if strcmp(cfg.doSleepScoring,'yes')
     
-    
-    cfg.score_channel_eeg_scale = 50;
-    temp_eeg_span = (1/min(cfg.chanscale))*cfg.score_channel_eeg_scale*cfg.chanscale(cfg.score_channel_eeg_number);
-    cfg.ylim = [-temp_eeg_span temp_eeg_span];
+
     
     
     cfg.markSpindles = 'no';
@@ -1468,6 +1498,20 @@ if strcmp(cfg.doSleepScoring,'yes')
     cfg.underlaySOSignal = 'no';
 
     cfg.channel = ft_channelselection(cfg.channeldisplayed,opt.orgdata.label);
+    
+    
+    
+
+    cfg.score_channel_eeg_scale = 50;
+    temp_eeg_span = abs((1/min(cfg.chanscale))*cfg.score_channel_eeg_scale*cfg.chanscale(cfg.score_channel_eeg_number));
+    cfg.ylim = [-temp_eeg_span temp_eeg_span];
+    
+    if isempty(cfg.chanyrange)
+        if ~isempty(opt.orgdata)
+            cfg.chanyrange = repmat([-temp_eeg_span temp_eeg_span],numel(cfg.channel),1);
+        end
+    end
+    
     
     cfg.spindle_mark_color = [0 1 0];
     cfg.slowoscillation_mark_color = [1 0 0];
@@ -1675,7 +1719,7 @@ uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbu
 
 
 uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '+', 'position', [0.13, temp_lower_line_y + 0.08/3 + 0.08/3, 0.04, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'uparrow')
-uicontrol('tag', 'labels',  'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'scale', 'position', [0.13, temp_lower_line_y + 0.08/3, 0.04, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'y')
+uicontrol('tag', 'labels',  'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'zoom', 'position', [0.13, temp_lower_line_y + 0.08/3, 0.04, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'y')
 uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '-', 'position', [0.13, temp_lower_line_y, 0.04, 0.03],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'downarrow')
 
 if ~strcmp(cfg.doSleepScoring,'yes')
@@ -3115,13 +3159,70 @@ switch key
             setappdata(h, 'cfg', cfg);
             definetrial_cb(h, eventdata);
             redraw_cb(h, eventdata);
+    case 'y'
+        
+	response = inputdlg('vertical zoom factor fro current ranges, a factor number e.g. 2 or 0.5, or [-100 100] or ''maxabs'' or ''maxmin''', 'specify', 1, {[ num2str(1)]});
+        if ~isempty(response)
+            response = ['[' response{1} ']']; % convert to string and add brackets, just to ensure that str2num will work
+            if strcmp(response, '[maxmin]')
+                chanindx  = match_str(opt.curdat.label,opt.hdr.label);
+                for i = 1:length(chanindx)
+                    ich = chanindx(i);
+                    minval = min(opt.curdat.trial{1}(i,:));
+                    maxval = max(opt.curdat.trial{1}(i,:));
+                    cfg.chanyrange(ich,:) = [minval maxval];
+                end
+            elseif strcmp(response, '[maxabs]')
+                chanindx  = match_str(opt.curdat.label,opt.hdr.label);
+                for i = 1:length(chanindx)
+                    ich = chanindx(i);
+                    minval = min(opt.curdat.trial{1}(i,:));
+                    maxval = max(opt.curdat.trial{1}(i,:));
+                    cfg.chanyrange(ich,:) = [-max(abs([minval maxval])) max(abs([minval maxval]))];
+                end
+            else
+                tmp = str2num(response);
+                if numel(tmp)==2
+                    cfg.chanyrange = repmat(tmp,size(cfg.chanyrange,1),1);
+                elseif numel(tmp)==1
+                    cfg.chanyrange = cfg.chanyrange/tmp;
+                else
+                    warning('incorrect specification of cfg.chanyrange, not changing the limits for the vertical axes')
+                end
+            end
+%         % select the vertical scaling
+%         
+%         response = inputdlg('vertical scale references, [ymin ymax], ''maxabs'' or ''maxmin''', 'specify', 1, {['[ ' num2str(cfg.ylim) ' ]']});
+%         if ~isempty(response)
+%             response = ['[' response{1} ']']; % convert to string and add brackets, just to ensure that str2num will work
+%             if strcmp(response, '[maxmin]')
+%                 minval = min(opt.curdat.trial{1}(:));
+%                 maxval = max(opt.curdat.trial{1}(:));
+%                 cfg.ylim = [minval maxval];
+%             elseif strcmp(response, '[maxabs]')
+%                 minval = min(opt.curdat.trial{1}(:));
+%                 maxval = max(opt.curdat.trial{1}(:));
+%                 cfg.ylim = [-max(abs([minval maxval])) max(abs([minval maxval]))];
+%             else
+%                 tmp = str2num(response);
+%                 if numel(tmp)==2
+%                     cfg.ylim = tmp;
+%                 else
+%                     warning('incorrect specification of cfg.ylim, not changing the limits for the vertical axes')
+%                 end
+%             end
+            setappdata(h, 'opt', opt);
+            setappdata(h, 'cfg', cfg);
+            redraw_cb(h, eventdata);
+        end
     case 'uparrow'
-        cfg.ylim = cfg.ylim/sqrt(2);
+        %cfg.ylim = cfg.ylim/sqrt(2);
+        cfg.chanyrange = cfg.chanyrange/sqrt(2);
         setappdata(h, 'opt', opt);
         setappdata(h, 'cfg', cfg);
         redraw_cb(h, eventdata);
     case 'downarrow'
-        cfg.ylim = cfg.ylim*sqrt(2);
+        cfg.chanyrange = cfg.chanyrange*sqrt(2);
         setappdata(h, 'opt', opt);
         setappdata(h, 'cfg', cfg);
         redraw_cb(h, eventdata);
@@ -3453,31 +3554,6 @@ switch key
                 msgbox('Setting the thresholds failed!' ,'Thresholds failed','error','modal');
             end
         end
-    case 'y'
-        % select the vertical scaling
-        response = inputdlg('vertical scale references, [ymin ymax], ''maxabs'' or ''maxmin''', 'specify', 1, {['[ ' num2str(cfg.ylim) ' ]']});
-        if ~isempty(response)
-            response = ['[' response{1} ']']; % convert to string and add brackets, just to ensure that str2num will work
-            if strcmp(response, '[maxmin]')
-                minval = min(opt.curdat.trial{1}(:));
-                maxval = max(opt.curdat.trial{1}(:));
-                cfg.ylim = [minval maxval];
-            elseif strcmp(response, '[maxabs]')
-                minval = min(opt.curdat.trial{1}(:));
-                maxval = max(opt.curdat.trial{1}(:));
-                cfg.ylim = [-max(abs([minval maxval])) max(abs([minval maxval]))];
-            else
-                tmp = str2num(response);
-                if numel(tmp)==2
-                    cfg.ylim = tmp;
-                else
-                    warning('incorrect specification of cfg.ylim, not changing the limits for the vertical axes')
-                end
-            end
-            setappdata(h, 'opt', opt);
-            setappdata(h, 'cfg', cfg);
-            redraw_cb(h, eventdata);
-        end
     case 'shift+c'
         %         % select channels
         %         select = match_str(opt.hdr.label, cfg.channel);
@@ -3493,6 +3569,8 @@ switch key
         [selected_channels, cfg, opt] = channelDialog(temp_all_channels,select,cfg,opt);
         if ~isempty(selected_channels)
             cfg.channel = selected_channels;
+            %select = match_str(temp_all_channels, cfg.channel);
+            %cfg.chanyrange = cfg.chanyrange(select,:);
             setappdata(h, 'opt', opt);
             setappdata(h, 'cfg', cfg);
             delete(findobj(h,'tag', 'chanlabel'));  % remove channel labels here, and not in redrawing to save significant execution time (see bug 2065)
@@ -4407,9 +4485,23 @@ if strcmp(cfg.doSleepScoring,'yes')
         x_pos_end = cfg.hyp_x_time(hyp_endsample);
         x_pos = [x_pos_begin x_pos_end x_pos_end x_pos_begin];
         y_pos = [cfg.plot_MA_offset cfg.plot_MA_offset 1 1];
-        pos_now = patch(x_pos,y_pos,[0.5 0.25 1],'parent',axh);
-        set(pos_now,'FaceAlpha',0.4);
-        set(pos_now,'EdgeColor','none');
+        
+        blockepochstart = (opt.trlop-1)*(cfg.blocksize/cfg.epochlength)+1;
+        blockepochend = opt.trlop*(cfg.blocksize/cfg.epochlength);
+        hyp_begsample_view = cfg.hyp_epochLengthSamples*(blockepochstart-1)+1; % opt.trlvis(opt.trlop,1);
+        hyp_endsample_view = cfg.hyp_epochLengthSamples*(blockepochend);% opt.trlvis(opt.trlop,2);
+        x_pos_begin_view = cfg.hyp_x_time(hyp_begsample_view);
+        x_pos_end_view = cfg.hyp_x_time(hyp_endsample_view);
+        x_pos_view = [x_pos_begin_view x_pos_end_view x_pos_end_view x_pos_begin_view];
+        %y_pos = [cfg.plot_MA_offset cfg.plot_MA_offset 1 1];
+        
+        pos_now_epoch = patch(x_pos_view,y_pos,[0.5 0.8 0.5],'parent',axh);
+        set(pos_now_epoch,'FaceAlpha',0.28);
+        set(pos_now_epoch,'EdgeColor','none');
+        
+        pos_now_epoch = patch(x_pos,y_pos,[0.5 0.25 1],'parent',axh);
+        set(pos_now_epoch,'FaceAlpha',0.4);
+        set(pos_now_epoch,'EdgeColor','none');
         
         if cfg.toggle_epoch_marker
             x_pos_begin_toggle_epoch_marker = cfg.hyp_x_time(cfg.hyp_epochLengthSamples*(cfg.toggle_epoch_marker-1)+1); % opt.trlvis(opt.trlop,1);
@@ -4459,11 +4551,7 @@ if nsamplepad>0
     dat = [dat NaN(numel(lab), opt.nanpaddata(opt.trlop))];
     tim = [tim linspace(tim(end),tim(end)+nsamplepad*mean(diff(tim)),nsamplepad)];  % possible machine precision error here
 end
-opt.curdat.label      = lab;
-opt.curdat.time{1}    = tim;
-opt.curdat.trial{1}   = dat;
-opt.curdat.fsample    = opt.fsample;
-opt.curdat.sampleinfo = [begsample endsample offset];
+
 
 % apply scaling to selected channels
 % using wildcard to support subselection of channels
@@ -4504,6 +4592,12 @@ if ~isempty(cfg.mychanscale)
     chansel = match_str(lab, ft_channelselection(cfg.mychan, lab));
     dat(chansel,:) = dat(chansel,:) .* cfg.mychanscale;
 end
+
+opt.curdat.label      = lab;
+opt.curdat.time{1}    = tim;
+opt.curdat.trial{1}   = dat;
+opt.curdat.fsample    = opt.fsample;
+opt.curdat.sampleinfo = [begsample endsample offset];
 
 % to assure current feature is plotted on top
 ordervec = 1:length(opt.artdata.label);
@@ -4552,6 +4646,8 @@ opt.height = ax(4)-ax(3);
 % the hlim will be in seconds, the vlim will be in Tesla or Volt
 opt.hlim = [tim(1) tim(end)];
 opt.vlim = cfg.ylim;
+opt.chanvrange = cfg.chanyrange;
+
 
 % FW begin
 %hold all
@@ -4652,7 +4748,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                 minPeakDistanceSamples = fix(FrqOfSmpl*(1/(cfg.so_maxFreq)));
                 maxPeakDistanceSamples = fix(FrqOfSmpl*(1/cfg.so_minFreq));
                 
-                [tempCandSignalPeaks, tempCandSignalPeaksSamples] = findpeaks(data_det_signal_eeg_so,'MINPEAKHEIGHT',0,'MINPEAKDISTANCE',minPeakDistanceSamples_peakdet);
+                [tempCandSignalPeaks, tempCandSignalPeaksSamples] = findpeaks(double(data_det_signal_eeg_so),'MINPEAKHEIGHT',0,'MINPEAKDISTANCE',minPeakDistanceSamples_peakdet);
                 
                 %     data_det_signal_eeg_so = sin(0:0.01:3)+sin(0:0.1:30)*0.6
                 %     [y x] = findpeaks(data_det_signal_eeg_so,'MINPEAKHEIGHT',0,'MINPEAKDISTANCE',150)
@@ -5105,7 +5201,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                     
                     
                     
-                    temp_curr_tfr_channel_signal_ylim = cfg.ylim/cfg.chanscale(cfg.score_channel_eeg_number);
+                    temp_curr_tfr_channel_signal_ylim = cfg.chanyrange(cfg.score_channel_eeg_number,:)/cfg.chanscale(cfg.score_channel_eeg_number);
                     temp_curr_tfr_channel_signal_ylim = temp_curr_tfr_channel_signal_ylim*2;
                     
                     Ysteps = (max(temp_curr_tfr_channel_signal_ylim)-min(temp_curr_tfr_channel_signal_ylim))/5;
@@ -5394,7 +5490,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                 
                 
                 minPeakDistanceSamples = FrqOfSmpl * 0.2;%200ms the refractory time of a heart beat
-                [tempCandSignalPeaks, tempCandSignalPeaksSamples] = findpeaks(candSignal,'MINPEAKHEIGHT',threshold_ECG,'MINPEAKDISTANCE',minPeakDistanceSamples);
+                [tempCandSignalPeaks, tempCandSignalPeaksSamples] = findpeaks(double(candSignal),'MINPEAKHEIGHT',threshold_ECG,'MINPEAKDISTANCE',minPeakDistanceSamples);
                 candSignalPeaks = candSignal(tempCandSignalPeaksSamples);
                 candSignalPeaksSamples = tempCandSignalPeaksSamples;%    candSignalPeaksSamples = currentRawDataSampleOffset + tempCandSignalPeaksSamples;
                 
@@ -5721,7 +5817,7 @@ if strcmp(cfg.displayEvents,'yes')
                     switch cfg.eventhighlighting
                         case {'snake','snake+box','boxdimple+snake'}
                     ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', eventdarkercolor, 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*10,...
-                        'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.laytime.width(iChannel), 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                        'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.laytime.width(iChannel), 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(iChannel),:));
                     end
                 end
                 switch cfg.eventhighlighting
@@ -6088,15 +6184,15 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                   if strcmp(cfg.underlaySpindleSignal,'yes')
                       if isfield(cfg,'spindsignal_envelope_display')
                           ft_plot_vector(tim(1:numel(cfg.spindsignal_envelope_display)), cfg.spindsignal_envelope_display, 'box', false, 'color', cfg.underlaySpindleSignal_color, 'tag', 'spindle_timecourse', ...
-                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                           ft_plot_vector(tim(1:numel(cfg.spindsignal_envelope_display)), -cfg.spindsignal_envelope_display, 'box', false, 'color', cfg.underlaySpindleSignal_color, 'tag', 'spindle_timecourse', ...
-                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                           
                       end
                       
                       if isfield(cfg,'spindsignal_display')
                           ft_plot_vector(tim(1:numel(cfg.spindsignal_display)), cfg.spindsignal_display , 'box', false, 'color', [0.75 0.75 0.75], 'tag', 'spindle_timecourse', ...
-                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                       end
                   end
               end
@@ -6108,7 +6204,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                       
                       if isfield(cfg,'alphasignal_display')
                           ft_plot_vector(tim(1:numel(cfg.alphasignal_display)), cfg.alphasignal_display , 'box', false, 'color', [0.75 0.75 0.75], 'tag', 'alpha_timecourse', ...
-                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                       end
                   end
               end
@@ -6117,7 +6213,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                   if strcmp(cfg.underlaySOSignal,'yes')
                       if isfield(cfg,'so_signal_display')
                           ft_plot_vector(tim(1:numel(cfg.so_signal_display)), cfg.so_signal_display , 'box', false, 'color', cfg.underlaySOSignal_color, 'tag', 'so_timecourse', ...
-                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                              'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                       end
                       
                   end
@@ -6129,19 +6225,21 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
               
               vpos = opt.laytime.pos(laysel,2);
               height = opt.laytime.height(laysel);
+              vrange = cfg.chanyrange(chanindx(datsel),:);
+
               
-              if vlim(1)==vlim(2)
+              if vrange(1)==vrange(2)
                   % vertical scaling cannot be determined, behave consistent to the plot() function
-                  vlim = [-1 1];
+                  vrange = [-1 1];
               end
               
               
               
-              if any(vlim)
+              if any(vrange)
                   % first shift the vertical axis to zero
-                  dat(datsel,:) = dat(datsel,:) - (vlim(1)+vlim(2))/2;
+                  dat(datsel,:) = dat(datsel,:) - (vrange(1)+vrange(2))/2;
                   % then scale to length 1
-                  dat(datsel,:) = dat(datsel,:) / (vlim(2)-vlim(1));
+                  dat(datsel,:) = dat(datsel,:) / (vrange(2)-vrange(1));
                   % then scale to the new height
                   dat(datsel,:) = dat(datsel,:) .* height;
               end
@@ -6152,7 +6250,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
           else
               %the time course of channels
               ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', colors(i,:), 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
-                  'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                  'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
               
           end
           
@@ -6178,7 +6276,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                         %                             %ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', rgb(rgb_ind,:), 'tag', 'ecg_HR_timecourse', ...
                         %                             ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', 'k', 'tag', 'ecg_HR_timecourse', ...
                         %                             'linewidth', 1.5, ...
-                        %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                        %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                         %
                         if ~isempty(cfg.ECG_instHRsmin_SignalPeaksSamples)
                             rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples), min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
@@ -6187,10 +6285,10 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                             for iECGpeak = 1:numel(cfg.ECG_instHRsmin_SignalPeaksSamples)
                                 %ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', [0.2 0.2 0.2], ...
                                 ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', rgb(rgb_ind(iECGpeak),:), ...
-                                    'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                                    'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                             end
                             %                             ft_plot_vector(tim(cfg.ECG_instHRsmin_SignalPeaksSamples), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples), 'box', false, 'color', 'none', 'marker', 'o', 'markerfacecolor', [1 90/255 0], 'tag', 'ecg_HR_peaks_markers', ...
-                            %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim);
+                            %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
                         end
                     end
                     break
@@ -6208,12 +6306,16 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
         yTickLabel = [];
         for i = 1:length(chanindx)
             curr_scale = cfg.chanscale(chanindx);
+            curr_range = cfg.chanyrange(chanindx,:);
+
             if length(chanindx) > 6
                 % one tick per channel
                 yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/4); ...
                     opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/4)]);
                 %FW begin
-                temp_tick = [.25 .75] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
+                %temp_tick = [.25 .75] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
+                temp_tick = [.25 .75] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
+                
                 yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2)},'UniformOutput',false));
                 yTickLabel = [yTickLabel {yTickLabel_temp}];
                 %yTickLabel = [yTickLabel {[.25 .75] .* temp_factor}];
@@ -6221,7 +6323,8 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
             else
                 %FW begin
                 % two ticks per channel
-                temp_tick = [0 .25 .75 1] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
+                % temp_tick = [0 .25 .75 1] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
+                temp_tick = [0 .25 .75 1] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
                 %annotation('line',[-0.01 -0.01],[0 1],'color',[0.5 0.5 0.5]) .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i)));
                 yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/2); ...
                     opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/4); ...
@@ -6663,14 +6766,15 @@ if strcmp(cfg.use_ruler,'yes') || strcmp(opt.markingstatus,'on')
             %channelIndex = 3;
             
             curr_channel = chanindx(channelIndex);
-            curr_channel_scaling = cfg.chanscale(curr_channel);
+            %curr_channel_scaling = cfg.chanscale(curr_channel);
+            curr_channel_range = cfg.chanyrange(curr_channel,:);
             
             y_range_channel_plot = opt.laytime.height(channelIndex);
             
             x_scale_outer = (ruler_outer_duration_seconds_max/cfg.blocksize)*range(xlim_h_init);
             x_scale_outer_min = (ruler_outer_duration_seconds_min/cfg.blocksize)*range(xlim_h_init);
             
-            y_scale_outer = ((ruler_outer_amplitude_units/range(cfg.ylim))*curr_channel_scaling)*y_range_channel_plot;
+            y_scale_outer = ((ruler_outer_amplitude_units/range(curr_channel_range)))*y_range_channel_plot;
             
             scale_help_outerlow = ft_plot_line([max(xlim_h(1),over_x) min(xlim_h(2),over_x+x_scale_outer)], [max(ylim_h(1),over_y+(y_scale_outer/2)) min(ylim_h(2),over_y+y_scale_outer/2)],'facealpha',0.9, 'color', [1 0 0] , 'linewidth', 1, 'tag', 'scale_help');
             scale_help_outerhigh = ft_plot_line([max(xlim_h(1),over_x) min(xlim_h(2),over_x+x_scale_outer)],[max(ylim_h(1),over_y-y_scale_outer/2) min(ylim_h(2),over_y-(y_scale_outer/2))],'facealpha',0.9, 'color', [1 0 0] , 'linewidth', 1, 'tag', 'scale_help');
@@ -6684,10 +6788,10 @@ if strcmp(cfg.use_ruler,'yes') || strcmp(opt.markingstatus,'on')
             x_scale_inner = (ruler_inner_duration_seconds_max/cfg.blocksize)*range(xlim_h_init);
             x_scale_inner_min = (ruler_inner_duration_seconds_min/cfg.blocksize)*range(xlim_h_init);
             
-            y_scale_inner = ((ruler_inner_amplitude_units/range(cfg.ylim))*curr_channel_scaling)*y_range_channel_plot;
-            y_scale_inner_min = ((ruler_inner_amplitude_units_min/range(cfg.ylim))*curr_channel_scaling)*y_range_channel_plot;
+            y_scale_inner = ((ruler_inner_amplitude_units/range(curr_channel_range)))*y_range_channel_plot;
+            y_scale_inner_min = ((ruler_inner_amplitude_units_min/range(curr_channel_range)))*y_range_channel_plot;
             
-            y_scale_inner2 = ((ruler_inner2_amplitude_units/range(cfg.ylim))*curr_channel_scaling)*y_range_channel_plot;
+            y_scale_inner2 = ((ruler_inner2_amplitude_units/range(curr_channel_range)))*y_range_channel_plot;
             x_scale_inner2 = (1/cfg.blocksize)*range(xlim_h_init);
             
             scale_help_inner_emg_max_top = ft_plot_line([max(xlim_h(1),over_x-x_scale_inner2/2) min(xlim_h(2),over_x+x_scale_inner2/2)], [max(ylim_h(1),over_y+y_scale_inner2/2) min(ylim_h(2),over_y+y_scale_inner2/2)],'facealpha',0.5, 'color', [1 0.7 0] , 'linewidth', 1, 'tag', 'scale_help');
@@ -6988,37 +7092,39 @@ index_unselected = setdiff(1:length(channels), indices_selected);
 % line_x_offsets = [0   0.2 0.3 0.4 0.5 0.6  0.65 0.7  0.75 0.83];
 % line_x_width =   [0.2 0.1 0.1 0.1 0.1 0.05 0.05 0.05 0.05 0.17];
 
-line_x_offsets = [0.00 0.15 0.250 0.325 0.40 0.50 0.55 0.60 0.65 0.70 0.75 0.83];
-line_x_width =   [0.15 0.10 0.075 0.075 0.10 0.05 0.05 0.05 0.05 0.05 0.05 0.17];
+line_x_offsets = [0.00  0.1750 0.2250 0.2750 0.3250  0.3750 0.4500 0.5250 0.5750 0.6250 0.6750 0.7250 0.7750 0.8250];
+line_x_width =   [0.175 0.05   0.05   0.05   0.05    0.075  0.075  0.05   0.05   0.05   0.05   0.05   0.05   0.15];
 uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(1) 1-1*vertical_size_row line_x_width(1), vertical_size_row], 'string', 'channel','tag',['heading1']);
 uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(2) 1-1*vertical_size_row line_x_width(2), vertical_size_row], 'string', 'visible','tag',['heading2']);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(3) 1-1*vertical_size_row line_x_width(3), vertical_size_row], 'string', 'scaling','tag',['heading3']);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(4) 1-1*vertical_size_row line_x_width(4), vertical_size_row], 'string', 'color','tag',['heading4']);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(5) 1-1*vertical_size_row line_x_width(5), vertical_size_row], 'string', 'chOrder','tag',['heading5']);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(3) 1-1*vertical_size_row line_x_width(3), vertical_size_row], 'string', 'scale','tag',['heading3']);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(4) 1-1*vertical_size_row line_x_width(4), vertical_size_row], 'string', 'y min','tag',['heading4']);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(5) 1-1*vertical_size_row line_x_width(5), vertical_size_row], 'string', 'y max','tag',['heading5']);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(6) 1-1*vertical_size_row line_x_width(6), vertical_size_row], 'string', 'color','tag',['heading6']);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(7) 1-1*vertical_size_row line_x_width(7), vertical_size_row], 'string', 'chOrder','tag',['heading7']);
 
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(6) 1-1*vertical_size_row line_x_width(6), vertical_size_row], 'string', 'EEG','tag',['heading6'],'backgroundcolor', cfg.score_channel_eeg_color);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(7) 1-1*vertical_size_row line_x_width(7), vertical_size_row], 'string', 'EEG_F','tag',['heading7'],'backgroundcolor', cfg.score_channel_eeg_frontal_color);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(8) 1-1*vertical_size_row line_x_width(8), vertical_size_row], 'string', 'EEG_O','tag',['heading8'],'backgroundcolor', cfg.score_channel_eeg_occipital_color);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(9) 1-1*vertical_size_row line_x_width(9), vertical_size_row], 'string', 'EOG','tag',['heading9'],'backgroundcolor', cfg.score_channel_eog_color);
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(10) 1-1*vertical_size_row line_x_width(10), vertical_size_row], 'string', 'EMG','tag',['heading10'],'backgroundcolor', cfg.score_channel_emg_color);
-bg_EEG           = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(6) 1-(numel(channels)+1)*vertical_size_row line_x_width(6), vertical_size_row*numel(channels)],'tag',['rdg_EEG'],'backgroundcolor', cfg.score_channel_eeg_color,'parent',panel2);
-bg_EEG_frontal   = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(7) 1-(numel(channels)+1)*vertical_size_row line_x_width(7), vertical_size_row*numel(channels)],'tag',['rdg_EEG_frontal'],'backgroundcolor', cfg.score_channel_eeg_frontal_color,'parent',panel2);
-bg_EEG_occipital = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(8) 1-(numel(channels)+1)*vertical_size_row line_x_width(8), vertical_size_row*numel(channels)],'tag',['rdg_EEG_occipital'],'backgroundcolor', cfg.score_channel_eeg_occipital_color,'parent',panel2);
-bg_EOG           = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(9) 1-(numel(channels)+1)*vertical_size_row line_x_width(9), vertical_size_row*numel(channels)],'tag',['rdg_EOG'],'backgroundcolor', cfg.score_channel_eog_color,'parent',panel2);
-bg_EMG           = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(10) 1-(numel(channels)+1)*vertical_size_row line_x_width(10), vertical_size_row*numel(channels)],'tag',['rdg_EMG'],'backgroundcolor', cfg.score_channel_emg_color,'parent',panel2);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(8) 1-1*vertical_size_row line_x_width(8), vertical_size_row], 'string', 'EEG','tag',['heading8'],'backgroundcolor', cfg.score_channel_eeg_color);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(9) 1-1*vertical_size_row line_x_width(9), vertical_size_row], 'string', 'EEG_F','tag',['heading9'],'backgroundcolor', cfg.score_channel_eeg_frontal_color);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(10) 1-1*vertical_size_row line_x_width(10), vertical_size_row], 'string', 'EEG_O','tag',['heading10'],'backgroundcolor', cfg.score_channel_eeg_occipital_color);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(11) 1-1*vertical_size_row line_x_width(11), vertical_size_row], 'string', 'EOG','tag',['heading11'],'backgroundcolor', cfg.score_channel_eog_color);
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(12) 1-1*vertical_size_row line_x_width(12), vertical_size_row], 'string', 'EMG','tag',['heading12'],'backgroundcolor', cfg.score_channel_emg_color);
+bg_EEG           = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(8) 1-(numel(channels)+1)*vertical_size_row line_x_width(8), vertical_size_row*numel(channels)],'tag',['rdg_EEG'],'backgroundcolor', cfg.score_channel_eeg_color,'parent',panel2);
+bg_EEG_frontal   = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(9) 1-(numel(channels)+1)*vertical_size_row line_x_width(9), vertical_size_row*numel(channels)],'tag',['rdg_EEG_frontal'],'backgroundcolor', cfg.score_channel_eeg_frontal_color,'parent',panel2);
+bg_EEG_occipital = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(10) 1-(numel(channels)+1)*vertical_size_row line_x_width(10), vertical_size_row*numel(channels)],'tag',['rdg_EEG_occipital'],'backgroundcolor', cfg.score_channel_eeg_occipital_color,'parent',panel2);
+bg_EOG           = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(11) 1-(numel(channels)+1)*vertical_size_row line_x_width(11), vertical_size_row*numel(channels)],'tag',['rdg_EOG'],'backgroundcolor', cfg.score_channel_eog_color,'parent',panel2);
+bg_EMG           = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(12) 1-(numel(channels)+1)*vertical_size_row line_x_width(12), vertical_size_row*numel(channels)],'tag',['rdg_EMG'],'backgroundcolor', cfg.score_channel_emg_color,'parent',panel2);
 
 if cfg.has_ECG
-    uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(11) 1-1*vertical_size_row line_x_width(11), vertical_size_row], 'string', 'ECG','tag',['heading11'],'backgroundcolor', cfg.score_channel_ecg_color);
-    bg_ECG = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(11) 1-(numel(channels)+1)*vertical_size_row line_x_width(11), vertical_size_row*numel(channels)],'tag',['rdg_ECG'],'backgroundcolor', cfg.score_channel_ecg_color,'parent',panel2);
+    uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(13) 1-1*vertical_size_row line_x_width(13), vertical_size_row], 'string', 'ECG','tag',['heading13'],'backgroundcolor', cfg.score_channel_ecg_color);
+    bg_ECG = uibuttongroup('Visible','off', 'units', 'normalized','Position',[line_x_offsets(13) 1-(numel(channels)+1)*vertical_size_row line_x_width(13), vertical_size_row*numel(channels)],'tag',['rdg_ECG'],'backgroundcolor', cfg.score_channel_ecg_color,'parent',panel2);
 end
 
-uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(12) 1-1*vertical_size_row line_x_width(12), vertical_size_row], 'string', 'OK','tag',['button_OK'],'Callback','uiresume');
-uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(12) 1-2*vertical_size_row line_x_width(12), vertical_size_row], 'string', 'Cancel','tag',['button_Cancel'],'Callback','close');
-%uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(12) 1-2*vertical_size_row line_x_width(12), vertical_size_row], 'string', 'Cancel','tag',['button_Cancel'],'Callback','close');
-uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(12) 1-3*vertical_size_row line_x_width(12), vertical_size_row], 'string', '(ch colors)','tag',['button_Color'],'Callback',{@cb_channelDialog_color_channels, numel(channels)});
+uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(14) 1-1*vertical_size_row line_x_width(14), vertical_size_row], 'string', 'OK','tag',['button_OK'],'Callback','uiresume');
+uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(14) 1-2*vertical_size_row line_x_width(14), vertical_size_row], 'string', 'Cancel','tag',['button_Cancel'],'Callback','close');
+%uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(14) 1-2*vertical_size_row line_x_width(14), vertical_size_row], 'string', 'Cancel','tag',['button_Cancel'],'Callback','close');
+uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(14) 1-3*vertical_size_row line_x_width(14), vertical_size_row], 'string', '(ch colors)','tag',['button_Color'],'Callback',{@cb_channelDialog_color_channels, numel(channels)});
 
-uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(12) 1-4*vertical_size_row line_x_width(12), vertical_size_row], 'string', 'all chan.?','tag',['text_all_chan']);
-uicontrol(panel2, 'style', 'checkbox', 'units', 'normalized', 'position', [line_x_offsets(12) 1-5*vertical_size_row+vertical_size_row/2 line_x_width(12), vertical_size_row],'tag',['enabled_all_chan'],'Callback',{@cb_channelDialog_all_channels});
+uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(14) 1-4*vertical_size_row line_x_width(14), vertical_size_row], 'string', 'all chan.?','tag',['text_all_chan']);
+uicontrol(panel2, 'style', 'checkbox', 'units', 'normalized', 'position', [line_x_offsets(14) 1-5*vertical_size_row+vertical_size_row/2 line_x_width(14), vertical_size_row],'tag',['enabled_all_chan'],'Callback',{@cb_channelDialog_all_channels});
 
 
 
@@ -7026,9 +7132,11 @@ for iCh = 1:numel(channels)
     uicontrol(panel2, 'style', 'text', 'units', 'normalized','HorizontalAlignment','left', 'position', [line_x_offsets(1) 1-(iCh+1)*vertical_size_row line_x_width(1), vertical_size_row], 'string', channels(iCh),'tag',['text_chan' num2str(iCh)]);
     uicontrol(panel2, 'style', 'checkbox', 'units', 'normalized', 'position', [line_x_offsets(2) 1-(iCh+1)*vertical_size_row line_x_width(2), vertical_size_row],'tag',['enabled_chan' num2str(iCh)]);
     uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(3) 1-(iCh+1)*vertical_size_row line_x_width(3), vertical_size_row], 'string', num2str(cfg.chanscale(iCh)),'tag',['scale_chan' num2str(iCh)],'Min',0);
-    %uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(4) 1-(iCh+1)*vertical_size_row line_x_width(4), vertical_size_row], 'string', '','tag',['order_chan' num2str(iCh)],'Min',1);
-    uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(4) 1-(iCh+1)*vertical_size_row line_x_width(4), vertical_size_row], 'string', 'color','ForegroundColor',opt.chancolors(iCh,:),'tag',['color_chan' num2str(iCh)],'Callback',{@cb_channelDialog_Colorchooser,opt.chancolors(iCh,:)});
-    uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(5) 1-(iCh+1)*vertical_size_row line_x_width(5), vertical_size_row], 'string', num2str(iCh),'tag',['order_chan' num2str(iCh)],'Min',0);
+    uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(4) 1-(iCh+1)*vertical_size_row line_x_width(4), vertical_size_row], 'string', num2str(cfg.chanyrange(iCh,1)),'tag',['range_chan_ymin' num2str(iCh)]);
+    uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(5) 1-(iCh+1)*vertical_size_row line_x_width(5), vertical_size_row], 'string', num2str(cfg.chanyrange(iCh,2)),'tag',['range_chan_ymax' num2str(iCh)]);
+    %uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(6) 1-(iCh+1)*vertical_size_row line_x_width(6), vertical_size_row], 'string', '','tag',['order_chan' num2str(iCh)],'Min',1);
+    uicontrol(panel2, 'style', 'pushbutton', 'units', 'normalized', 'position', [line_x_offsets(6) 1-(iCh+1)*vertical_size_row line_x_width(6), vertical_size_row], 'string', 'color','ForegroundColor',opt.chancolors(iCh,:),'tag',['color_chan' num2str(iCh)],'Callback',{@cb_channelDialog_Colorchooser,opt.chancolors(iCh,:)});
+    uicontrol(panel2, 'style', 'edit', 'units', 'normalized', 'position', [line_x_offsets(7) 1-(iCh+1)*vertical_size_row line_x_width(7), vertical_size_row], 'string', num2str(iCh),'tag',['order_chan' num2str(iCh)],'Min',0);
     
     uicontrol(panel2, 'style', 'radiobutton', 'units', 'normalized', 'position', [0.1 1-(iCh)*vertical_size_row/(vertical_size_row*numel(channels))+vertical_size_row*0.25 1-0.1 vertical_size_row ], 'string', '','tag',['radiobutton_focusEEG' num2str(iCh)],'parent',bg_EEG,'backgroundcolor', cfg.score_channel_eeg_color);
     uicontrol(panel2, 'style', 'radiobutton', 'units', 'normalized', 'position', [0.1 1-(iCh)*vertical_size_row/(vertical_size_row*numel(channels))+vertical_size_row*0.25 1-0.1 vertical_size_row ], 'string', '','tag',['radiobutton_focusEEG_frontal' num2str(iCh)],'parent',bg_EEG_frontal,'backgroundcolor', cfg.score_channel_eeg_frontal_color);
@@ -7192,6 +7300,14 @@ if ishandle(dlg)
         end
     end
     
+    for iCh = 1:numel(channels)
+        value_min = str2num( get(findobj(get(dlg,'children'),'tag',['range_chan_ymin' num2str(iCh)]),'String') );
+        value_max = str2num( get(findobj(get(dlg,'children'),'tag',['range_chan_ymax' num2str(iCh)]),'String') );
+        if ~isempty(value_min) && ~isempty(value_max)
+            cfg.chanyrange(find(curr_chanIndexOrder == iCh,1,'first'),:) = [value_min value_max];
+        end
+    end
+    
     selected_channels = channels(index_selected_channels);
     
     for iCh = 1:numel(channels)
@@ -7321,7 +7437,7 @@ function opt = set_curr_epoch(curr_epoch, opt, cfg)
     opt.trlop = max(1,min(ceil(opt.curr_epoch*cfg.epochlength/cfg.blocksize), size(opt.trlvis,1))); % should not be larger than the number of trials
 end
 
-function opt = changeDataChannelOrder(channel_order,opt)
+function opt = changeDataChannelOrder(channel_order,opt,cfg)
 %channel_order(2) = 3.5
 [dummy_chanOrder curr_chanIndexOrder] = sort(channel_order);
 
@@ -7333,9 +7449,12 @@ for iChannelbyOrder = curr_chanIndexOrder'
     if ~all(ismember(curr_channel_label,opt.orgdata.label))
         continue
     end
-    cfg = [];
-    cfg.channel = curr_channel_label;
-    data_new{iChanCount} = ft_selectdata(cfg,opt.orgdata);
+    cfg_sd = [];
+    cfg_sd.channel = curr_channel_label;
+    data_new{iChanCount} = ft_selectdata(cfg_sd,opt.orgdata);
+    %if ~isempty(cfg.chanyrange)
+        
+    %end
     iChanCount = iChanCount + 1;
 end
 
