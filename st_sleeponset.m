@@ -66,6 +66,7 @@ if isfield(scoring, 'sleepopon')
 else
     if hasLightsOff && ~isnan(lightsOffMoment)
         sleepOpportunityOnMoment = lightsOffMoment;
+        hasSleepOpportunityOn = true;
     	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
     else
     	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset.');
@@ -83,7 +84,7 @@ onsetnumber = -1;
 
 
 allowedsleeponsetbeforesleepopon = false;
-if hasLightsOff
+if hasSleepOpportunityOn
         for iOnset = 1:numel(scoring.epochs)
             if strcmp(hypnStages(iOnset,4),'S') 
                 break;
