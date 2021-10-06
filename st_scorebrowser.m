@@ -4490,8 +4490,8 @@ if strcmp(cfg.doSleepScoring,'yes')
         blockepochend = opt.trlop*(cfg.blocksize/cfg.epochlength);
         hyp_begsample_view = cfg.hyp_epochLengthSamples*(blockepochstart-1)+1; % opt.trlvis(opt.trlop,1);
         hyp_endsample_view = cfg.hyp_epochLengthSamples*(blockepochend);% opt.trlvis(opt.trlop,2);
-        x_pos_begin_view = cfg.hyp_x_time(hyp_begsample_view);
-        x_pos_end_view = cfg.hyp_x_time(hyp_endsample_view);
+        x_pos_begin_view = cfg.hyp_x_time(max(1,hyp_begsample_view));
+        x_pos_end_view = cfg.hyp_x_time(min(numel(cfg.hyp_x_time),hyp_endsample_view));
         x_pos_view = [x_pos_begin_view x_pos_end_view x_pos_end_view x_pos_begin_view];
         %y_pos = [cfg.plot_MA_offset cfg.plot_MA_offset 1 1];
         

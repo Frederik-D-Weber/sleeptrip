@@ -26,6 +26,11 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
 %                        opportunity (or lights off moment if former is not present) 
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
+%   cfg.allowsleepafteresleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
+%                        opportunity (or lights on moment if former is not present) 
+%                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'yes')
+%   cfg.allowsleepopoonbeforescoring = srting, if possible, allow sleep opportunity onset to be before the scoring starts, i.e. to be < 0(default = 'yes')
+%   cfg.allowsleepopoffafterscoring = srting, if possible, allow sleep opportunity offset to be after the scoring ends, i.e. to be > scoring duration(default = 'yes')
 %   cfg.fixindicatorstoepochlength = string, either 'no', 'start', 'end', and 'snap' to put the 
 %                       indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring 
 %                       to the start or end of their epoch or snap them to either the start or end on which whatever is closer (default = 'no')
@@ -83,6 +88,9 @@ fprintf([functionname ' function started\n']);
 
 % set the defaults
 cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+
+cfg.allowsleepopoonbeforescoring  = ft_getopt(cfg, 'allowsleepopoonbeforescoring', 'yes');
+cfg.allowsleepopoffafterscoring  = ft_getopt(cfg, 'allowsleepopoffafterscoring', 'yes');
 
 cfg.fixindicatorstoepochlength  = ft_getopt(cfg, 'fixindicatorstoepochlength', 'no');
 
@@ -363,19 +371,25 @@ for iScoringCycle = 1:numel(scoring_cycles)
     hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
     hypnEpochsEndsSamples   = (hypnEpochs * epochLengthSamples)';
     
-    [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage allowedsleeponsetbeforesleepopon] = st_sleeponset(cfg,scoring);
+    [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepafteresleepopoff] = st_sleeponset(cfg,scoring);
     
     if isempty(onsetepoch)
         onsetnumber = NaN;
     end
     
     hasLightsOn = false;
-    lightsOnMoment = lastsleepstagenumber*scoring.epochlength;
+    lightsOnMoment = lastscoredsleepstagenumber*scoring.epochlength;
     lightsOnToLightsOff = NaN;
     if isfield(scoring, 'lightson')
         if ~isnan(scoring.lightson)
             hasLightsOn = true;
             lightsOnMoment = scoring.lightson;
+            if ~istrue(cfg.allowsleepopoonbeforescoring)
+                lightsOffMoment = 0;
+            end
+            if ~istrue(cfg.allowsleepopoffafterscoring)
+                lightsOnMoment = numel(scoring.epochs)*scoring.epochlength;
+            end
             lightsOnToLightsOff = (lightsOnMoment-lightsOffMoment);
         else
             ft_warning('The lights on moment was NaN in the scoring structure.\n The end of sleep is thus assumed as lights on.');
@@ -386,12 +400,18 @@ for iScoringCycle = 1:numel(scoring_cycles)
     
     
     hasSleepOpportunityOff = false;
-    sleepOpportunityOffMoment = lastsleepstagenumber*scoring.epochlength;
+    sleepOpportunityOffMoment = lastscoredsleepstagenumber*scoring.epochlength;
     sleepOpportunityOnToSleepOpportunityOff = NaN;
     if isfield(scoring, 'sleepopoff')
         if ~isnan(scoring.sleepopoff)
             hasSleepOpportunityOff = true;
             sleepOpportunityOffMoment = scoring.sleepopoff;
+            if ~istrue(cfg.allowsleepopoonbeforescoring)
+                sleepOpportunityOnMoment = 0;
+            end
+            if ~istrue(cfg.allowsleepopoffafterscoring)
+                sleepOpportunityOffMoment = numel(scoring.epochs)*scoring.epochlength;
+            end
             sleepOpportunityOnToSleepOpportunityOff = (sleepOpportunityOffMoment-sleepOpportunityOnMoment);
         else
             ft_warning('The sleep opportunity off moment was NaN in the scoring structure.\n The end of sleep is thus assumed as sleep opportunity off.');
@@ -457,15 +477,15 @@ for iScoringCycle = 1:numel(scoring_cycles)
     end
     if ~isnan(onsetnumber)
         %hypnTST = epochs(onsetCandidate:preOffsetCandidate);
-        hypnTST_excluded = scoring.excluded(onsetnumber:lastsleepstagenumber);
+        hypnTST_excluded = scoring.excluded(onsetnumber:lastscoredsleepstagenumber);
         
-        hypnStagesTST = hypnStages(onsetnumber:lastsleepstagenumber,:);
+        hypnStagesTST = hypnStages(onsetnumber:lastscoredsleepstagenumber,:);
         hypnStagesPreSleepOnset = hypnStages(1:preOnsetCandidate,:);
-        hypnEpochsTST = hypnEpochs(onsetnumber:lastsleepstagenumber);
-        hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(onsetnumber:lastsleepstagenumber,:);
-        hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(onsetnumber:lastsleepstagenumber,:);
+        hypnEpochsTST = hypnEpochs(onsetnumber:lastscoredsleepstagenumber);
+        hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(onsetnumber:lastscoredsleepstagenumber,:);
+        hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(onsetnumber:lastscoredsleepstagenumber,:);
         
-        totalSleepPeriod = (length(onsetnumber:lastsleepstagenumber))*scoring.epochlength;
+        totalSleepPeriod = (length(onsetnumber:lastscoredsleepstagenumber))*scoring.epochlength;
     else
         
         %hypnTST = epochs(onsetCandidate:preOffsetCandidate);
@@ -504,7 +524,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
             if ~isnan(onsetnumber)
                 cfg_cut = [];
                 cfg_cut.start = onsetnumber;
-                cfg_cut.end = lastsleepstagenumber;
+                cfg_cut.end = lastscoredsleepstagenumber;
                 scorings_sleepperiod = st_cutscoring(cfg_cut,scoring);
                 scorings_sleepperiod = scorings_sleepperiod{1};
             else

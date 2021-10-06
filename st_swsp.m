@@ -108,7 +108,7 @@ res_excluded_sw_event.type = 'excluded_sw_event';
 res_swsp_event.table.delay_sp_time_minus_sw_offset = res_swsp_event.table.test_minus_target_delay;
 res_swsp_event.table.test_minus_target_delay = [];
 
-res_swsp_event.table.delay_sp_time_minus_sw_trough = res_swsp_event.table.(['sp_' cfg.SpindleTimePointColumn]) - res_swsp_event.table.sw_seconds_trough_max;
+res_swsp_event.table.delay_sp_time_minus_sw_trough = res_swsp_event.table.([cfg_co.column_prefix_test cfg.SpindleTimePointColumn]) - res_swsp_event.table.sw_seconds_trough_max;
 
 
 idcols = {};

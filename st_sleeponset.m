@@ -1,10 +1,11 @@
-function [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage allowedsleeponsetbeforesleepopon] = st_sleeponset(cfg,scoring)
+function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepafteresleepopoff] = st_sleeponset(cfg,scoring)
 % 
 % ST_SLEEPONSET determines the sleep onset of a sleep scoring
 % Use as
-%   [onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage, allowedsleeponsetbeforesleepopon] = st_sleeponset(cfg,scoring)
-%   [onsetnumber, lastsleepstagenumber, onsetepoch, lastsleepstage] = st_sleeponset(cfg,scoring)
-%   [onsetnumber, lastsleepstagenumber] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage, allowedsleeponsetbeforesleepopon allowedsleepafteresleepopoff] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage, allowedsleeponsetbeforesleepopon] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastscoredsleepstagenumber] = st_sleeponset(cfg,scoring)
 %   [onsetnumber] = st_sleeponset(cfg,scoring)
 %
 % Configutation parameter can be empty, e.g. cfg = []
@@ -17,6 +18,9 @@ function [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage allowedslee
 %   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
 %                        opportunity (or lights off moment if former is not present) 
 %                        either 'yes' or 'no' (default = 'no')
+%   cfg.allowsleepafteresleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
+%                        opportunity (or lights on moment if former is not present) 
+%                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'yes')
 %
 %  Here are the possible sleep onset definitions, where NR referes to
 %  non-REM, R to REM and XR to any non-REM or REM sleep stage.
@@ -42,6 +46,9 @@ function [onsetnumber lastsleepstagenumber onsetepoch lastsleepstage allowedslee
 % set the defaults
 cfg.sleeponsetdef  = upper(ft_getopt(cfg, 'sleeponsetdef', 'N1_XR'));
 cfg.allowsleeponsetbeforesleepopon  = ft_getopt(cfg, 'allowsleeponsetbeforesleepopon', 'no');
+cfg.allowsleepafteresleepopoff  = ft_getopt(cfg, 'allowsleepafteresleepopoff', 'no');
+
+
 
 
 hasLightsOff = false;
@@ -51,6 +58,16 @@ if isfield(scoring, 'lightsoff')
     lightsOffMoment = scoring.lightsoff;
 else
     ft_warning('The lights off moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as lights off.');
+end
+
+
+hasLightsOn = false;
+lightsOnMoment = NaN;
+if isfield(scoring, 'lightson')
+    hasLightsOn = true;
+    lightsOnMoment = scoring.lightson;
+else
+    ft_warning('The lights on moment was not provided in the scoring structure.\n The last sleep stage is assumed to best match this.');
 end
 
 
@@ -70,6 +87,25 @@ else
     	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
     else
     	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset.');
+    end
+end
+
+hasSleepOpportunityOff = false;
+sleepOpportunityOffMoment = NaN;
+if isfield(scoring, 'sleepopoff')
+    %if ~isnan(scoring.sleepopon)
+        hasSleepOpportunityOff = true;
+        sleepOpportunityOffMoment = scoring.sleepopoff;
+    %else
+    %    ft_warning('The sleep opportunity onset moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset will be NaN.');
+    %end
+else
+    if hasLightsOn && ~isnan(lightsOnMoment)
+        sleepOpportunityOffMoment = lightsOnMoment;
+        hasSleepOpportunityOff = true;
+    	ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The lights on moment is used instead');
+    else
+    	ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The last sleep stage is assumed to best match this.');
     end
 end
 
@@ -99,6 +135,8 @@ if hasSleepOpportunityOn
                 end
         end
 end
+
+
 switch cfg.sleeponsetdef
      case 'NR'
         for iOnset = 1:numel(scoring.epochs)
@@ -195,17 +233,41 @@ switch cfg.sleeponsetdef
         end
 end
 
-lastsleepstagenumber = max(find(strcmp(hypnStages(:,1),'N1') | strcmp(hypnStages(:,3),'NR') | strcmp(hypnStages(:,3),'R') | strcmp(hypnStages(:,3),'MT')));
 
-if isempty(lastsleepstagenumber);
-    ft_warning('could not identify a sleep offset.\nAssume that sleep did not occur and thus not end.')
-    lastsleepstagenumber = numel(scoring.epochs);
+
+lastscoredsleepstagenumber = max(find(strcmp(hypnStages(:,1),'N1') | strcmp(hypnStages(:,3),'NR') | strcmp(hypnStages(:,3),'R') | strcmp(hypnStages(:,3),'MT')));
+
+allowedsleepafteresleepopoff = false;
+if hasSleepOpportunityOff
+%         if (scoring.epochlength*numel(scoring.epochs)) > sleepOpportunityOffMoment
+%             
+%         else
+        if lastscoredsleepstagenumber*scoring.epochlength > sleepOpportunityOffMoment
+                if istrue(cfg.allowsleepafteresleepopoff)
+                    allowedsleepafteresleepopoff = true;
+                    ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n BUT sleep off is allowed to end after sleep opportunity off!',lastscoredsleepstagenumber,sleepOpportunityOffMoment);
+                else
+                    lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,ceil(sleepOpportunityOffMoment/scoring.epochlength));
+                	ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n The epoch in which the sleep opportunity off ends is thus assumed as sleep offset. or use the cfg.allowsleepafteresleepopoff = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
+                end
+        end
+%         end
+        
+
+else
+    
 end
 
-if lastsleepstagenumber > 0
-lastsleepstage = scoring.epochs{lastsleepstagenumber};
+
+if isempty(lastscoredsleepstagenumber) || isnan(lastscoredsleepstagenumber)
+    ft_warning('could not identify a sleep offset.\nAssume that sleep did not occur and thus not end.')
+    lastscoredsleepstagenumber = numel(scoring.epochs);
+end
+
+if (lastscoredsleepstagenumber > 0) && (lastscoredsleepstagenumber <= numel(scoring.epochs))
+lastscoredsleepstage = scoring.epochs{lastscoredsleepstagenumber};
 else
-  lastsleepstage = '';  
+  lastscoredsleepstage = '';  
 end
 
 if onsetnumber == -1;
