@@ -18,7 +18,7 @@ function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage
 %   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
 %                        opportunity (or lights off moment if former is not present) 
 %                        either 'yes' or 'no' (default = 'no')
-%   cfg.allowsleepafteresleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
+%   cfg.allowsleepaftersleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
 %                        opportunity (or lights on moment if former is not present) 
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'yes')
 %
@@ -46,7 +46,7 @@ function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage
 % set the defaults
 cfg.sleeponsetdef  = upper(ft_getopt(cfg, 'sleeponsetdef', 'N1_XR'));
 cfg.allowsleeponsetbeforesleepopon  = ft_getopt(cfg, 'allowsleeponsetbeforesleepopon', 'no');
-cfg.allowsleepafteresleepopoff  = ft_getopt(cfg, 'allowsleepafteresleepopoff', 'no');
+cfg.allowsleepaftersleepopoff  = ft_getopt(cfg, 'allowsleepaftersleepopoff', 'no');
 
 
 
@@ -73,13 +73,13 @@ end
 
 hasSleepOpportunityOn = false;
 sleepOpportunityOnMoment = 0;
-if isfield(scoring, 'sleepopon')
-    %if ~isnan(scoring.sleepopon)
+if isfield(scoring, 'sleepopon') 
+    if ~isnan(scoring.sleepopon)
         hasSleepOpportunityOn = true;
         sleepOpportunityOnMoment = scoring.sleepopon;
-    %else
-    %    ft_warning('The sleep opportunity onset moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset will be NaN.');
-    %end
+    else
+        ft_warning('The sleep opportunity onset moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset will be NaN.');
+    end
 else
     if hasLightsOff && ~isnan(lightsOffMoment)
         sleepOpportunityOnMoment = lightsOffMoment;
@@ -93,12 +93,12 @@ end
 hasSleepOpportunityOff = false;
 sleepOpportunityOffMoment = NaN;
 if isfield(scoring, 'sleepopoff')
-    %if ~isnan(scoring.sleepopon)
+    if ~isnan(scoring.sleepopon)
         hasSleepOpportunityOff = true;
         sleepOpportunityOffMoment = scoring.sleepopoff;
-    %else
-    %    ft_warning('The sleep opportunity onset moment was NaN in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset will be NaN.');
-    %end
+    else
+        ft_warning('The sleep opportunity offset moment was NaN in the scoring structure.\n The end of the scoring is thus assumed as sleep opportunity onset, but sleep opportunity window and period related measures will be NaN.');
+    end
 else
     if hasLightsOn && ~isnan(lightsOnMoment)
         sleepOpportunityOffMoment = lightsOnMoment;
@@ -243,12 +243,12 @@ if hasSleepOpportunityOff
 %             
 %         else
         if lastscoredsleepstagenumber*scoring.epochlength > sleepOpportunityOffMoment
-                if istrue(cfg.allowsleepafteresleepopoff)
+                if istrue(cfg.allowsleepaftersleepopoff)
                     allowedsleepafteresleepopoff = true;
                     ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n BUT sleep off is allowed to end after sleep opportunity off!',lastscoredsleepstagenumber,sleepOpportunityOffMoment);
                 else
                     lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,ceil(sleepOpportunityOffMoment/scoring.epochlength));
-                	ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n The epoch in which the sleep opportunity off ends is thus assumed as sleep offset. or use the cfg.allowsleepafteresleepopoff = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
+                	ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n The epoch in which the sleep opportunity off ends is thus assumed as sleep offset. or use the cfg.allowsleepaftersleepopoff = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
                 end
         end
 %         end
