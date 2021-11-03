@@ -300,7 +300,7 @@ if needhdr
     else
       hdr.orig.chansel = 1:hdr.nChans;
     end
-    hdr.orig.annotation = find(strcmp(cellstr(hdr.orig.Label), 'EDF Annotations'));
+    hdr.orig.annotation = find(ismember(cellstr(hdr.orig.Label), {'EDF Annotations','BDF Annotations'}));
     
   elseif all(EDF.SampleRate(1:end-1)==EDF.SampleRate(1))
     % only the last channel has a deviant sampling frequency
@@ -343,7 +343,7 @@ if needhdr
     hdr.orig         = EDF;
     % this will be used on subsequent reading of data
     hdr.orig.chansel    = chansel;
-    hdr.orig.annotation = find(strcmp(cellstr(hdr.orig.Label), 'EDF Annotations'));
+    hdr.orig.annotation = find(ismember(cellstr(hdr.orig.Label), {'EDF Annotations', 'BDF Annotations'}));
     
     ft_warning('channels with different sampling rate not supported, selecting subset of %d channels at %f Hz', length(hdr.label), hdr.Fs);
   end
@@ -392,9 +392,10 @@ if needdat || needevt
   
   if needevt
     % read the annotation channel, not the data channels
+    % read only the first annotation channel
     chanindx = EDF.annotation;
     begsample = 1;
-    endsample = EDF.SPR(EDF.annotation)*EDF.NRec;
+    endsample = EDF.SPR(EDF.annotation(1))*EDF.NRec;
   end
   
   if useChanindx

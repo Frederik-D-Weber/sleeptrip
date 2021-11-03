@@ -1,8 +1,8 @@
-function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepafteresleepopoff] = st_sleeponset(cfg,scoring)
+function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepaftersleepopoff] = st_sleeponset(cfg,scoring)
 % 
 % ST_SLEEPONSET determines the sleep onset of a sleep scoring
 % Use as
-%   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage, allowedsleeponsetbeforesleepopon allowedsleepafteresleepopoff] = st_sleeponset(cfg,scoring)
+%   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage, allowedsleeponsetbeforesleepopon allowedsleepaftersleepopoff] = st_sleeponset(cfg,scoring)
 %   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage, allowedsleeponsetbeforesleepopon] = st_sleeponset(cfg,scoring)
 %   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage] = st_sleeponset(cfg,scoring)
 %   [onsetnumber, lastscoredsleepstagenumber] = st_sleeponset(cfg,scoring)
@@ -237,14 +237,14 @@ end
 
 lastscoredsleepstagenumber = max(find(strcmp(hypnStages(:,1),'N1') | strcmp(hypnStages(:,3),'NR') | strcmp(hypnStages(:,3),'R') | strcmp(hypnStages(:,3),'MT')));
 
-allowedsleepafteresleepopoff = false;
+allowedsleepaftersleepopoff = false;
 if hasSleepOpportunityOff
 %         if (scoring.epochlength*numel(scoring.epochs)) > sleepOpportunityOffMoment
 %             
 %         else
         if lastscoredsleepstagenumber*scoring.epochlength > sleepOpportunityOffMoment
                 if istrue(cfg.allowsleepaftersleepopoff)
-                    allowedsleepafteresleepopoff = true;
+                    allowedsleepaftersleepopoff = true;
                     ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n BUT sleep off is allowed to end after sleep opportunity off!',lastscoredsleepstagenumber,sleepOpportunityOffMoment);
                 else
                     lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,ceil(sleepOpportunityOffMoment/scoring.epochlength));

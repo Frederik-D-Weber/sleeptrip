@@ -536,14 +536,14 @@ for iScoringCycle = 1:numel(scoring_cycles)
                 scorings_sleepperiod.excluded = scorings_sleepperiod.excluded(1:0);
             end
             
-            cfg = [];
-            cfg.stages = stagesCombo{iStages};
-            cfg.considerexcluded = 'no';
-            [begins_epoch ends_epoch] = st_select_scoring(cfg,scorings_sleepperiod);
+            cfg_sc = cfg;
+            cfg_sc.stages = stagesCombo{iStages};
+            cfg_sc.considerexcluded = 'no';
+            [begins_epoch ends_epoch] = st_select_scoring(cfg_sc,scorings_sleepperiod);
             if ~isempty(begins_epoch)
-                cfg.start = begins_epoch;
-                cfg.end = ends_epoch;
-                scorings_cut = st_cutscoring(cfg,scorings_sleepperiod);
+                cfg_sc.start = begins_epoch;
+                cfg_sc.end = ends_epoch;
+                scorings_cut = st_cutscoring(cfg_sc,scorings_sleepperiod);
                 
                 scorings_cut_appended = st_append_scoring(scorings_cut{:});
                 nArousalsByStage(iStages) = size(scorings_cut_appended.arousals,1);

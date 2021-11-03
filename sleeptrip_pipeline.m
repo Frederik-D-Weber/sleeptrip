@@ -358,12 +358,13 @@ data = st_preprocessing(cfg);
 %if there is a montage defined you might whant to use it or not
 if isfield(subject,'montage')
     cfg.montage = subject.montage;
+
+    data_with_montage = st_preprocessing(cfg);
+    
+    %alternatively if the data is already read in
+    data_with_montage = ft_apply_montage(data,subject.montage);
+
 end
-
-data_with_montage = st_preprocessing(cfg);
-
-%alternatively if the data is already read in
-data_with_montage = ft_apply_montage(data,subject.montage);
 
 
 %% extract the date from zmax/edf data header. 
