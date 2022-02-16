@@ -711,6 +711,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
                             interupptions_durations_min = cat(1,consecDur_wholescoring_seconds/60,scorings_cut2_appended_temp.arousals.duration/60);
                             
                         else
+                            consecDur_wholescoring_seconds  = consecEnds_wholescoring_seconds - consecBegins_wholescoring_seconds;
                             interupptions_durations_min = cat(1,consecDur_wholescoring_seconds/60);
                         end
                         
