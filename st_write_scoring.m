@@ -182,6 +182,14 @@ switch cfg.datatype
             temp_hypn = [cellfun(@str2num,temp_scoring.epochs,'UniformOutput',true)' temp_scoring.excluded'];
         end
         writetable(array2table(temp_hypn),filename,'FileType','text','WriteVariableNames',false,'Delimiter',cfg.columndelimimter)
+        
+        if isfield(scoring,'arousals')
+        	writetable(scoring.arousals,[filename '.arousals.tsv'],'FileType','text','WriteVariableNames',true,'Delimiter','\t')
+        end
+        
+        if isfield(scoring,'events')
+        	writetable(scoring.events,[filename '.events.tsv'],'FileType','text','WriteVariableNames',true,'Delimiter','\t')
+        end
     otherwise
         ft_error('cfg.datatype = %s is not supported',cfg.datatype)
 end

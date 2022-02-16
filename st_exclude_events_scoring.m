@@ -12,6 +12,7 @@ function [scoring] = st_exclude_events_scoring(cfg, scoring, varargin)
 %   cfg.timebuffer           = a 1x2 number vector with the time buffer
 %                              left and right of the event or the event
 %                              bounds, respectively (default = [0 0], e.g. [-3 3] to extend the time points by a fixed 3 seconds in each time direction)
+%   cfg.reverse              = if the exclusion should be reversed (i.e. all not-event periods are excluded), either 'yes' or 'no' (default = 'no')
 %
 % See also ST_READ_SCORING
 
@@ -58,7 +59,7 @@ end
 
 % set the defaults
 cfg.timebuffer      = ft_getopt(cfg, 'timebuffer', [0 0]);
-
+cfg.reverse         = ft_getopt(cfg, 'reverse', 'no');
 
 isBoundayEvent = false;
 starts = varargin{1};
@@ -97,7 +98,12 @@ end
 exind = unique(exind);
 
 exind((exind < 0) | (exind > nEpochs)) = [];
-scoring.excluded(exind(:)') = true;
+exind = ismember(1:nEpochs,exind);
+if istrue(cfg.reverse)
+    scoring.excluded(~exind(:)') = true;
+else
+    scoring.excluded(exind(:)') = true;
+end
 
 end
 

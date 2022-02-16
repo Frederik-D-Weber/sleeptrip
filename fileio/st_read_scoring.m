@@ -44,6 +44,8 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          which case a scoremap needs to be given (default = 'aasm')
 %   cfg.to               = string, if it is set it will convert to a known standard
 %                          see ST_SCORINGCONVERT for details
+%   cfg.scoringarousalsfile = string, path to the arousal file, by devault [cfg.scoringfile '.arousals.tsv'] ;
+%   cfg.scoringeventsfile = string, path to the events file, by devault [cfg.scoringfile '.events.tsv'] ;
 %   cfg.forceundefinedto = string,... and force the unsupported scoring labels to this string, see ST_SCORINGCONVERT for details
 %   cfg.epochlength      = scalar, epoch length in seconds, (default = 30)
 %   cfg.dataoffset       = scalar, offest from data in seconds,
@@ -108,6 +110,24 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %   scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', 'MT', '?'};
 %   scoremap.unknown   = '?';
 %
+%
+%  a scoring can also contain a field arousals and more general also
+%  events, i.e. scoring.arousals and scoring.events
+%  both are a table of the form
+
+%  ---------------------------------------------
+%  name    | start | stop  | duration | channel
+%  ---------------------------------------------
+%  arousal | 104.1 | 108.1 | 4.0      | EEG
+%  arousal | 502.6 | 509.5 | 6.9      | EMG
+%  ...     | ...   | ...   | ...      | channel
+%  ---------------------------------------------
+% 
+% note that channel can also be used with placeholders like E*G and that
+% stop is the optional field as start and duration are already fixing the
+% values (so stop is redundant)
+%
+%
 % See also ST_PREPROCESSING
 
 % Copyright (C) 2019-, Frederik D. Weber
@@ -170,6 +190,9 @@ cfg.dataoffset         = ft_getopt(cfg, 'dataoffset', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
 cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
 
+cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
+
+
 
 % flag to determine which reading option to take
 readoption = 'readtable'; % either 'readtable' or 'load'
@@ -210,13 +233,30 @@ if strcmp(cfg.standard,'custom') && ~isfield(cfg,'scoremap')
 end
 
 % optionally get the data from the URL and make a temporary local copy
+
 if nargin<2
     filename = fetch_url(cfg.scoringfile);
     if ~exist(filename, 'file')
         ft_error('The scoring file "%s" file was not found, cannot read in scoring information. No scoring created.', filename);
     end
+    
+    cfg.scoringarousalsfile = ft_getopt(cfg, 'scoringarousalsfile', [cfg.scoringfile '.arousals.tsv'] );
+    filename_arousals = fetch_url(cfg.scoringarousalsfile);
+    if ~exist(filename_arousals, 'file')
+        ft_warning('No scoring arousal file "%s" file was not present.', filename_arousals);
+        filename_arousals = [];
+    end
+    
+    cfg.scoringeventsfile = ft_getopt(cfg, 'scoringeventsfile', [cfg.scoringfile '.events.tsv'] );
+    filename_events = fetch_url(cfg.scoringeventsfile);
+    if ~exist(filename_events, 'file')
+        ft_warning('No scoring events file "%s" file was not present.', filename_events);
+        filename_events = [];
+    end
 else
     cfg.scoringfile = [];
+    cfg.scoringarousalsfile = [];
+    cfg.scoringeventsfile = [];
 end
 
 processTableStucture = true;
@@ -342,7 +382,7 @@ switch  cfg.scoringformat
         scoremap.unknown   = '?';
         
         %cfg.scoremap         = scoremap;
-        load(cfg.scoringfile,'sleepscore')
+        load(filename,'sleepscore')
         rawScores_NB = sleepscore(:,1); %column vector of Neurobit scores (values from [0 1 2 3 5])
         tableScoring = table(rawScores_NB);
         %cfg.to = 'aasm';
@@ -786,6 +826,46 @@ if processTableStucture
     end
     
 end
+
+if nargin<2
+if ~isempty(filename_arousals)
+    
+        tableArousal = readtable(filename_arousals,'FileType','text','ReadVariableNames',true,'Delimiter','\t');
+        switch cfg.eventsoffset
+            case 'scoringonset'
+                tableArousal.start = tableArousal.start + scoring.dataoffset;
+                tableArousal.stop = tableArousal.stop + scoring.dataoffset;                
+        end
+        if isfield(scoring, 'arousals')
+        	scoring.arousals = unique(cat(1,scoring.arousals,tableArousal));
+        else
+        	scoring.arousals = tableArousal;
+        end
+         
+end
+end
+
+
+if nargin<2
+if ~isempty(filename_events)
+    
+    tableEvents = readtable(filename_events,'FileType','text','ReadVariableNames',true,'Delimiter','\t');
+    
+    switch cfg.eventsoffset
+        case 'scoringonset'
+            tableEvents.start = tableEvents.start + scoring.dataoffset;
+            tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+    end
+    if isfield(scoring, 'events')
+        scoring.events = unique(cat(1,scoring.events,tableEvents));
+    else
+        scoring.events = tableEvents;
+    end
+    
+end
+end
+
+       
 
 if isfield(cfg,'to')
     cfg_sc = [];

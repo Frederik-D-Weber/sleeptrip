@@ -330,7 +330,7 @@ res_sleepdescriptive_cycle.table
 cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.postfix = '';
 filelist_res_sleepdescriptives = st_write_res(cfg, res_scoringdescriptive); 
 
 % note: you can write mutliple results with st_write_res(cfg, res_sleep1, res_sleep2, ...)
@@ -626,7 +626,7 @@ res_power_band.table
 cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.postfix = '';
 filelist_res_power = st_write_res(cfg, res_power_bin, res_power_band); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %practice: use different frequency bands and ranges, what do you notice,
@@ -694,7 +694,7 @@ cfg.channel          = subject.eegchannels;
 cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.postfix = '';
 filelist_res_slowwave = st_write_res(cfg, res_slowwaves_channel, res_slowwaves_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %% plot an event related potential (ERP) of slow waves
@@ -888,7 +888,7 @@ res_spindles_channel.table
 cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.postfix = '';
 filelist_res_spindles = st_write_res(cfg, res_spindles_channel, res_spindles_event, res_spindles_filter); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %practice: what if you change the threshold parameters, do you think
@@ -1062,7 +1062,7 @@ res_swsp_channel_stat.table
 cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.postfix = '';
 filelist_res_swsp = st_write_res(cfg, res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %% plot an event related potential (ERP) of  SW-spindles
@@ -1254,7 +1254,7 @@ res_all_stacked.table
 cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.postfix = '';
 filelist_res_all_stacked = st_write_res(cfg, res_all_stacked); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 
@@ -1572,8 +1572,8 @@ end
 [res_power_bands_appended] = st_append_res(res_power_bands{:});
 cfg = [];
 cfg.prefix = 'example_multi';
-cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.infix  = '';
+cfg.postfix = '';
 filelist_res_power_appended = st_write_res(cfg, res_power_bins_appended, res_power_bands_appended);
 
 %% find the frequency power peaks, only one, e.g. for the 'fast spindles'
@@ -1590,9 +1590,9 @@ res_freqpeaks.table.freqpeak1((res_freqpeaks.table.freqpeak1 < 9) | (res_freqpea
 
 % write our results
 cfg = [];
-cfg.prefix = 'example';
-cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.prefix = 'example_multi';
+cfg.infix  = '';
+cfg.postfix = '';
 filelist_res_freqpeaks = st_write_res(cfg, res_freqpeaks);
 
 %keep the results for later
@@ -1624,8 +1624,8 @@ end
 [res_spindles_events_appended] = st_append_res(res_spindles_events{:});
 cfg = [];
 cfg.prefix = 'example_multi';
-cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.infix  = '';
+cfg.postfix = '';
 filelist_res_spindles_appended = st_write_res(cfg, res_spindles_channels_appended, res_spindles_events_appended);
 
 %% detect slow waves
@@ -1651,8 +1651,8 @@ end
 [res_slowwaves_events_appended] = st_append_res(res_slowwaves_events{:});
 cfg = [];
 cfg.prefix = 'example_multi';
-cfg.infix  = subject.name;
-cfg.posfix = '';
+cfg.infix  = '';
+cfg.postfix = '';
 filelist_res_slowwaves_appended = st_write_res(cfg, res_slowwaves_channels_appended, res_slowwaves_events_appended);
 
 %% plot spindles and slow waves on a hypnogram per subject and save as pdf

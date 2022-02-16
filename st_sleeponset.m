@@ -247,7 +247,9 @@ if hasSleepOpportunityOff
                     allowedsleepaftersleepopoff = true;
                     ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n BUT sleep off is allowed to end after sleep opportunity off!',lastscoredsleepstagenumber,sleepOpportunityOffMoment);
                 else
-                    lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,ceil(sleepOpportunityOffMoment/scoring.epochlength));
+                    temp_sleepopoff_epoch = min(numel(hypnStages(:,1)),ceil(sleepOpportunityOffMoment/scoring.epochlength));
+                    lastscoredsleepstagenumber_sleep_opoff = max(find(strcmp(hypnStages(1:temp_sleepopoff_epoch,1),'N1') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'NR') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'R') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'MT')));
+                    lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,lastscoredsleepstagenumber_sleep_opoff);
                 	ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n The epoch in which the sleep opportunity off ends is thus assumed as sleep offset. or use the cfg.allowsleepaftersleepopoff = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
                 end
         end

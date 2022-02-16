@@ -183,6 +183,7 @@ function [fh, axh] = st_hypnoplot(cfg, scoring)
 %   cfg.folderstructure        = either 'yes' or 'no' if a folder structure should
 %                                be created with the result origin and type 
 %                                all results will be stored in "/res/..." (default = 'yes')
+%
 %   cfg.legacymode             = either 'yes' or 'no' if the plotting is
 %                                slow and in legacy mode (pre 2021)
 %

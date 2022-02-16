@@ -388,11 +388,13 @@ if hasdata
     end
 else
     cfg_int.dataset  = cfg.dataset;
+    select_scroing_executed = false;
     if ~istrue(cfg.quick)
-    [cfg_int] = st_select_scoring(cfg_int);
+        [cfg_int] = st_select_scoring(cfg_int);
+            select_scroing_executed = true;
     end
     cfg_int.continuous   = 'yes';
-    if isempty(cfg_int.trl) 
+    if select_scroing_executed && isempty(cfg_int.trl) 
         hasROIs = false;
         % read in dummy data
         cfg_int.trl = [1 round(cfg.segmentlength*fsample)+1 0];

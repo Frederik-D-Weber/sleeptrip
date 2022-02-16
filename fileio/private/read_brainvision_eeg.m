@@ -151,16 +151,32 @@ elseif strcmpi(hdr.DataFormat, 'binary') && strcmpi(hdr.DataOrientation, 'vector
         if isempty(chanindx) % Read all channels
             chanindx = 1:hdr.NumberOfChannels;
         end
-        
+
+% this does not work:     
 %         dat = zeros(length(chanindx), numsamples,'single');
 %         ich = 0;
 %         for chan=1:min(hdr.NumberOfChannels,max(chanindx))
-%             fseek(fid, (begsample-1)*samplesize*hdr.NumberOfChannels, 'cof');                 % skip the first N samples % ftell(fid)/numsamples
+%             fseek(fid, (begsample-1)*samplesize, 'cof');                 % skip the first N samples % ftell(fid)/numsamples
 %             if ismember(chan,chanindx)
 %                 ich = ich + 1;
 %                 [dat(ich,:) count]= fread(fid, [1, numsamples], [sampletype '=>float32']);     % read these samples
 %             else
 %                 fseek(fid, numsamples, 'cof');
+%             end
+%             fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
+%         end
+
+
+% this also works:
+%         dat = zeros(length(chanindx), numsamples,'single');
+%         ich = 0;
+%         for chan=1:min(hdr.NumberOfChannels,max(chanindx))
+%             fseek(fid, (begsample - 1) * samplesize, 'cof');                 % skip the first N samples % ftell(fid)/numsamples
+%             if ismember(chan,chanindx)
+%                 ich = ich + 1;
+%                 dat(ich,:) = fread(fid, [1, numsamples], [sampletype '=>float32']);     % read these samples
+%             else
+%                 fseek(fid, numsamples*samplesize, 'cof');
 %             end
 %             fseek(fid, (hdr.nSamples-endsample)*samplesize, 'cof');      % skip the last M samples
 %         end
