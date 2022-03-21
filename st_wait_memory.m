@@ -3,9 +3,9 @@ function [memoryavailGB, avail, waited_seconds] = st_wait_memory(cfg, memoryneed
 % ST_WAIT_EXISTS pauses program until filename exists
 %
 % Use as
-%   [memoryneededGB]                        = st_wait_exists(cfg, memoryneededGB)
-%   [memoryneededGB, avail]                 = st_wait_exists(cfg, memoryneededGB)
-%   [memoryneededGB, avail, waited_seconds] = st_wait_exists(cfg, memoryneededGB)
+%   [memoryneededGB]                        = st_wait_memory(cfg, memoryneededGB)
+%   [memoryneededGB, avail]                 = st_wait_memory(cfg, memoryneededGB)
+%   [memoryneededGB, avail, waited_seconds] = st_wait_memory(cfg, memoryneededGB)
 %
 %   cfg can be empty (i.e., cfg = [];)
 %
@@ -13,7 +13,7 @@ function [memoryavailGB, avail, waited_seconds] = st_wait_memory(cfg, memoryneed
 %
 %   cfg.timeout         = scalar, time in seconds to wait at most (default = Inf)
 %   cfg.checkinterval   = scalar, interval in seconds to check (default = 1)
-%   cfg.minmemoryneededGB = scalar, minimal GByte to remain free in addition as a buffer (default = 0.5)
+%   cfg.minadditionalmemoryGB = scalar, minimal GByte to remain free in addition as a buffer (default = 0.5)
 %
 % See also FT_PREPROCESSING, LOAD
 
@@ -49,15 +49,15 @@ fprintf([functionname ' function started\n']);
 % set defaults
 cfg.timeout  = ft_getopt(cfg, 'timeout', Inf);
 cfg.checkinterval  = ft_getopt(cfg, 'checkinterval', 1);
-cfg.minmemoryneededGB  = ft_getopt(cfg, 'minmemoryneededGB', 0.5); % 0.5 GByte
+cfg.minadditionalmemoryGB  = ft_getopt(cfg, 'minadditionalmemoryGB', 0.5); % 0.5 GByte
 
                                     
 fprintf([functionname ' function initialized\n']);
 
-fprintf(['waiting for %f GByte to be available with minimum buffer of %f (%f in total)' '\n'],memoryneededGB,cfg.minmemoryneededGB,memoryneededGB+cfg.minmemoryneededGB);
+fprintf(['waiting for %f GByte to be available with minimum buffer of %f (%f in total)' '\n'],memoryneededGB,cfg.minadditionalmemoryGB,memoryneededGB+cfg.minadditionalmemoryGB);
 
 
-actualneededmemory_inBytes = (memoryneededGB+cfg.minmemoryneededGB)*1024*1024*1024;
+actualneededmemory_inBytes = (memoryneededGB+cfg.minadditionalmemoryGB)*1024*1024*1024;
 [userview,systemview] = memory;
 present = userview.MemAvailableAllArrays;
 
