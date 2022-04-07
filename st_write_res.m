@@ -124,10 +124,10 @@ for iRes = 1:nRes
     subfolderpath = '';
     if istrue(cfg.folderstructure)
         subfolderpath = ['res' filesep];
-        if ~isdir([subfolderpath res.ori])
+        if ~isfolder([subfolderpath res.ori])
             mkdir([subfolderpath res.ori]);
         end
-        if ~isdir([subfolderpath res.ori filesep res.type])
+        if ~isfolder([subfolderpath res.ori filesep res.type])
             mkdir([subfolderpath res.ori filesep res.type]);
         end
         
