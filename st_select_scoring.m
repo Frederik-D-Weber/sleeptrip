@@ -25,7 +25,7 @@ function [cfg ends] = st_select_scoring(cfg, data)
 %
 %   cfg.considerexcluded = either 'yes' or 'no' if scoring.excluded should
 %                          be excluded as well (default 'yes')
-% 
+%
 %
 % See also ST_READ_SCORING, ST_PREPROCESSING, FT_DEFINETRIAL
 
@@ -45,7 +45,7 @@ function [cfg ends] = st_select_scoring(cfg, data)
 %    GNU General Public License for more details.
 %
 %    SleepTrip is a branch of FieldTrip, see http://www.fieldtriptoolbox.org
-%    and adds funtionality to analyse sleep and polysomnographic data. 
+%    and adds funtionality to analyse sleep and polysomnographic data.
 %    SleepTrip is under the same license conditions as FieldTrip.
 %
 %    You should have received a copy of the GNU General Public License
@@ -64,6 +64,7 @@ if ~iscellstr(cfg.stages)
 end
 
 cfg.considerexcluded = ft_getopt(cfg, 'considerexcluded', 'yes');
+cfg.mintriallength = ft_getopt(cfg, 'mintriallength',30); %default 30s (typical epoch length)
 
 % a scoring sturcture is provided
 hasScoring = false;
@@ -74,7 +75,7 @@ else
     scoring = cfg.scoring;
 end
 
-  
+
 hasdata = false;
 if ~hasScoring
     if nargin > 1
@@ -122,10 +123,10 @@ if hasScoring
         ft_warning('requested sleep stages are not present in the scoring, will return empty begins_epochs ends_epochs.');
     end
 else
-    
+
     epochLengthSamples = scoring.epochlength*fsample;
     offsetSamples = scoring.dataoffset*fsample;
-    
+
     if nargout <= 1
         nPossibleEpochsInData = floor((nSamplesInData-offsetSamples)/epochLengthSamples);
         nEpochsInScoring = numel(epochs);
@@ -135,45 +136,52 @@ else
             ft_warning('only %d epochs possible in data with epoch length of %d and scoring offset of %f seconds \nbut scoring has %d epochs.\nPlease check if scoring matches to the data.\nScoring was shortened to fit data, and some epochs were discarded.',nPossibleEpochsInData,scoring.epochlength,scoring.dataoffset,nEpochsInScoring);
         end
     end
-    
+
     hypnEpochs = 1:numel(epochs);
     hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
     hypnEpochsEndsSamples = (hypnEpochs * epochLengthSamples)';
-    
+
     if istrue(cfg.considerexcluded)
         epochsOfInterst = hypnEpochs(ismember(epochs',sleepStagesOfInterst) & (excluded' == 0));
     else
         epochsOfInterst = hypnEpochs(ismember(epochs',sleepStagesOfInterst));
     end
     cfg.nEpochs = length(epochsOfInterst);
-    
+
     begins = [];
     ends = [];
-    
+
     if ~isempty(epochsOfInterst)
         [consecBegins, consecEnds] = consecutiveBeginsAndEnds(epochsOfInterst,1);
         begins = hypnEpochsBeginsSamples(consecBegins);
         ends = hypnEpochsEndsSamples(consecEnds);
     end
-    
-    
+
+    %only include trials meeting minimum length requirement
+    mintriallength=cfg.mintriallength;
+    mintriallength_sample=round(mintriallength*fsample);
+
+    trial_inds=(ends-begins)>mintriallength_sample;
+    begins=begins(trial_inds);
+    ends=ends(trial_inds);
+
     if hasdata
         cfg.contbegsample = begins+offsetSamples;
         cfg.contendsample = ends+offsetSamples;
-        
-        
+
+
         % requested sleep stages are not present in dat
         if isempty(cfg.contbegsample)
             ft_warning('requested sleep stages are not present in the scoring, will return empty trials.');
         end
-        
+
     else
         cfg.trl = [begins+offsetSamples ends+offsetSamples begins-1+offsetSamples];
         % requested sleep stages are not present in dat
         if isempty(cfg.trl)
             ft_warning('requested sleep stages are not present in the scoring, will result in empty trials.');
         end
-        
+
     end
     ends = [];
     if hasdata
