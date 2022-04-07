@@ -695,7 +695,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
                                 idx_leftsideoverlap = (scorings_cut2_appended_temp.arousals.stop > consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start < consecBegins_wholescoring_seconds(iInterrupt));
                                 
                                 if sum(idx_rightsideoverlap) > 0
-                                    consecEnds_wholescoring_seconds(iInterrupt) = max(scorings_cut2_appended_temp.arousals.end(idx_rightsideoverlap));
+                                    consecEnds_wholescoring_seconds(iInterrupt) = max(scorings_cut2_appended_temp.arousals.stop(idx_rightsideoverlap));
                                     scorings_cut2_appended_temp.arousals(idx_rightsideoverlap,:) = [];
                                 end
                                 if sum(idx_leftsideoverlap) > 0
