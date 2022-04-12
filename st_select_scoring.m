@@ -26,6 +26,11 @@ function [cfg ends] = st_select_scoring(cfg, data)
 %   cfg.considerexcluded = either 'yes' or 'no' if scoring.excluded should
 %                          be excluded as well (default 'yes')
 %
+%  optional parameters
+%    cfg.mintriallength = the minimal trial length it needs to have to be selected.
+%                         if scoring is provided it will take the
+%                         scoring.epochlength as default (typically 30
+%                         seconds).
 %
 % See also ST_READ_SCORING, ST_PREPROCESSING, FT_DEFINETRIAL
 
@@ -64,7 +69,6 @@ if ~iscellstr(cfg.stages)
 end
 
 cfg.considerexcluded = ft_getopt(cfg, 'considerexcluded', 'yes');
-cfg.mintriallength = ft_getopt(cfg, 'mintriallength',30); %default 30s (typical epoch length)
 
 % a scoring sturcture is provided
 hasScoring = false;
@@ -73,6 +77,12 @@ if ~isfield(cfg,'scoring') && (nargin == 2)
     scoring = data;
 else
     scoring = cfg.scoring;
+end
+
+if hasScoring
+    cfg.mintriallength = ft_getopt(cfg, 'mintriallength',scoring.epochlength); 
+else 
+    cfg.mintriallength = ft_getopt(cfg, 'mintriallength',30); %default 30s (typical epoch length)
 end
 
 
