@@ -654,6 +654,8 @@ tfa = [];%clear
 band_ch_meanPowerSumOverSegments = [];
 band_ch_meanPowerMeanOverSegments = [];
 
+total_ch_sumPowerMeanOverSegments = [];
+total_ch_sumPowerSumOverSegments = [];
 
 for iBand = 1:(numel(cfg.bands))
     %iBand = 1;
@@ -675,8 +677,24 @@ for iBand = 1:(numel(cfg.bands))
         %band_ch_meanPower{iBand,iChan} = sum(W .* mean(trl_meanPower,2))/sum(W);%weighted mean
         band_ch_meanPowerSumOverSegments{iBand,iChan} = sum(mean(trl_meanPower,2));%sum over meaned power in band of channel
         band_ch_meanPowerMeanOverSegments{iBand,iChan} = mean(mean(trl_meanPower,2));%mean over meaned power in band of channel
+        band_ch_sumPowerMeanOverSegments{iBand,iChan} = sum(mean(trl_meanPower,1));%mean over meaned power in band of channel
+
     end
     
+end
+
+totalfoiIndex = (pFreq >= minBandFreq) & (pFreq <= maxBandFreq);
+
+for iChan = 1:nChannels
+    %iChan = 1;
+    fprintf('power: process total %i to %i Hz in channel %s\n',minBandFreq,maxBandFreq,newChannelLabels{iChan});
+    
+    trl_meanPower = [];
+    for iTr = 1:size(pPower,1)
+        trl_meanPower(iTr,:) = pPower(iTr,iChan,totalfoiIndex);
+    end
+    total_ch_sumPowerMeanOverSegments(iChan) = sum(mean(trl_meanPower,1));
+    total_ch_sumPowerSumOverSegments(iChan) = sum(sum(trl_meanPower,1));
 end
 
 fprintf('power: write results\n');
@@ -740,6 +758,14 @@ band_ch_meanPowerMeanOverSegments_density = zeros(nRows,1);
 band_ch_meanPowerSumOverSegmentss = zeros(nRows,1);
 band_ch_meanPowerSumOverSegmentss_density = zeros(nRows,1);
 
+band_ch_sumPowerMeanOverSegmentss = zeros(nRows,1);
+band_ch_sumPowerMeanOverSegmentss_density = zeros(nRows,1);
+
+total_ch_sumPowerSumOverSegmentss = zeros(nRows,1);
+total_ch_sumPowerSumOverSegments_density = zeros(nRows,1);
+total_ch_sumPowerMeanOverSegmentss = zeros(nRows,1);
+total_ch_sumPowerMeanOverSegmentss_density = zeros(nRows,1);
+
 bandMinFreqs = zeros(nRows,1);
 bandMaxFreqs = zeros(nRows,1);
 stagess = repmat(strjoin(cfg.stages),nRows,1);
@@ -776,6 +802,13 @@ for iBand = 1:(numel(cfg.bands))
         band_ch_meanPowerMeanOverSegments_density(iRow) = band_ch_meanPowerMeanOverSegments{iBand,iChan}/ENBW;
         band_ch_meanPowerSumOverSegmentss(iRow) = band_ch_meanPowerSumOverSegments{iBand,iChan};
         band_ch_meanPowerSumOverSegmentss_density(iRow) = band_ch_meanPowerSumOverSegments{iBand,iChan}/ENBW;
+        band_ch_sumPowerMeanOverSegmentss(iRow) = band_ch_sumPowerMeanOverSegments{iBand,iChan};
+        band_ch_sumPowerMeanOverSegmentss_density(iRow) = band_ch_sumPowerMeanOverSegments{iBand,iChan}/ENBW;
+        
+        total_ch_sumPowerSumOverSegmentss(iRow) = total_ch_sumPowerSumOverSegments(iChan);
+        total_ch_sumPowerSumOverSegments_density(iRow) = total_ch_sumPowerSumOverSegments(iChan)/ENBW;
+        total_ch_sumPowerMeanOverSegmentss(iRow) = total_ch_sumPowerMeanOverSegments(iChan);
+        total_ch_sumPowerMeanOverSegmentss_density(iRow) = total_ch_sumPowerMeanOverSegments(iChan)/ENBW;
         
         bandMinFreqs(iRow) = bandMinFreq;
         bandMaxFreqs(iRow) = bandMaxFreq;
@@ -791,18 +824,29 @@ res_power_band.table = table(...
     bandNames,chs,...
     band_ch_meanPowerMeanOverSegmentss,band_ch_meanPowerMeanOverSegments_density,...
     band_ch_meanPowerSumOverSegmentss,band_ch_meanPowerSumOverSegmentss_density,...
+    band_ch_sumPowerMeanOverSegmentss,band_ch_sumPowerMeanOverSegmentss_density,...
     bandMinFreqs,bandMaxFreqs,...
     stagess,epochlengths,segmentlengths,segmentoverlaps,...
     NSegmentss,NconsecutiveROIss, guaranteedROIsegmentCoverages, freqResolutionCalculations,...
     lengthsAcrossROIsSecondss,...
+    total_ch_sumPowerMeanOverSegmentss(:),... 
+    total_ch_sumPowerMeanOverSegmentss_density(:),... 
+    total_ch_sumPowerSumOverSegmentss(:),...
+    total_ch_sumPowerSumOverSegments_density(:),...
+    repmat(minBandFreq,size(bandNames)),...
+    repmat(maxBandFreq,size(bandNames)),...
     'VariableNames',{...
     'band','channel',...
     'mean_band_of_mean_power_over_segments','mean_band_of_mean_powerDensity_over_segments',...
     'mean_band_of_arb_energy_over_segments','mean_band_of_arb_energyDensity_over_segments',...
+    'AUC_band_of_mean_power_over_segments','AUC_band_of_mean_powerDensity_over_segments',...
     'min_freq_Hz','max_freq_Hz',....
     'sleep_stages','epoch_length_seconds','segment_length_seconds','segments_overlap_proportion',...
     'segment_count','consecutive_ROI_count','guaranteed_ROI_segment_coverage_seconds','frequency_true_resolution_calculation',...%'frequency_stepsize_output',...
-    'lengths_ROI_seconds'}...
+    'lengths_ROI_seconds',...
+    'full_AUC_band_of_mean_power_over_segments','full_AUC_band_of_mean_powerDensity_over_segments',...
+    'full_AUC_band_of_arb_energy_over_segments','full_AUC_band_of_arb_energyDensity_over_segments',...
+    'full_band_min_freq_Hz','full_band_max_freq_Hz'}...
     );
 
 
