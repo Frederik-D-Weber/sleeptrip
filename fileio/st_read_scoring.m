@@ -37,6 +37,8 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          'sleeptrip' for scoring files exported SleepTrip as a .mat
 %                                  containing a scoring structure
 %                                  (named 'scoring')
+%                          'rythm_dreem_json' for scoring files from Rythm
+%                                  Dreem head wearable files
 %
 % optional paramters are
 %   cfg.standard         = string, scoring standard either 'aasm' or AASM
@@ -646,6 +648,38 @@ switch  cfg.scoringformat
         processTableStucture = true;
         
         readoption = 'xml';
+    case {'rythm_dreem_json'}
+        % The sleep stages are as follows:
+        % 0: wake, 
+        % 1: N1,
+        % 2: N2, 
+        % 3: N3, 
+        % 4:REM
+
+        json = read_json(filename);
+        
+        scoremap = [];
+        scoremap.labelold  = {'0','1', '2', '3', '4', '?'};
+        switch cfg.standard
+            case 'aasm'
+                scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'R', '?'};
+            case 'rk'
+                ft_warning('the dreem data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.');
+                scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'R', '?'};
+        end
+        scoremap.unknown   = '?';
+        
+        json = ft_struct2string(json)';
+        
+        tableScoring = table(json,'VariableNames',{'stage'});
+
+        cfg.columnnum        = 1;
+        %cfg.exclepochs       = 'no';
+        %cfg.exclcolumnnum    = 2;
+        processTableStucture = true;
+        
+        readoption = 'json';
+        
     case {'sleeptrip'}
         readoption = 'loadmat';
     otherwise
@@ -655,6 +689,8 @@ switch cfg.datatype
     case 'columns'
     case 'xml'
         readoption = 'xml';
+    case 'json'
+        readoption = 'json';
     otherwise
     ft_error('cfg.datatype = ''%s'' unknown',cfg.datatype);
 end
@@ -662,6 +698,8 @@ end
 
 switch readoption
     case 'xml'
+        
+    case 'json'
         
     case 'table';
         tableScoring = tableScoring;
@@ -898,4 +936,10 @@ for iNode = 1:nodeList.getLength
     node = nodeList.item(iNode-1);
     nodevalues{iNode} = char(node.getNodeValue);
 end
+end
+
+function json = read_json(filename)
+ft_hastoolbox('jsonlab', 1);
+json = loadjson(filename);
+json = ft_struct2char(json); % convert strings into char-arrays
 end
