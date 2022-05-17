@@ -59,7 +59,7 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   cfg.eventchannelmatching    = either match channels of events to the
 %                                 one in the data using a 'wildcard' or be 'exact' (default = 'exact').
 %                                 Note that using 'wildcard' can be much
-%                                 much slower that 'exact' approach.
+%                                 much slower than 'exact' approach.
 %   cfg.eventsplothypnogram     = if events should be plotted also in the
 %                                 hypnogram, either 'yes' or 'no' (default = 'no')
 %   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' or 'boxdimple' or 'boxdimple+snake'(default = 'box');
@@ -87,7 +87,7 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   cfg.ploteventlabels         = 'type=value', 'colorvalue' (default = 'type=value');
 %   cfg.viewmode                = string, 'vertical', currently 'butterfly' or 'component' for visualizing components e.g. from an ICA are not supported (default is 'vertical')
 %   cfg.artfctdef.xxx.artifact  = Nx2 matrix with artifact segments see FT_ARTIFACT_xxx functions
-%   cfg.selectfeature           = string, name of feature to be selected/added (default = 'visual')
+%   cfg.selectfeature           = string, name of feature to be selected/added (default = 'arousal')
 %   cfg.selectmode              = 'markartifact', 'markpeakevent', 'marktroughevent' (default = 'markartifact')
 %   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
 %                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
@@ -439,12 +439,75 @@ cfg.plot_stage_signatures = 'yes';
 cfg.artfctdef.EEG.artifact = [];
 cfg.artfctdef.EMG.artifact = [];
 cfg.artfctdef.EOG.artifact = [];
-cfg.selectfeature = 'EEG';
+cfg.artfctdef.arousal.artifact = [];
+if strcmp(cfg.doSleepScoring,'yes')
+    cfg.selectfeature = 'arousal';
+else
+    cfg.selectfeature = 'EEG';
+end
+
+if isfield(cfg,'scoring')
+    
+    if isfield(cfg.scoring,'artifacts')
+        af = cfg.scoring.artifacts;
+        if ~isempty(af)
+            %unique(af.event)
+            af.start = round(af.start*data.fsample);
+            af.stop = round(af.stop*data.fsample);
+            
+            % collect the artifacts that have been detected from cfg.artfctdef.xxx.artifact
+            artlabel = unique(af.event);
+            %sel      = zeros(size(artlabel));
+            %artifact = cell(size(artlabel));
+            
+            for i=1:length(artlabel)
+                temp_idx = strcmp(artlabel{i},af.event);
+                if ~isfield(cfg.artfctdef,artlabel{i})
+                    cfg.artfctdef.(artlabel{i}) = [];
+                end
+                cfg.artfctdef.(artlabel{i}).artifact = [af.start(temp_idx) af.stop(temp_idx)];
+                %artifact{i} = [af.start(temp_idx) af.stop(temp_idx)];
+                fprintf('detected %3d %s artifacts\n', size(cfg.artfctdef.(artlabel{i}).artifact, 1), artlabel{i});
+            end
+            
+        end
+                       
+    end
+    if isfield(cfg.scoring,'arousals')
+        
+        af = cfg.scoring.arousals;
+        if ~isempty(af)
+            %unique(af.event)
+            af.start = round(af.start*data.fsample);
+            af.stop = round(af.stop*data.fsample);
+            
+            % collect the artifacts that have been detected from cfg.artfctdef.xxx.artifact
+            artlabel = unique(af.event);
+            %sel      = zeros(size(artlabel));
+            %artifact = cell(size(artlabel));
+            
+            for i=1:length(artlabel)
+                temp_idx = strcmp(artlabel{i},af.event);
+                if ~isfield(cfg.artfctdef,artlabel{i})
+                    cfg.artfctdef.(artlabel{i}) = [];
+                end
+                cfg.artfctdef.arousal.artifact = [af.start(temp_idx) af.stop(temp_idx)];
+                %artifact{i} = [af.start(temp_idx) af.stop(temp_idx)];
+                fprintf('detected %3d %s arousals now just marked as arousals \n', size(cfg.artfctdef.arousal.artifact, 1), artlabel{i});
+            end
+            
+        end
+        
+    end
+end
+
 cfg.selectmode = 'markartifact';
 if hasdata || istrue(cfg.datainteractive)
     cfg.channel = 1:length(data.label);
     cfg.chanscale = ones(1,length(data.label));
 end
+
+
     
 %     if strcmp(ApplyScalingSettings,'yes')
 %         fileScalingSettings = listOfScalingSettingsFiles{iData};
@@ -1269,7 +1332,8 @@ artifact = artifact(sel==1);
 artlabel = artlabel(sel==1);
 
 if length(artlabel) > 9
-    error('only up to 9 artifacts groups supported')
+    ft_warning('only up to 9 artifacts groups supported using different colors')
+    opt.artcolors = cat(1,opt.artcolors(1:9,1:3),hsv(length(artlabel)-9));
 end
 
 % make artdata representing all artifacts in a "raw data" format
@@ -1414,7 +1478,7 @@ opt.artdata     = artdata;
 opt.hdr         = hdr;
 opt.event       = event;
 opt.trlop       = 1;   
-opt.ftsel       = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected
+opt.ftsel       = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected   
 opt.trlorg      = trlorg;
 opt.fsample     = hdr.Fs;
 opt.artcolors   = [0.9686 0.7608 0.7686; 0.7529 0.7098 0.9647; 0.7373 0.9725 0.6824;0.8118 0.8118 0.8118; 0.9725 0.6745 0.4784; 0.9765 0.9176 0.5686; 0.6863 1 1; 1 0.6863 1; 0 1 0.6000];
@@ -1635,7 +1699,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     
     cfg.plotsignal = 'yes';
     
-    cfg.artifact_export_delimiter = ',';
+    cfg.artifact_export_delimiter = '\t';
     
     cfg.toggle_epoch_marker = 0;
     
@@ -1647,6 +1711,13 @@ if strcmp(cfg.doSleepScoring,'yes')
         cfg.hypn_plot_interpol_confidence_mult = {};
         cfg.hypn_mult_idx = 1;
     end
+    
+%     if strcmp(opt.artdata.label{opt.ftsel},'arousal') % if it is an arousal
+%     opt.ftsel = opt.ftsel + 1;
+% end
+% if opt.ftsel > numel(opt.artdata.label)
+%     opt.ftsel = 1;
+% end
     
 end
 
@@ -1707,7 +1778,7 @@ set(h, 'WindowButtonMotionFcn', {@ft_select_range, 'multiple', false, 'xrange', 
 temp_lower_line_y = 0.00;
 temp_lower_line_y2 = temp_lower_line_y+0.04;
 
-uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'x', 'position', [0.0, 0.99 , 0.01, 0.01],'backgroundcolor',[0.5 0.5 0.5],'foregroundcolor',[1 1 1], 'userdata', 'x')
+uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'x', 'position', [0.0, 0.99 , 0.01, 0.01],'backgroundcolor',[0.5 0.5 0.5],'foregroundcolor',[1 1 1], 'userdata', '-')
 
 uicontrol('tag', 'labels',  'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', opt.trialviewtype, 'position', [0.05, temp_lower_line_y2 , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 't')
 uicontrol('tag', 'buttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<', 'position', [0.05, temp_lower_line_y , 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'leftarrow')
@@ -1745,6 +1816,8 @@ if strcmp(cfg.doSleepScoring,'yes')
     uicontrol('tag', 'scbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'S1(1)','position', [0.36, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', '1')
     uicontrol('tag', 'scbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'S2(2)','position', [0.40 temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', '2')
     uicontrol('tag', 'scbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'S3(3)','position', [0.44, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', '3')
+    %uicontrol('tag', 'arousalui_button',  'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'Arousal','position', [0.48, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'a')
+
     if strcmp(cfg.standard,'rk')
         uicontrol('tag', 'scbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'S4(4)','position', [0.48, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', '4')
     end
@@ -1758,7 +1831,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     if cfg.has_ECG
         uicontrol('tag', 'scoptbuttons_HRdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<3 <3 <3','Fontsize',6,'FontUnits','normalized', 'position', [0.56, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'b')
     end
-    uicontrol('tag', 'scoptbuttons_ALdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--wWwWw--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'a')
+    uicontrol('tag', 'scoptbuttons_ALdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--wWwWw--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'x')
     
     uicontrol('tag', 'scoptbuttons_pow', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'pow','position',  [0.675, temp_lower_line_y+0.08/3+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'p')
     uicontrol('tag', 'scoptbuttons_tfr', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', 'tfr','position', [0.675, temp_lower_line_y+0.08/3, 0.025, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'f')
@@ -1806,7 +1879,11 @@ for iArt = 1:length(artlabel)
     %   uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', artlabel{iArt}, 'userdata', num2str(iArt), 'position', [0.91, 0.9 - ((iArt-1)*0.09), 0.08, 0.04], 'backgroundcolor', opt.artcolors(iArt,:))
     %   uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<', 'userdata', ['shift+' num2str(iArt)], 'position', [0.91, 0.855 - ((iArt-1)*0.09), 0.03, 0.04], 'backgroundcolor', opt.artcolors(iArt,:))
     %   uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '>', 'userdata', ['control+' num2str(iArt)], 'position', [0.96, 0.855 - ((iArt-1)*0.09), 0.03, 0.04], 'backgroundcolor', opt.artcolors(iArt,:))
-    uicontrol('tag', 'artifactui_button', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', ['artifact(' opt.artdata.label{opt.ftsel} ')'], 'userdata', 'shift+a', 'position', [0.01, temp_lower_line_y2 - ((iArt-1)*0.09), 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
+    if strcmp(opt.artdata.label{opt.ftsel},'arousal')
+        uicontrol('tag', 'artifactui_button', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', ['Arousal'], 'userdata', 'shift+a', 'position', [0.01, temp_lower_line_y2 - ((iArt-1)*0.09), 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
+    else
+        uicontrol('tag', 'artifactui_button', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', ['artfct(' opt.artdata.label{opt.ftsel} ')'], 'userdata', 'shift+a', 'position', [0.01, temp_lower_line_y2 - ((iArt-1)*0.09), 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
+    end
     uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<', 'userdata', ['shift+' num2str(iArt)], 'position', [0.01, temp_lower_line_y - ((iArt-1)*0.09), 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
     uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '>', 'userdata', ['control+' num2str(iArt)], 'position', [0.03, temp_lower_line_y - ((iArt-1)*0.09), 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
     
@@ -1834,6 +1911,8 @@ ft_uilayout(h, 'tag', 'artifactui', 'style', 'pushbutton', 'callback', @keyboard
 ft_uilayout(h, 'tag', 'artifactui_button', 'style', 'pushbutton', 'callback', @keyboard_cb);
 
 if strcmp(cfg.doSleepScoring,'yes');
+    ft_uilayout(h, 'tag', 'arousalui_button', 'style', 'pushbutton', 'callback', @keyboard_cb);
+
     ft_uilayout(h, 'tag', 'scbuttons', 'style', 'pushbutton', 'callback', @keyboard_cb);
     ft_uilayout(h, 'tag', 'scoptbuttons', 'style', 'pushbutton', 'callback', @keyboard_cb);
     
@@ -1869,7 +1948,6 @@ end
 % end
 % ft_uilayout(h, 'tag', 'viewui', 'BackgroundColor', [0.8 0.8 0.8], 'hpos', 'auto', 'vpos', 0.1);
 % ft_uilayout(h, 'tag', 'viewui2', 'BackgroundColor', [0.8 0.8 0.8], 'hpos', 'auto', 'vpos', 0);
-
 
 
 
@@ -2344,7 +2422,8 @@ helptext = [ ...
     '  R: REM (R)\n'...
     '  7 or D: Delete Stage \n'...
     '  8: Movement Time (MT) \n'...
-    '  9 or W: Movement Arousal/Epoch with artifact(s) (MA, additional) \n'...
+    '  9: Movement Arousal/Epoch with artifact(s) (MA, additional) \n'...
+    '  A: Arousal period \n'...
     ' Control:\n'...
     '  Left-arrow: go to previous epoch \n'...
     '  Right-arrow: go to next epoch \n'...
@@ -2359,7 +2438,7 @@ helptext = [ ...
     '  U: (automatic) epoch skipping modus change \n'...
     '  P: Power spectrum of the current epoch \n'...
     '  F: Time-frequency plot of the current EEG scoring channel \n'...
-    '  X: Hide/Display menue bar \n'...
+    '  -: Hide/Display menue bar \n'...
     '  T: Select epoch to jump to (dialog) \n'...
     '  Shift + T and Ctrl + T: toggle and un-toggle epoch start-marker\n'...
     '  L: Set Thresholds (dialog) \n'...
@@ -2458,6 +2537,26 @@ if isempty(cmenulab)
         setappdata(h, 'opt', opt);
         setappdata(h, 'cfg', cfg);
         redraw_cb(h);
+%     elseif strcmp(cfg.selectmode, 'markarousal')
+%         % mark or unmark arousals
+%         idxArousalLabel = find(ismember({'arousal'},opt.artdata.label),1); % find arousal index in artifact labels
+%         if ~isempty(idxArousalLabel)
+%             
+%         artval = opt.artdata.trial{1}(idxArousalLabel, begsel:endsel);
+%         artval = any(artval,1);
+%         if any(artval)
+%             fprintf('there is overlap with the active arousal (%s), disabling this arousal\n',opt.artdata.label{idxArousalLabel});
+%             opt.artdata.trial{1}(idxArousalLabel, begsel:endsel) = 0;
+%         else
+%             fprintf('there is no overlap with the active arousal (%s), marking this as a new arousal\n',opt.artdata.label{idxArousalLabel});
+%             opt.artdata.trial{1}(idxArousalLabel, begsel:endsel) = 1;
+%         end
+%         
+%         end
+%         % redraw only when marking (so the focus doesn't go back to the databrowser after calling selfuns
+%         setappdata(h, 'opt', opt);
+%         setappdata(h, 'cfg', cfg);
+%         redraw_cb(h);
     elseif strcmp(cfg.selectmode, 'markpeakevent') || strcmp(cfg.selectmode, 'marktroughevent')
         %mark or unmark events, marking at peak/trough of window
         if any(intersect(begsel:endsel, [opt.event.sample]))
@@ -2800,6 +2899,12 @@ switch key
         if opt.ftsel > numel(opt.artdata.label)
             opt.ftsel = 1;
         end
+%         if strcmp(opt.artdata.label{opt.ftsel},'arousal') % if it is an arousal
+%             opt.ftsel = opt.ftsel + 1;
+%         end
+%         if opt.ftsel > numel(opt.artdata.label)
+%             opt.ftsel = 1;
+%         end
         %opt.ftsel = str2double(strrep(key, 'shift+', ''));
         numart = size(opt.artdata.trial{1}, 1);
         if opt.ftsel > numart
@@ -2997,8 +3102,11 @@ switch key
                             end
                             writeHypnogramFile(cfg.autosave_hypfilepath,cfg.hypn,cfg.hypnogram_delimiter_autosave);
                             
-                            temp_ArtifactPath = [cfg.autosave_hypfilepath '.artifacts.csv'];
+                            temp_ArtifactPath = [cfg.autosave_hypfilepath '.artifacts.tsv'];
                             writeArtifactFile(temp_ArtifactPath,opt,cfg.artifact_export_delimiter);
+                            
+                            temp_ArousalPath = [cfg.autosave_hypfilepath '.arousals.tsv'];
+                            writeArousalFile(temp_ArousalPath,opt,cfg.artifact_export_delimiter);
                             
                         catch err
                             
@@ -3230,7 +3338,7 @@ switch key
         setappdata(h, 'opt', opt);
         setappdata(h, 'cfg', cfg);
         cleanup_cb(h);
-    case 'x'
+    case '-'
         status = get(h,'MenuBar');
         if strcmp(status,'figure')
             set(h,'MenuBar','none');
@@ -3341,7 +3449,8 @@ switch key
             setappdata(h, 'cfg', cfg);
             redraw_cb(h, eventdata);
         end
-    case 'a'
+    
+    case 'x'
         if strcmp(cfg.doSleepScoring,'yes')
             if ~isfield(cfg,'underlayAlphaSignal')
                 cfg.underlayAlphaSignal = 'yes';
@@ -3668,9 +3777,21 @@ switch key
                                 cfg.hypn_plot_interpol_confidence = cfg.hypn_plot_interpol_confidence_mult{selection};
 
                                 if isfield(cfg,'autosave_hypfilepath')
-                                    temp_ArtifactPath = [cfg.autosave_hypfilepath '.artifacts.csv'];
+                                    
+                                    opt.artdata = [];
+                                    
+                                    temp_ArtifactPath = [cfg.autosave_hypfilepath '.artifacts.tsv'];
                                     if exist(temp_ArtifactPath) == 2
                                         [o, c] = readArtifactFile(temp_ArtifactPath,opt,cfg,cfg.artifact_export_delimiter);
+                                        opt = o;
+                                        cfg = c;
+                                        c = [];
+                                        o = [];
+                                    end
+                                    
+                                    temp_ArousalPath = [cfg.autosave_hypfilepath '.arousals.tsv'];
+                                    if exist(temp_ArousalPath) == 2
+                                        [o, c] = readArousalFile(temp_ArousalPath,opt,cfg,cfg.artifact_export_delimiter);
                                         opt = o;
                                         cfg = c;
                                         c = [];
@@ -3846,9 +3967,20 @@ switch key
                         
                         if loaded_hypnogram_from_file
                             
-                            temp_ArtifactPath = [temp_hypnogramPath '.artifacts.csv'];
+                            opt.artdata = [];
+                            
+                            temp_ArtifactPath = [temp_hypnogramPath '.artifacts.tsv'];
                             if exist(temp_ArtifactPath) == 2
                                 [o, c] = readArtifactFile(temp_ArtifactPath,opt,cfg,cfg.artifact_export_delimiter);
+                                opt = o;
+                                cfg = c;
+                                c = [];
+                                o = [];
+                            end
+                            
+                            temp_ArousalPath = [temp_hypnogramPath '.arousals.tsv'];
+                            if exist(temp_ArousalPath) == 2
+                                [o, c] = readArousalFile(temp_ArousalPath,opt,cfg,cfg.artifact_export_delimiter);
                                 opt = o;
                                 cfg = c;
                                 c = [];
@@ -3929,8 +4061,9 @@ switch key
                 tempfilepath = [cfg.outputfilespath 'hypn_export' '.txt'];
                 
                 [hyp_file_name hyp_file_path hyp_file_filterindex] = uiputfile(...
-                    {'*.txt;*.csv','Export formats (*.txt,*.csv)';...
+                    {'*.txt;*.tsv;*.csv','Export formats (*.txt,*.tsv,*.csv)';...
                     '*.txt','Text - Tab delimited (*.txt)';...
+                    '*.tsv','Tab Separated Values (*.tsv)';...
                     '*.csv','Comma Separated Values (*.csv)';...
                     % '*.m', 'program files (*.m)';...
                     % '*.fig','Figures (*.fig)';...
@@ -3949,9 +4082,11 @@ switch key
                     temp_hypnogramPath = [hyp_file_path hyp_file_name];
                     writeHypnogramFile(temp_hypnogramPath,cfg.hypn,cfg.hypnogram_delimiter_autosave);
                     
-                    temp_ArtifactPath = [hyp_file_path hyp_file_name '.artifacts.csv'];
+                    temp_ArtifactPath = [hyp_file_path hyp_file_name '.artifacts.tsv'];
                     writeArtifactFile(temp_ArtifactPath,opt,cfg.artifact_export_delimiter);
                     
+                    temp_ArousalPath = [hyp_file_path hyp_file_name '.arousals.tsv'];
+                    writeArousalFile(temp_ArousalPath,opt,cfg.artifact_export_delimiter);
                     
                     [temp_pathstr,temp_name,temp_ext] = fileparts(temp_hypnogramPath);
                     iAutosave = 0;
@@ -3960,11 +4095,7 @@ switch key
                         iAutosave = iAutosave + 1;
                         cfg.autosave_hypfilepath = [temp_pathstr filesep temp_name '_autosave' num2str(iAutosave) temp_ext];
                     end
-                    
-                    
-                    
-                    
-                    
+                                        
                     setappdata(h, 'cfg', cfg);
                     msgbox('Exporting the hypnogram successful!' ,'Export successful','modal');
                 end
@@ -4005,6 +4136,13 @@ switch key
         %             setappdata(h, 'cfg', cfg);
         %             redraw_cb(h, eventdata);
         %         end
+     case 'a'
+        cfg.selectmode = 'markarousal';
+        
+        fprintf('switching to selectmode = %s\n',cfg.selectmode);
+        setappdata(h, 'opt', opt);
+        setappdata(h, 'cfg', cfg);
+        redraw_cb(h, eventdata);
     case 's'
         % toggle between selectmode options: switch from 'markartifact', to 'markpeakevent' to 'marktroughevent' and back with on screen feedback
         %         curstate = find(strcmp(cfg.selectmode, {'markartifact', 'markpeakevent', 'marktroughevent'}));
@@ -4186,9 +4324,11 @@ if strcmp(cfg.doSleepScoring,'yes')
         ft_uilayout(h, 'tag', 'scoptbuttons_tfr', 'string', ['tfr']);
     end
     
-    
-    
-    ft_uilayout(h, 'tag', 'artifactui_button', 'string', ['artfct(' opt.artdata.label{opt.ftsel} ')']);
+    if strcmp(opt.artdata.label{opt.ftsel},'arousal')
+        ft_uilayout(h, 'tag', 'artifactui_button', 'string', ['Arousal']);
+    else
+        ft_uilayout(h, 'tag', 'artifactui_button', 'string', ['artfct(' opt.artdata.label{opt.ftsel} ')']);
+    end
     
 end
 uiresume(h);
@@ -7496,7 +7636,7 @@ end
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function writeArtifactFile(filepath,opt,delimiter)
 art_export = fopen(filepath, 'wt');
-fprintf(art_export, ['%s' delimiter '%s' delimiter '%s\n'], 'artifact', 'begin_seconds', 'end_seconds');
+fprintf(art_export, ['%s' delimiter '%s' delimiter '%s' delimiter  '%s' delimiter '%s\n'], 'event', 'start', 'stop', 'duration', 'channel');
 temp_cfg = [];
 for i=1:length(opt.artdata.label)
     temp_cfg.artfctdef.(opt.artdata.label{i}).artifact = convert_event(opt.artdata.trial{1}(i,:), 'artifact');
@@ -7504,12 +7644,37 @@ end
 artTypes = fieldnames(temp_cfg.artfctdef);
 for iArtType = 1:numel(artTypes)
     artType = artTypes{iArtType};
-    
+    if strcmp(artType,'arousal') % do not write out arousals
+        continue
+    end
     artifactSamples = temp_cfg.artfctdef.(artType).artifact;
     for iArt = 1:size(artifactSamples,1)
         beginsample = artifactSamples(iArt,1);
         endsample = artifactSamples(iArt,2);
-        fprintf(art_export, ['%s' delimiter '%f' delimiter '%f\n'], artType, beginsample/opt.fsample, endsample/opt.fsample);
+        fprintf(art_export, ['%s' delimiter '%f' delimiter '%f' delimiter '%f' delimiter '%s\n'], ['artifact_' artType], beginsample/opt.fsample, endsample/opt.fsample, (endsample-beginsample+1)/opt.fsample, artType);
+    end
+end
+fclose(art_export);
+end
+
+function writeArousalFile(filepath,opt,delimiter)
+art_export = fopen(filepath, 'wt');
+fprintf(art_export, ['%s' delimiter '%s' delimiter '%s' delimiter  '%s' delimiter '%s\n'], 'event', 'start', 'stop', 'duration', 'channel');
+temp_cfg = [];
+for i=1:length(opt.artdata.label)
+    temp_cfg.artfctdef.(opt.artdata.label{i}).artifact = convert_event(opt.artdata.trial{1}(i,:), 'artifact');
+end
+artTypes = fieldnames(temp_cfg.artfctdef);
+for iArtType = 1:numel(artTypes)
+    artType = artTypes{iArtType};
+    if ~strcmp(artType,'arousal') % do not write out arousals
+        continue
+    end
+    artifactSamples = temp_cfg.artfctdef.(artType).artifact;
+    for iArt = 1:size(artifactSamples,1)
+        beginsample = artifactSamples(iArt,1);
+        endsample = artifactSamples(iArt,2);
+        fprintf(art_export, ['%s' delimiter '%f' delimiter '%f' delimiter '%f' delimiter '%s\n'], ['arousal'], beginsample/opt.fsample, endsample/opt.fsample, (endsample-beginsample+1)/opt.fsample, 'all');
     end
 end
 fclose(art_export);
@@ -7534,31 +7699,28 @@ function [opt, cfg] = readArtifactFile(filepath,opt,cfg,delimiter)
 
 af = dataset('File',[filepath],'Delimiter',delimiter);
 if ~isempty(af)
-    %unique(af.artifact)
-    af.begin_seconds = round(af.begin_seconds*opt.fsample);
-    af.end_seconds = round(af.end_seconds*opt.fsample);
-    
-    
-    
-    
+    %unique(af.event)
+    af.start = round(af.start*opt.fsample);
+    af.stop = round(af.stop*opt.fsample);    
     
     % collect the artifacts that have been detected from cfg.artfctdef.xxx.artifact
-    artlabel = unique(af.artifact);
+    artlabel = unique(af.event);
     sel      = zeros(size(artlabel));
     artifact = cell(size(artlabel));
     
     for i=1:length(artlabel)
-        temp_idx = strcmp(artlabel(i),af.artifact);
-        artifact{i} = [af.begin_seconds(temp_idx) af.end_seconds(temp_idx)];
+        temp_idx = strcmp(artlabel(i),af.event);
+        artifact{i} = [af.start(temp_idx) af.stop(temp_idx)];
         fprintf('detected %3d %s artifacts\n', size(artifact{i}, 1), artlabel{i});
     end
     
     cfg.selectfeature = artlabel(1);
-    opt.ftsel       = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected
+    opt.ftsel         = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected
     
-    if length(artlabel) > 9
-        error(['only up to 9 artifacts groups supported, but ' num2str(length(artlabel)) ' found'])
-    end
+    
+%     if length(artlabel) > 9
+%         error(['only up to 9 artifact groups supported, but ' num2str(length(artlabel)) ' found'])
+%     end
     
     % make artdata representing all artifacts in a "raw data" format
     datendsample = max(opt.trlorg(:,2));
@@ -7585,6 +7747,94 @@ if ~isempty(af)
     
     
     opt.artdata = artdata;
+    
+    if length(opt.artdata.label) > 9
+        ft_warning('only up to 9 artifacts groups supported using different colors')
+        opt.artcolors = cat(1,opt.artcolors(1:9,1:3),hsv(length(artlabel)-9));
+    end
+    
+%     if strcmp(opt.artdata.label{opt.ftsel},'arousal') % if it is an arousal
+%         opt.ftsel = opt.ftsel + 1;
+%     end
+%     if opt.ftsel > numel(opt.artdata.label)
+%         opt.ftsel = 1;
+%     end
+end
+
+end
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % SUBFUNCTION
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [opt, cfg] = readArousalFile(filepath,opt,cfg,delimiter)
+
+af = dataset('File',[filepath],'Delimiter',delimiter);
+if ~isempty(af)
+    %unique(af.event)
+    af.start = round(af.start*opt.fsample);
+    af.stop = round(af.stop*opt.fsample);    
+    
+    % collect the artifacts that have been detected from cfg.artfctdef.xxx.artifact
+    artlabel = unique(af.event);
+    sel      = zeros(size(artlabel));
+    artifact = cell(size(artlabel));
+    
+    for i=1:length(artlabel)
+        temp_idx = strcmp(artlabel(i),af.event);
+        artifact{1} = cat(1,artifact{1},[af.start(temp_idx) af.stop(temp_idx)]);
+        fprintf('detected %3d %s arousals\n', size(artifact{1}, 1), artlabel{i});
+    end
+    
+    cfg.selectfeature = artlabel(1);
+    opt.ftsel         = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected
+    
+    
+%     if length(artlabel) > 9
+%         error(['only up to 9 arousals groups supported, but ' num2str(length(artlabel)) ' found'])
+%     end
+
+
+    % make artdata representing all artifacts in a "raw data" format
+    datendsample = max(opt.trlorg(:,2));
+    
+    if isempty(opt.artdata)
+        artdata = [];
+        artdata.trial{1}       = convert_event(artifact, 'boolvec', 'endsample', datendsample); % every artifact is a "channel"
+        artdata.time{1}        = offset2time(0, opt.fsample, datendsample);
+        artdata.label          = 'arousal';
+        artdata.fsample        = opt.fsample;
+        artdata.cfg.trl        = [1 datendsample 0];
+        
+        
+        % % legend artifacts/features
+        % for iArt = 1:length(artlabel)
+        %     %   uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', artlabel{iArt}, 'userdata', num2str(iArt), 'position', [0.91, 0.9 - ((iArt-1)*0.09), 0.08, 0.04], 'backgroundcolor', opt.artcolors(iArt,:))
+        %     %   uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<', 'userdata', ['shift+' num2str(iArt)], 'position', [0.91, 0.855 - ((iArt-1)*0.09), 0.03, 0.04], 'backgroundcolor', opt.artcolors(iArt,:))
+        %     %   uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '>', 'userdata', ['control+' num2str(iArt)], 'position', [0.96, 0.855 - ((iArt-1)*0.09), 0.03, 0.04], 'backgroundcolor', opt.artcolors(iArt,:))
+        %     uicontrol('tag', 'artifactui_button', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', ['artifact(' opt.artdata.label{opt.ftsel} ')'], 'userdata', 'a', 'position', [0.01, temp_lower_line_y2 - ((iArt-1)*0.09), 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
+        %     uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '<', 'userdata', ['shift+' num2str(iArt)], 'position', [0.01, temp_lower_line_y - ((iArt-1)*0.09), 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
+        %     uicontrol('tag', 'artifactui', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '>', 'userdata', ['control+' num2str(iArt)], 'position', [0.03, temp_lower_line_y - ((iArt-1)*0.09), 0.02, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1])
+        %
+        % end
+        
+        
+        
+        opt.artdata = artdata;
+    else % there is aleady artifact data so do not overwrite
+        opt.artdata.trial{1}       = cat(1,opt.artdata.trial{1},convert_event(artifact, 'boolvec', 'endsample', datendsample)); % every artifact is a "channel"
+        opt.artdata.label          = cat(1,opt.artdata.label,'arousal');
+    end
+    
+    if length(opt.artdata.label) > 9
+        ft_warning('only up to 9 artifacts/arousal groups supported using different colors')
+        opt.artcolors = cat(1,opt.artcolors(1:9,1:3),hsv(length(artlabel)-9));
+    end
+%     if strcmp(opt.artdata.label{opt.ftsel},'arousal') % if it is an arousal
+%         opt.ftsel = opt.ftsel + 1;
+%     end
+%     if opt.ftsel > numel(opt.artdata.label)
+%         opt.ftsel = 1;
+%     end
 end
 
 end

@@ -187,6 +187,10 @@ switch cfg.datatype
         	writetable(scoring.arousals,[filename '.arousals.tsv'],'FileType','text','WriteVariableNames',true,'Delimiter','\t')
         end
         
+        if isfield(scoring,'artifacts')
+        	writetable(scoring.artifacts,[filename '.artifacts.tsv'],'FileType','text','WriteVariableNames',true,'Delimiter','\t')
+        end
+        
         if isfield(scoring,'events')
         	writetable(scoring.events,[filename '.events.tsv'],'FileType','text','WriteVariableNames',true,'Delimiter','\t')
         end

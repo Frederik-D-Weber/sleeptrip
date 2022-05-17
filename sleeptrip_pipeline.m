@@ -296,10 +296,6 @@ cfg.figureoutputformat = 'pdf';
 
 [figure_handle figure_axis_handle] = st_hypnoplot(cfg, scoring);
 % close(figure_handle) close the figure automatically e.g. after exporting
-scoring.sleepopon = 1000;
-scoring.sleepopoff = 2000;
-scoring.lightson = 2500;
-
 
 %practice: play around with the plotting paramters. Export the file as a
 %pdf or a png, change the figure dimensions and resolution, manipulate the
@@ -541,7 +537,7 @@ ft_singleplotTFR(cfg, freq_continous_pos_fooofed);
 % the power values and see how to change z axis scaling cfg.zlim (after commenting it out
 % first to check the scale) to adapt to the different transformations.
 
-%% looking at the data in the "score" browser STILL ALPHA version
+%% looking at the data in the score browser version
 cfg = [];
 cfg.renderer = 'opengl'; % to get things plotted a little faster
 cfg.scoring = scoring;
