@@ -225,6 +225,29 @@ else
     
 end
 
+%order the channel labels like in the original event files after grpstats
+%function reordered them.
+
+sp_channel_labels_ordered = unique(res_spindles_event.table.channel,'stable');
+sw_channel_labels_ordered = unique(res_slowwaves_event.table.channel,'stable');
+sp_sw_channel_labels_ordered = unique(cat(1,sp_channel_labels_ordered,sw_channel_labels_ordered),'stable');
+
+[~,inds] = ismember(sp_sw_channel_labels_ordered, res_swsp_summary.table.channel);
+inds = inds(inds ~= 0);
+res_swsp_summary.table = res_swsp_summary.table(inds,:);
+
+[~,inds] = ismember(sp_sw_channel_labels_ordered, res_swsp_channel_stat.table.sp_channel);
+inds = inds(inds ~= 0);
+res_swsp_channel_stat.table = res_swsp_channel_stat.table(inds,:);
+
+[~,inds] = ismember(sp_channel_labels_ordered, res_nonswsp_channel_stat.table.sp_channel);
+inds = inds(inds ~= 0);
+res_nonswsp_channel_stat.table = res_nonswsp_channel_stat.table(inds,:);
+    
+[~,inds] = ismember(sp_channel_labels_ordered, res_nonspsw_channel_stat.table.sw_channel);
+inds = inds(inds ~= 0);
+res_nonspsw_channel_stat.table = res_nonspsw_channel_stat.table(inds,:);
+
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
 ft_postamble trackconfig

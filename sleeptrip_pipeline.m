@@ -1053,6 +1053,8 @@ cfg = [];
 
 res_swsp_summary.table
 res_swsp_channel_stat.table
+res_nonswsp_channel_stat.table
+res_nonspsw_channel_stat.table
 
 %write out the results
 cfg = [];
