@@ -3,7 +3,7 @@ function [res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res
 % ST_SWSP find the slow-wave spindles (SW-spindles) from the resutls of st_spindles and st_slowwaves (e.g. ST_SPINDLES, ST_SLOWWAVES)
 %
 % Use as
-%   [res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp, res_nonswsp, res_nonspsw, res_excluded_sp, res_excluded_sw] = st_swsp(cfg, res_spindles_event, res_slowwaves_event)
+%   [res_swsp_summary, res_swsp_channel_stat, res_nonswsp_channel_stat, res_nonspsw_channel_stat, res_swsp_event, res_nonswsp_event, res_nonspsw_event, res_excluded_sp_event, res_excluded_sw_event] = st_swsp(cfg, res_spindles_event, res_slowwaves_event)
 %
 % Optional configuration parameters are:
 %
@@ -110,6 +110,9 @@ res_swsp_event.table.test_minus_target_delay = [];
 
 res_swsp_event.table.delay_sp_time_minus_sw_trough = res_swsp_event.table.([cfg_co.column_prefix_test cfg.SpindleTimePointColumn]) - res_swsp_event.table.sw_seconds_trough_max;
 
+res_swsp_summary.table.sp_match_fraction = res_swsp_summary.table.sp_match_grouped./res_swsp_summary.table.sp_grouped;
+res_swsp_summary.table.sw_match_fraction = res_swsp_summary.table.sp_match_grouped./res_swsp_summary.table.sw_ungrouped;
+
 
 idcols = {};
 for iGroupBy = 1:numel(cfg.groupby)
@@ -125,15 +128,34 @@ res_swsp_channel_stat.ori = functionname;
 res_swsp_channel_stat.type = 'swsp_channel_stat';
 res_swsp_channel_stat.cfg = cfg;
 
-res_swsp_channel_stat.table = grpstats(res_swsp_event.table, idcols_temp,...
-    {'mean','median','min','max','std'},...
-    'DataVars',{...
+datavars_temp = {...
     'sp_duration_seconds', 'sp_amplitude_peak2trough_max', 'sp_frequency_by_mean_pk_trgh_cnt_per_dur',...
     'sw_duration_seconds', 'sw_amplitude_peak2trough_max', 'sw_slope_to_trough_min_potential_per_second', 'sw_slope_zeroxing_to_trough_potential_per_second', 'sw_slope_trough_to_up_max_potential_per_second', 'sw_slope_trough_to_zeroxing_potential_per_second','sw_frequency_by_duration','sw_frequency_by_trough_to_peak_latency',...
-    'delay_sp_time_minus_sw_offset','delay_sp_time_minus_sw_trough','sp_lengths_ROI_seconds'});
-res_swsp_channel_stat.table.Properties.VariableNames{(strcmp(res_swsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
-res_swsp_channel_stat.table.density_per_minute = res_swsp_channel_stat.table.count ./ (res_swsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
-res_swsp_channel_stat.table.Properties.RowNames = {};
+    'delay_sp_time_minus_sw_offset','delay_sp_time_minus_sw_trough','sp_lengths_ROI_seconds'};
+
+if size(res_swsp_event.table,1) > 0
+    res_swsp_channel_stat.table = grpstats(res_swsp_event.table, idcols_temp,...
+        {'mean','median','min','max','std'},...
+        'DataVars',datavars_temp);
+    res_swsp_channel_stat.table.Properties.VariableNames{(strcmp(res_swsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
+    res_swsp_channel_stat.table.density_per_minute = res_swsp_channel_stat.table.count ./ (res_swsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
+    res_swsp_channel_stat.table.Properties.RowNames = {};
+else
+    
+    temptable = res_swsp_event.table(:,cat(2,idcols_temp,datavars_temp));
+    temptab2 = cat(2,cell2table(idcols_temp),array2table(nan(1,size(datavars_temp,2))));
+    %temptable(1,:) = temptab2(1,:);
+    temptab2.Properties.VariableNames = temptable.Properties.VariableNames;
+    res_swsp_channel_stat.table = grpstats(temptab2, idcols_temp,...
+        {'mean','median','min','max','std'},...
+        'DataVars',datavars_temp);
+    
+    res_swsp_channel_stat.table.Properties.VariableNames{(strcmp(res_swsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
+    res_swsp_channel_stat.table.density_per_minute = res_swsp_channel_stat.table.count ./ (res_swsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
+    res_swsp_channel_stat.table.Properties.RowNames = {};
+    
+    res_swsp_channel_stat.table(:,:) = [];
+end
 
 
 idcols_temp = idcols(ismember(idcols, res_nonswsp_event.table.Properties.VariableNames));
@@ -141,30 +163,67 @@ res_nonswsp_channel_stat = [];
 res_nonswsp_channel_stat.ori = functionname;
 res_nonswsp_channel_stat.type = 'nonswsp_channel_stat';
 res_nonswsp_channel_stat.cft = cfg;
-res_nonswsp_channel_stat.table = grpstats(res_nonswsp_event.table,idcols_temp,...
-    {'mean','median','min','max','std'},...
-    'DataVars',{...
-    'sp_duration_seconds', 'sp_amplitude_peak2trough_max', 'sp_frequency_by_mean_pk_trgh_cnt_per_dur','sp_lengths_ROI_seconds',...
-    });
-res_nonswsp_channel_stat.table.Properties.VariableNames{(strcmp(res_nonswsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
-res_nonswsp_channel_stat.table.density_per_minute = res_nonswsp_channel_stat.table.count ./ (res_nonswsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
-res_nonswsp_channel_stat.table.Properties.RowNames = {};
 
+datavars_temp = {'sp_duration_seconds', 'sp_amplitude_peak2trough_max', 'sp_frequency_by_mean_pk_trgh_cnt_per_dur','sp_lengths_ROI_seconds'};
+
+if size(res_nonswsp_event.table,1) > 0
+    res_nonswsp_channel_stat.table = grpstats(res_nonswsp_event.table,idcols_temp,...
+        {'mean','median','min','max','std'},...
+        'DataVars',datavars_temp);
+    res_nonswsp_channel_stat.table.Properties.VariableNames{(strcmp(res_nonswsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
+    res_nonswsp_channel_stat.table.density_per_minute = res_nonswsp_channel_stat.table.count ./ (res_nonswsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
+    res_nonswsp_channel_stat.table.Properties.RowNames = {};
+else
+    
+    temptable = res_nonswsp_event.table(:,cat(2,idcols_temp,datavars_temp));
+    temptab2 = cat(2,cell2table(idcols_temp),array2table(nan(1,size(datavars_temp,2))));
+    %temptable(1,:) = temptab2(1,:);
+    temptab2.Properties.VariableNames = temptable.Properties.VariableNames;
+    
+    res_nonswsp_channel_stat.table = grpstats(temptab2,idcols_temp,...
+        {'mean','median','min','max','std'},...
+        'DataVars',datavars_temp);
+    res_nonswsp_channel_stat.table.Properties.VariableNames{(strcmp(res_nonswsp_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
+    res_nonswsp_channel_stat.table.density_per_minute = res_nonswsp_channel_stat.table.count ./ (res_nonswsp_channel_stat.table.mean_sp_lengths_ROI_seconds/60);
+    res_nonswsp_channel_stat.table.Properties.RowNames = {};
+    
+    res_nonswsp_channel_stat.table(:,:) = [];
+    
+end
 
 idcols_temp = idcols(ismember(idcols, res_nonspsw_event.table.Properties.VariableNames));
 res_nonspsw_channel_stat = [];
 res_nonspsw_channel_stat.ori = functionname;
 res_nonspsw_channel_stat.type = 'nonspsw_channel_stat';
 res_nonspsw_channel_stat.cft = cfg;
-res_nonspsw_channel_stat.table = grpstats(res_nonspsw_event.table, idcols_temp,...
-    {'mean','median','min','max','std'},...
-    'DataVars',{...
-    'sw_duration_seconds', 'sw_amplitude_peak2trough_max', 'sw_slope_to_trough_min_potential_per_second','sw_slope_zeroxing_to_trough_potential_per_second','sw_slope_trough_to_up_max_potential_per_second','sw_slope_trough_to_zeroxing_potential_per_second','sw_frequency_by_duration','sw_frequency_by_trough_to_peak_latency','sw_lengths_ROI_seconds',...
-    });
 
-res_nonspsw_channel_stat.table.Properties.VariableNames{(strcmp(res_nonspsw_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
-res_nonspsw_channel_stat.table.density_per_minute = res_nonspsw_channel_stat.table.count ./ (res_nonspsw_channel_stat.table.mean_sw_lengths_ROI_seconds/60);
-res_nonspsw_channel_stat.table.Properties.RowNames = {};
+datavars_temp = {'sw_duration_seconds', 'sw_amplitude_peak2trough_max', 'sw_slope_to_trough_min_potential_per_second','sw_slope_zeroxing_to_trough_potential_per_second','sw_slope_trough_to_up_max_potential_per_second','sw_slope_trough_to_zeroxing_potential_per_second','sw_frequency_by_duration','sw_frequency_by_trough_to_peak_latency','sw_lengths_ROI_seconds'};
+
+if size(res_nonspsw_event.table,1) > 0
+    res_nonspsw_channel_stat.table = grpstats(res_nonspsw_event.table, idcols_temp,...
+        {'mean','median','min','max','std'},...
+        'DataVars',datavars_temp);
+    res_nonspsw_channel_stat.table.Properties.VariableNames{(strcmp(res_nonspsw_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
+    res_nonspsw_channel_stat.table.density_per_minute = res_nonspsw_channel_stat.table.count ./ (res_nonspsw_channel_stat.table.mean_sw_lengths_ROI_seconds/60);
+    res_nonspsw_channel_stat.table.Properties.RowNames = {};
+else
+    
+    temptable = res_nonspsw_event.table(:,cat(2,idcols_temp,datavars_temp));
+    temptab2 = cat(2,cell2table(idcols_temp),array2table(nan(1,size(datavars_temp,2))));
+    %temptable(1,:) = temptab2(1,:);
+    temptab2.Properties.VariableNames = temptable.Properties.VariableNames;
+    
+    res_nonspsw_channel_stat.table = grpstats(temptab2, idcols_temp,...
+        {'mean','median','min','max','std'},...
+        'DataVars',datavars_temp);
+    
+    res_nonspsw_channel_stat.table.Properties.VariableNames{(strcmp(res_nonspsw_channel_stat.table.Properties.VariableNames,'GroupCount'))} = 'count';
+    res_nonspsw_channel_stat.table.density_per_minute = res_nonspsw_channel_stat.table.count ./ (res_nonspsw_channel_stat.table.mean_sw_lengths_ROI_seconds/60);
+    res_nonspsw_channel_stat.table.Properties.RowNames = {};
+    
+    res_nonspsw_channel_stat.table(:,:) = [];
+    
+end
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
