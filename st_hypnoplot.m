@@ -59,6 +59,8 @@ function [fh, axh] = st_hypnoplot(cfg, scoring)
 %                                opportunity (or lights off moment if former is not present) 
 %                                either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
 %   cfg.title                  = string, title of the figure to export the figure
+%   cfg.xlabel                 = relabel the x-axis (Time)
+%   cfg.ylabel                 = relabel the y-axis (Sleep stage)
 %   cfg.timeticksdiff          = scalar, time difference in minutes the ticks are places from each other (default = 30);
 %   cfg.timemin                = scalar, minimal time in minutes the ticks 
 %                                have, e.g. 480 min, will plot tick at least to 480 min (default = 0);
@@ -68,10 +70,19 @@ function [fh, axh] = st_hypnoplot(cfg, scoring)
 %                                have, e.g. 480 min, will plot tick at least to 480 min (default = display all);
 %   cfg.timeunitdisplay        = string, time unit for display in the x-axis labels
 %                                either 'minutes' or 'seconds' or 'hours' or 'days'
+%                                if 'time' is provided then the
+%                                scoring.startdatetime will be used to plot
+%                                time on the clock in a 24 hours format
 %                                Note: this will not affect the other parameters like cfg.timerange to be given in minutes
 %                                (default = 'minutes')
+%   cfg.scoringstartdatetime   = provide a datetime for the start of the
+%                                scoring (not the data start)
+%                                Note: this will overwrite the scoring.startdatetime
+%                                Note: to display, this will need cfg.timeunitdisplay = 'time'
 %   cfg.considerdataoffset     = string, 'yes' or 'no' if dataoffset is represented in time axis (default = 'yes');
 %
+%   cfg.relabelstages          = relabel of the sleep stages y-axis as seen
+%                                without the relabling and event names
 %  Events can be plotted using the following options
 %
 %   cfg.eventtimes             = a Nx1 cell containing 1x? vectors of event
@@ -114,6 +125,11 @@ function [fh, axh] = st_hypnoplot(cfg, scoring)
 %                                 {[20 40]; ...
 %                                  [18, 36]; ...
 %                                  [39, 80.0]}
+%   cfg.eventvalueranges_plot  = a Nx1 logical vector of event
+%                                values ranges being plotted or not
+%                                 [1; ...
+%                                  0; ...
+%                                  1]
 %   cfg.eventvaluerangesrnddec = round event ranges to that amount of decimal (default = 2)
 %   cfg.eventcolors            = a Nx3 color matrix with 3 RGB values from 0 to 1 color for each of
 %                                 the N event types, (default = lines(N))
@@ -163,6 +179,14 @@ function [fh, axh] = st_hypnoplot(cfg, scoring)
 %  cfg.eventmaskcolor          = a 1x3 color matrix with 3 RGB values from
 %                                 0 to 1 color for the mask color
 %                                 default = [1 1 1] i.e. white
+%  cfg.offset_event_y          = offset in the y-axis of the events being
+%                                plotted. 0 means default above hypnogram, 
+%                                negative numbers mean lower, positive mean higher (default = 0)
+%  cfg.ploteventboundaryticks = a Nx1 logical vector for each event
+%                                if the minor ticks (indicating event boundaries/range) should be plotted or not
+%                                 [1; ...
+%                                  1; ...
+%                                  1] (default = true for every event type)
 %
 % If you wish to export the figure then define also the following
 %   cfg.figureoutputfile       = string, file to export the figure
@@ -266,6 +290,7 @@ cfg.eventheight             = ft_getopt(cfg, 'eventheight', 0.4);
 cfg.eventalign              = ft_getopt(cfg, 'eventalign', 'center');
 cfg.eventminscale           = ft_getopt(cfg, 'eventminscale', 0.1);
 cfg.eventsmoothing          = ft_getopt(cfg, 'eventsmoothing', 'no');
+cfg.offset_event_y          = ft_getopt(cfg, 'offset_event_y', 0);
 
 
 if (scoring.epochlength ~= round(scoring.epochlength)) && strcmp(cfg.plottype,'classic')
@@ -276,6 +301,17 @@ if strcmp(cfg.considerdataoffset, 'yes')
     offsetseconds = scoring.dataoffset;
 else
     offsetseconds = 0;
+end
+
+hasDT = false;
+if isfield(scoring,'startdatetime')
+    hasDT = true;
+    startdatetime = scoring.startdatetime;
+end
+
+if isfield(cfg,'scoringstartdatetime')
+    hasDT = true;
+    startdatetime = cfg.scoringstartdatetime;
 end
 
 cfg.eventsmoothing_windowseconds = ft_getopt(cfg, 'eventsmoothing_windowseconds', scoring.epochlength);
@@ -326,6 +362,9 @@ end
 if (~isfield(cfg, 'eventtimes') && isfield(cfg, 'eventlabels'))  
     ft_error(' cfg.eventtimes needs to be defined for the cfg.eventlabels and  have to be defined togehter.');
 end
+
+
+
 
 if isfield(cfg, 'eventtimes')
     nEventTypes = numel(cfg.eventtimes);
@@ -447,6 +486,25 @@ if isfield(cfg, 'eventvalueranges')
     end
 end
 
+if isfield(cfg, 'eventvalueranges_plot')
+    if numel(cfg.eventtimes) ~=  numel(cfg.eventvalueranges_plot)
+        ft_error('dimensions of cfg.eventtimes and cfg.eventvalueranges_plot do not match.');
+    end
+end
+
+if isfield(cfg, 'ploteventboundaryticks')
+    if numel(cfg.eventtimes) ~=  numel(cfg.ploteventboundaryticks)
+        ft_error('dimensions of cfg.eventtimes and cfg.ploteventboundaryticks do not match.');
+    end
+end
+
+if isfield(cfg, 'eventtimes') && ~isfield(cfg, 'eventvalueranges_plot')
+    cfg.eventvalueranges_plot = logical(ones(numel(cfg.eventtimes),1));
+end 
+
+if isfield(cfg, 'eventtimes') && ~isfield(cfg, 'ploteventboundaryticks')
+    cfg.ploteventboundaryticks = logical(ones(numel(cfg.eventtimes),1));
+end 
 
 if isfield(cfg, 'eventcolors') && istrue(cfg.eventcolorsbystagecolor)
     ft_warning('cfg.eventcolors will be ignored because cfg.eventcolorsbystagecolor = ''yes''.')
@@ -701,6 +759,8 @@ end
 height = 1;
 
 yTick_Stages_range = [min(yTick)-height/2 max(yTick)+height/2];
+yTick_Stages_range_mask = [min(yTick)-height/2 (max(yTick)+min(0,cfg.offset_event_y+1.25))+height/2];
+
 
 plot_exclude_offset = min(yTick) -2;
 
@@ -711,13 +771,22 @@ end
 
 switch cfg.plottype
     case 'colorbar'
-
-    otherwise
-        if isfield(cfg,'relabel')
-            if numel(cfg.relabel)==numel(yTickLabel_mod)
-                yTickLabel_mod = cfg.relabel;
+        if isfield(cfg,'relabelstages')
+            if numel(cfg.relabelstages)==1
+                if ~iscell(cfg.relabelstages)
+                    cfg.relabelstages = {cfg.relabelstages};
+                end
+                yTickLabel_mod = cfg.relabelstages;
             else
-                ft_error('the relabels ''%s'' need to match the size and order of ''%s''',strjoin(cfg.relabel),strjoin(yTickLabel_mod))
+                ft_error('the number of relabels ''%s'' must be a cell of with one string in it.',strjoin(cfg.relabelstages),strjoin(yTickLabel_mod))
+            end
+        end
+    otherwise
+        if isfield(cfg,'relabelstages')
+            if numel(cfg.relabelstages)==numel(yTickLabel_mod)
+                yTickLabel_mod = cfg.relabelstages;
+            else
+                ft_error('the relabels ''%s'' need to match the size and order of ''%s''',strjoin(cfg.relabelstages),strjoin(yTickLabel_mod))
             end
         end
 end
@@ -985,7 +1054,7 @@ eventTimeMaxSeconds = cfg.timemin*60;
 % eventHeight = cfg.eventheight;
 % offset_step = eventHeight*1.25; %0.5
 offset_step_prev = 0.5;
-offset_event_y = max(yTick);
+offset_event_y = max(yTick) + cfg.offset_event_y;
 
 switch cfg.plottype
     case {'colorbar', 'colorblocks', 'deepcolorblocks', 'colorblocksN1N2N3S4', 'colorblocksN2N3S4', 'colorblocksN3S4'}
@@ -1016,9 +1085,6 @@ max_temp_x_all = max_temp_x_all/60;
 plotYMinorTicks = false;
 eventYMinorTicks = [];
 if isfield(cfg, 'eventtimes')
-    
-   
-    
     nEvents = numel(cfg.eventtimes);
     if istrue(cfg.eventcolorsbystagecolor)
         [epoch_colors_unknown labels_ordered] = st_epoch_colors({'?'},cfg.colorscheme); 
@@ -1064,8 +1130,9 @@ if isfield(cfg, 'eventtimes')
             offset_event_y = offset_event_y + offset_step_prev + offset_step;
             upper_Yboundary = offset_event_y + eventHeight/2;
             lower_Yboundary = offset_event_y - eventHeight/2;
-            eventYMinorTicks = cat(2, eventYMinorTicks, [lower_Yboundary upper_Yboundary]);
-            
+            if cfg.ploteventboundaryticks(iEventTypes)
+                eventYMinorTicks = cat(2, eventYMinorTicks, [lower_Yboundary upper_Yboundary]);
+            end
             offset_step_prev = offset_step;
             currEventLabel = cfg.eventlabels{iEventTypes};
             
@@ -1095,8 +1162,9 @@ if isfield(cfg, 'eventtimes')
                 event_scale_null = fw_normalize(currEventValues, min(currEventValueRanges),  max(currEventValueRanges), 0, 1)';
                 event_scale = event_scale(:);
                 event_scale_null = event_scale_null(:);
-
-                text(max_temp_x_all+1,temp_y(1),['[' num2str(min(currEventValueRanges)) ' ' num2str(max(currEventValueRanges)) ']']);
+                if cfg.eventvalueranges_plot(iEventTypes)
+                    text(max_temp_x_all+1,temp_y(1),['[' num2str(min(currEventValueRanges)) ' ' num2str(max(currEventValueRanges)) ']']);
+                end
             else
                 event_scale = ones(1,numel(currEvents))';
             end
@@ -1130,7 +1198,7 @@ if isfield(cfg, 'eventtimes')
                         hev = patch([temp_x1(iEv) temp_x2(iEv) temp_x2(iEv) temp_x1(iEv)]', [temp_plot_y(:,1) temp_plot_y(:,1) temp_plot_y(:,2) temp_plot_y(:,2)]',colorev,'edgecolor','none');
                         if isfield(cfg, 'eventmask')
                             if currEventsMask(iEv) 
-                                hev = patch([temp_x1(iEv) temp_x2(iEv) temp_x2(iEv) temp_x1(iEv)]', [yTick_Stages_range(1) yTick_Stages_range(1) yTick_Stages_range(2) yTick_Stages_range(2)]',cfg.eventmaskcolor,'edgecolor','none');
+                                hev = patch([temp_x1(iEv) temp_x2(iEv) temp_x2(iEv) temp_x1(iEv)]', [yTick_Stages_range_mask(1) yTick_Stages_range_mask(1) yTick_Stages_range_mask(2) yTick_Stages_range_mask(2)]',cfg.eventmaskcolor,'edgecolor','none');
                                 %hev = patch([temp_x1(iEv) temp_x2(iEv) temp_x2(iEv) temp_x1(iEv)]', [temp_plot_y(iEv,1) temp_plot_y(iEv,1) temp_plot_y(iEv,2) temp_plot_y(iEv,2)]',cfg.eventmaskcolor,'edgecolor','none');
                             end
                         end
@@ -1167,7 +1235,7 @@ if isfield(cfg, 'eventtimes')
                     hev = patch([temp_x1 temp_x2 temp_x2 temp_x1]', [temp_plot_y(:,1) temp_plot_y(:,1) temp_plot_y(:,2) temp_plot_y(:,2)]',color,'edgecolor','none');
                     if isfield(cfg, 'eventmask')
                         if any(currEventsMask)
-                            hev = patch([temp_x1(currEventsMask) temp_x2(currEventsMask) temp_x2(currEventsMask) temp_x1(currEventsMask)]', [(repmat(yTick_Stages_range(1),numel(temp_plot_y(currEventsMask,1)),1)) (repmat(yTick_Stages_range(1),numel(temp_plot_y(currEventsMask,1)),1)) (repmat(yTick_Stages_range(2),numel(temp_plot_y(currEventsMask,1)),1))  repmat(yTick_Stages_range(2),numel(temp_plot_y(currEventsMask,2)),1)]',cfg.eventmaskcolor,'edgecolor','none');
+                            hev = patch([temp_x1(currEventsMask) temp_x2(currEventsMask) temp_x2(currEventsMask) temp_x1(currEventsMask)]', [(repmat(yTick_Stages_range_mask(1),numel(temp_plot_y(currEventsMask,1)),1)) (repmat(yTick_Stages_range_mask(1),numel(temp_plot_y(currEventsMask,1)),1)) (repmat(yTick_Stages_range_mask(2),numel(temp_plot_y(currEventsMask,1)),1))  repmat(yTick_Stages_range_mask(2),numel(temp_plot_y(currEventsMask,2)),1)]',cfg.eventmaskcolor,'edgecolor','none');
                             %hev = patch([temp_x1(currEventsMask) temp_x2(currEventsMask) temp_x2(currEventsMask) temp_x1(currEventsMask)]', [temp_plot_y(currEventsMask,1) temp_plot_y(currEventsMask,1) temp_plot_y(currEventsMask,2) temp_plot_y(currEventsMask,2)]',cfg.eventmaskcolor,'edgecolor','none');
 
                         end
@@ -1176,7 +1244,7 @@ if isfield(cfg, 'eventtimes')
                     plot(axh,[temp_x1 temp_x1]',temp_plot_y','Color',color)
                     if isfield(cfg, 'eventmask')
                         if any(currEventsMask)
-                            plot(axh,[temp_x1(currEventsMask) temp_x2(currEventsMask)]', [(repmat(yTick_Stages_range(1),numel(temp_plot_y(currEventsMask,1)),1)) repmat(yTick_Stages_range(2),numel(temp_plot_y(currEventsMask,2)),1)]','Color',cfg.eventmaskcolor)
+                            plot(axh,[temp_x1(currEventsMask) temp_x2(currEventsMask)]', [(repmat(yTick_Stages_range_mask(1),numel(temp_plot_y(currEventsMask,1)),1)) repmat(yTick_Stages_range_mask(2),numel(temp_plot_y(currEventsMask,2)),1)]','Color',cfg.eventmaskcolor)
                             %plot(axh,[temp_x1(currEventsMask) temp_x2(currEventsMask)]', temp_plot_y(currEventsMask,:)','Color',cfg.eventmaskcolor)
                         end;
                     end
@@ -1205,10 +1273,10 @@ if strcmp(cfg.plotlightsoff, 'yes')
                 onset_y_coord = 0+onset_y_coord_offset;
             case {'colorblocks', 'deepcolorblocks', 'colorblocksN1N2N3S4', 'colorblocksN2N3S4', 'colorblocksN3S4'}
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
         end
         hold(axh,'on');
         scatter(axh,lightsoff_time,onset_y_coord,'filled','s','MarkerFaceColor',[0.38 0.38 0.38],'MarkerEdgeColor',[0 0 0])
@@ -1225,10 +1293,10 @@ if strcmp(cfg.plotlightson, 'yes')
                 onset_y_coord = 0+onset_y_coord_offset;
             case {'colorblocks', 'deepcolorblocks', 'colorblocksN1N2N3S4', 'colorblocksN2N3S4', 'colorblocksN3S4'}
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
         end
         hold(axh,'on');
         scatter(axh,lightson_time,onset_y_coord-0.25,'filled','s','MarkerFaceColor',[1 1 0],'MarkerEdgeColor',[0 0 0])
@@ -1246,10 +1314,10 @@ if strcmp(cfg.plotsleepopon, 'yes')
                 onset_y_coord = 0+onset_y_coord_offset;
             case {'colorblocks', 'deepcolorblocks', 'colorblocksN1N2N3S4', 'colorblocksN2N3S4', 'colorblocksN3S4'}
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
         end
         hold(axh,'on');
         scatter(axh,sleepopon_time,onset_y_coord-0.25,'filled','>','MarkerFaceColor',[0.38 0.38 0.38],'MarkerEdgeColor',[0 0 0])
@@ -1266,10 +1334,10 @@ if strcmp(cfg.plotsleepopoff, 'yes')
                 onset_y_coord = 0+onset_y_coord_offset;
             case {'colorblocks', 'deepcolorblocks', 'colorblocksN1N2N3S4', 'colorblocksN2N3S4', 'colorblocksN3S4'}
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
             case 'colorbar'
                 onset_y_coord_offset = 0.5;
-                onset_y_coord =  yTick(1)+onset_y_coord_offset;
+                onset_y_coord =  yTick_Stages_range(2)+onset_y_coord_offset;
         end
         hold(axh,'on');
         scatter(axh,sleepopoff_time,onset_y_coord,'filled','<','MarkerFaceColor',[0.83 0.83 0.83],'MarkerEdgeColor',[0 0 0])
@@ -1331,7 +1399,7 @@ switch cfg.plottype
         end
     case {'colorbar', 'colorblocks', 'deepcolorblocks', 'colorblocksN1N2N3S4', 'colorblocksN2N3S4', 'colorblocksN3S4'}
         temp_max_y = max(yTick)+0.5;
-        temp_min_y = min(yTick)-0.5;
+        temp_min_y = min(yTick)-0.5-0.25;
         
 end
 
@@ -1366,6 +1434,10 @@ xlim(axh,xlim_range)
 ylabel(axh,'Stages');
 ylim(axh,[temp_min_y temp_max_y])
 
+[yTick,iyTick] = sort(yTick,'descend');
+yTickLabel_mod = yTickLabel_mod(iyTick);
+[yTick,iyTick,iyTickold] = unique(yTick,'stable');
+yTickLabel_mod = yTickLabel_mod(iyTick);
 set(axh, 'yTick', flip(yTick));
 set(axh, 'yTickLabel', flip(yTickLabel_mod));
 set(axh, 'TickDir','out');
@@ -1392,11 +1464,28 @@ switch cfg.timeunitdisplay
     case {'d' 'day' 'days'}
         set(axh, 'xTickLabel', arrayfun(@num2str,round(xTick/(60*24),3),'UniformOutput',false)); 
         timeunit = 'd';
+    case {'t' 'time' 'Time'}
+        if hasDT && strcmp(cfg.timeunitdisplay, 'time')
+            dt_xlim_start = startdatetime - seconds(offsetseconds);
+            dt_xlim_end = (dt_xlim_start+minutes(diff(xlim_range)));
+            dt_xlim_tick_temp = dateshift(dt_xlim_start,'start','hour'):minutes(cfg.timeticksdiff):dateshift(dt_xlim_end,'end','hour');
+            dt_xlim_tick_temp = dt_xlim_tick_temp((dt_xlim_tick_temp >= dt_xlim_start) & (dt_xlim_end <= dt_xlim_end));
+            
+            dt_xlim_tick_temp_minutes_in_range = minutes(dt_xlim_tick_temp-dt_xlim_start);
+            dt_xlim_tick_temp_minutes_in_range_labels = datestr(dt_xlim_tick_temp,'HH:MM');
+            set(axh, 'xTick', dt_xlim_tick_temp_minutes_in_range);
+            set(axh, 'xTickLabel', dt_xlim_tick_temp_minutes_in_range_labels); 
+
+        else
+            ft_error('using cfg.timeunitdisplay = ''time'' you need to provide a datetime in either the scoring with scoring.startdatetime or cfg.scoringstartdatetime ')
+        end
+        
+        timeunit = '';
 end
     
 set(axh, 'box', 'off')
 
-if plotYMinorTicks
+if plotYMinorTicks && istrue(any(cfg.ploteventboundaryticks))
     axh.YAxis.MinorTick = 'on';
     axh.YAxis.MinorTickValues = eventYMinorTicks;
 end
@@ -1414,9 +1503,22 @@ end
 %     line([x_pos_begin x_pos_begin],[plot_exclude_offset temp_max_y],'color',[0.25 0.125 1],'parent',axh);
 
 %titleName = sprintf('Hypnogram_datasetnum_%d_file_%d',iData,iHyp);
-xlabel(['Time [' timeunit ']']);
-ylabel('Sleep stage');
 
+if isfield(cfg,'xlabel')
+    xlabel(axh,cfg.xlabel)
+else
+    if isempty(timeunit)
+        xlabel(axh,['Time']);
+    else
+        xlabel(axh,['Time [' timeunit ']']);
+    end
+end
+
+if isfield(cfg,'ylabel')
+    ylabel(axh,cfg.ylabel)
+else
+    ylabel(axh,'Sleep stage');
+end
 
 cfg = st_adjustfigure(cfg,hhyp);
 

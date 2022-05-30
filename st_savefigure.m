@@ -37,10 +37,22 @@ timestampfix = '';
         end
         subfolderpath = [subfolderpath cfg.functionname filesep cfg.subfolder];
         [path filename ext] = fileparts(cfg.figureoutputfile);
-        cfg.figureoutputfile = [subfolderpath filesep filename timestampfix ext];
+        postpath = subfolderpath;
+        if ~isempty(postpath)
+            postpath = [path filesep];
+        else
+            postpath = [path];
+        end
+        cfg.figureoutputfile = [postpath filename timestampfix ext];
     else
         [path filename ext] = fileparts(cfg.figureoutputfile);
-        cfg.figureoutputfile = [path filesep filename timestampfix ext];
+        postpath = path;
+        if ~isempty(postpath)
+            postpath = [path filesep];
+        else
+            postpath = [path];
+        end
+        cfg.figureoutputfile = [postpath filename timestampfix ext];
     end
             
     switch cfg.figureoutputformat
