@@ -611,11 +611,12 @@ cfg.quick = 'yes'; % if you want to do quick and dirty determination
 % cfg.segmentlength = scoring.epochlength;
 % cfg.segmentoverlap = 0;
 cfg.fooof = 'yes'; % this will also put the fooofed signals in the res_power_bin
-[res_power_bin, res_power_band] = st_power(cfg, data);
+[res_power_bin, res_power_band, res_power_fooof] = st_power(cfg, data);
 
 %let us take a look
 res_power_bin.table
 res_power_band.table
+res_power_fooof.table
 
 
 %export the data
@@ -623,7 +624,7 @@ cfg = [];
 cfg.prefix = 'example';
 cfg.infix  = subject.name;
 cfg.postfix = '';
-filelist_res_power = st_write_res(cfg, res_power_bin, res_power_band); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
+filelist_res_power = st_write_res(cfg, res_power_bin, res_power_band, res_power_fooof); % write mutliple results with  st_write_res(cfg, res_sleep1, res_sleep2)
 
 %practice: use different frequency bands and ranges, what do you notice,
 %what happens if the sleep stage is not present in the data? use the

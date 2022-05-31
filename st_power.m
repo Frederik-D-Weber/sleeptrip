@@ -1,4 +1,4 @@
-function [res_power_bin, res_power_band] = st_power(cfg, data)
+function [res_power_bin, res_power_band, res_power_fooof] = st_power(cfg, data)
 
 % ST_POWER calculates power and power density as well as engergy and energy
 % density based on Welch's method with FFTs to overlapping data segments of a length that   
@@ -6,8 +6,8 @@ function [res_power_bin, res_power_band] = st_power(cfg, data)
 % results are stored it in a result structure
 %
 % Use as
-%   [res_power_bin res_power_band] = st_power(cfg, data)
-%   [res_power_bin res_power_band] = st_power(cfg)
+%   [res_power_bin, res_power_band, res_power_fooof] = st_power(cfg, data)
+%   [res_power_bin, res_power_band, res_power_fooof] = st_power(cfg)
 %
 % Required configuration parameters are:
 %   cfg.scoring  = structure provided by ST_READ_SCORING
@@ -854,8 +854,11 @@ res_power_band.table = table(...
 nFreqs = length(pFreq);
 
 nRows = nChannels*nFreqs;
+nRows_fooof = nChannels;
 
 chs = cell(nRows,1);
+chs_fooof = cell(nRows_fooof,1);
+
 pFreqs = zeros(nRows,1);
 
 band_ch_meanPowerMeanOverSegmentss = zeros(nRows,1);
@@ -864,6 +867,21 @@ band_ch_meanPowerSumOverSegmentss = zeros(nRows,1);
 band_ch_meanPowerSumOverSegmentss_density = zeros(nRows,1);
 
 if istrue(cfg.fooof)
+    fooof_pow_freq_min = nan(nRows_fooof,1);
+    fooof_pow_freq_max = nan(nRows_fooof,1);
+    
+    fooof_powsumed_r_squared = nan(nRows_fooof,1);
+    fooof_powmeand_r_squared = nan(nRows_fooof,1);
+    
+    fooof_powsumed_error = nan(nRows_fooof,1);
+    fooof_powmeand_error = nan(nRows_fooof,1);
+    
+    fooof_powsumed_aperiodics_exponent = nan(nRows_fooof,1);
+    fooof_powmeaned_aperiodics_exponent = nan(nRows_fooof,1);
+    
+    fooof_powsumed_aperiodics_offset = nan(nRows_fooof,1);
+    fooof_powmeaned_aperiodics_offset = nan(nRows_fooof,1);
+    
     band_ch_meanPowerMeanOverSegmentss_fooofed = zeros(nRows,1);
     band_ch_meanPowerMeanOverSegments_density_fooofed = zeros(nRows,1);
     band_ch_meanPowerSumOverSegmentss_fooofed = zeros(nRows,1);
@@ -883,6 +901,12 @@ if istrue(cfg.fooof)
     band_ch_meanPowerMeanOverSegments_density_fooofed_aperiodic_fit = zeros(nRows,1);
     band_ch_meanPowerSumOverSegmentss_fooofed_aperiodic_fit = zeros(nRows,1);
     band_ch_meanPowerSumOverSegmentss_density_fooofed_aperiodic_fit = zeros(nRows,1);
+    
+    band_ch_meanPowerMeanOverSegmentss_fooofed_FWE = zeros(nRows,1);
+    band_ch_meanPowerMeanOverSegments_density_fooofed_FWE = zeros(nRows,1);
+    band_ch_meanPowerSumOverSegmentss_fooofed_FWE = zeros(nRows,1);
+    band_ch_meanPowerSumOverSegmentss_density_fooofed_FWE = zeros(nRows,1);
+    
 end
         
 
@@ -902,9 +926,28 @@ for iChan = 1:nChannels
     tPowSumed = squeeze(sum(pPower(:,iChan,:),1));
     tPowMeaned = squeeze(mean(pPower(:,iChan,:),1));
     if istrue(cfg.fooof)
-        [temppow fooof_tPowSumed, freqs] = st_fooof(cfg, tPowSumed, pFreq);
-        [temppow fooof_tPowMeaned, freqs] = st_fooof(cfg, tPowMeaned, pFreq);
+        [temppow fooof_tPowSumed, freqs, fooof_ePeaks_powSumed, eAperiodics_tPowSumed, fooof_eStats_powSumed] = st_fooof(cfg, tPowSumed, pFreq);
+        [temppow fooof_tPowMeaned, freqs, fooof_ePeaks_powMeaned, eAperiodics_tPowMeaned, fooof_eStats_powMeaned] = st_fooof(cfg, tPowMeaned, pFreq);
+        
+        chs_fooof{iChan} = ch;
+        
+        fooof_pow_freq_min(iChan) = min(freqs);
+        fooof_pow_freq_max(iChan) = max(freqs);
+        
+        fooof_powsumed_r_squared(iChan) = fooof_tPowSumed.r_squared;
+        fooof_powmeand_r_squared(iChan) = fooof_tPowMeaned.r_squared;
+        
+        fooof_powsumed_error(iChan) = fooof_tPowSumed.error;
+        fooof_powmeand_error(iChan) = fooof_tPowMeaned.error;
+
+        fooof_powsumed_aperiodics_exponent(iChan) = eAperiodics_tPowSumed.exponent;
+        fooof_powmeaned_aperiodics_exponent(iChan) = eAperiodics_tPowMeaned.exponent;
+        
+        fooof_powsumed_aperiodics_offset(iChan) = eAperiodics_tPowSumed.offset;
+        fooof_powmeaned_aperiodics_offset(iChan) = eAperiodics_tPowMeaned.offset;
     end
+    
+    
     
     for iFreq = 1:nFreqs
         iRow = (iChan - 1)*nFreqs + iFreq;
@@ -937,6 +980,11 @@ for iChan = 1:nChannels
             band_ch_meanPowerMeanOverSegments_density_fooofed_aperiodic_fit(iRow) = fooof_tPowMeaned.ap_fit(iFreq)/ENBW;
             band_ch_meanPowerSumOverSegmentss_fooofed_aperiodic_fit(iRow) = fooof_tPowSumed.ap_fit(iFreq);
             band_ch_meanPowerSumOverSegmentss_density_fooofed_aperiodic_fit(iRow) = fooof_tPowSumed.ap_fit(iFreq)/ENBW;
+            
+            band_ch_meanPowerMeanOverSegmentss_fooofed_FWE(iRow) = fooof_eStats_powMeaned.frequency_wise_error(iFreq);
+            band_ch_meanPowerMeanOverSegments_density_fooofed_FWE(iRow) = fooof_eStats_powMeaned.frequency_wise_error(iFreq)/ENBW;
+            band_ch_meanPowerSumOverSegmentss_fooofed_FWE(iRow) = fooof_eStats_powSumed.frequency_wise_error(iFreq);
+            band_ch_meanPowerSumOverSegmentss_density_fooofed_FWE(iRow) = fooof_eStats_powSumed.frequency_wise_error(iFreq);
         end
             
     end
@@ -981,6 +1029,10 @@ if istrue(cfg.fooof)
     band_ch_meanPowerMeanOverSegments_density_fooofed_aperiodic_fit,...
     band_ch_meanPowerSumOverSegmentss_fooofed_aperiodic_fit,...
     band_ch_meanPowerSumOverSegmentss_density_fooofed_aperiodic_fit,...
+    band_ch_meanPowerMeanOverSegmentss_fooofed_FWE,...
+    band_ch_meanPowerMeanOverSegments_density_fooofed_FWE,...
+    band_ch_meanPowerSumOverSegmentss_fooofed_FWE,...
+    band_ch_meanPowerSumOverSegmentss_density_fooofed_FWE,...
     'VariableNames',{...
     'mean_power_over_segments_fooofed',...
     'mean_powerDensity_over_segments_fooofed',...
@@ -998,9 +1050,36 @@ if istrue(cfg.fooof)
     'mean_powerDensity_over_segments_fooofed_aperiodic_fit',...
     'arb_energy_over_segments_fooofed_aperiodic_fit',...
     'arb_energyDensity_over_segments_fooofed_aperiodic_fit'...
+    'mean_power_over_segments_fooofed_freq_wise_error',...
+    'mean_powerDensity_over_segments_fooofed_freq_wise_error',...
+    'arb_energy_over_segments_fooofed_freq_wise_error',...
+    'arb_energyDensity_over_segments_fooofed_freq_wise_error'...
     }...
     ));
 end
+
+
+
+
+res_power_fooof = [];
+res_power_fooof.ori = functionname;
+res_power_fooof.type = 'power_fooof';
+res_power_fooof.cfg = cfg;
+res_power_fooof.table = table(...
+    chs_fooof,...
+    fooof_pow_freq_min,fooof_pow_freq_max,...
+    fooof_powmeand_r_squared,fooof_powsumed_r_squared,...
+    fooof_powmeand_error,fooof_powsumed_error,...
+    fooof_powmeaned_aperiodics_exponent,fooof_powsumed_aperiodics_exponent,...
+    fooof_powmeaned_aperiodics_offset,fooof_powsumed_aperiodics_offset,...
+    'VariableNames',{...
+    'channel',...
+    'freq_min','freq_max',...
+    'fooof_power_fit_r_squared','fooof_energy_fit_r_squared',...
+    'fooof_power_fit_mean_square_error','fooof_energy_fit_mean_square_error',...
+    'fooof_power_fit_exponent','fooof_energy_fit_exponent',...
+    'fooof_power_fit_offset','fooof_energy_fit_offset'}...
+    );
 
 
 
