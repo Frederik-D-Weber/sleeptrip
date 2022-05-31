@@ -866,21 +866,23 @@ band_ch_meanPowerMeanOverSegments_density = zeros(nRows,1);
 band_ch_meanPowerSumOverSegmentss = zeros(nRows,1);
 band_ch_meanPowerSumOverSegmentss_density = zeros(nRows,1);
 
+
+fooof_pow_freq_min = nan(nRows_fooof,1);
+fooof_pow_freq_max = nan(nRows_fooof,1);
+
+fooof_powsumed_r_squared = nan(nRows_fooof,1);
+fooof_powmeand_r_squared = nan(nRows_fooof,1);
+
+fooof_powsumed_error = nan(nRows_fooof,1);
+fooof_powmeand_error = nan(nRows_fooof,1);
+
+fooof_powsumed_aperiodics_exponent = nan(nRows_fooof,1);
+fooof_powmeaned_aperiodics_exponent = nan(nRows_fooof,1);
+
+fooof_powsumed_aperiodics_offset = nan(nRows_fooof,1);
+fooof_powmeaned_aperiodics_offset = nan(nRows_fooof,1);
+
 if istrue(cfg.fooof)
-    fooof_pow_freq_min = nan(nRows_fooof,1);
-    fooof_pow_freq_max = nan(nRows_fooof,1);
-    
-    fooof_powsumed_r_squared = nan(nRows_fooof,1);
-    fooof_powmeand_r_squared = nan(nRows_fooof,1);
-    
-    fooof_powsumed_error = nan(nRows_fooof,1);
-    fooof_powmeand_error = nan(nRows_fooof,1);
-    
-    fooof_powsumed_aperiodics_exponent = nan(nRows_fooof,1);
-    fooof_powmeaned_aperiodics_exponent = nan(nRows_fooof,1);
-    
-    fooof_powsumed_aperiodics_offset = nan(nRows_fooof,1);
-    fooof_powmeaned_aperiodics_offset = nan(nRows_fooof,1);
     
     band_ch_meanPowerMeanOverSegmentss_fooofed = zeros(nRows,1);
     band_ch_meanPowerMeanOverSegments_density_fooofed = zeros(nRows,1);
