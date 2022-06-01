@@ -1,7 +1,21 @@
 function [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg, data)
 
 % ST_REMS detects rapid eye movements during sleep and their properties.
-% results are stored it in a result structure
+% results are stored it in result structures
+% Ideally two channels with EOG deviations are given: 
+% where one electrode placed 1 cm above and slightly lateral to the outer canthus of one eye (left side of the head). 
+% The second placed 1 cm below and slightly lateral to the outer canthus of the other eye (right side of the head). 
+% with both electrodes then referenced to the left mastoid to result in two
+% anticorrelated EOG channles.
+% 
+% Algorithm and implementation adapted from:
+%     Adamczyk, M., Fulda, S., Pawlowski, M., Steiger, A., Holsboer, F., & Friess, E. (2011). 
+%     Robust and stable automatic detection of rapid-eye movements in REM sleep. 
+%     Pharmacopsychiatry, 21(06), A2.
+%
+%     Pawlowski, M. A., Gazea, M., Wollweber, B., Dresler, M., Holsboer, F., Keck, M. E., ... & Mikoteit, T. (2017). 
+%     Heart rate variability and cordance in rapid eye movement sleep as biomarkers of depression and treatment response. 
+%     Journal of psychiatric research, 92, 64-73.
 %
 % Use as
 %   [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg)
@@ -14,15 +28,6 @@ function [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg, dat
 %
 %  if no data structure is provided as parameter then you need to define
 %   cfg.dataset  = string with the filename
-%
-% THE DEFAULT options are an adapted and improved version of the Mölle et
-%             al. 2002-2013 papers, with improved filters, narrower
-%             frequency ranges (i.e. 2 Hz symetrically around center frequency)
-%             correct window size of 0.2 s
-%             using a stricter criterion to filter some spinldes like 200 uV
-%             amplitude (cfg.minamplitude)
-%             and minimal threshold factor of 1.75 of the std (instead of cfg.factorthresholdcriterion = 1.5)
-%             and the maximal duration set to 2 seconds (instead of 3)
 %
 % Optional configuration parameters are:
 %

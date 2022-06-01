@@ -1505,6 +1505,7 @@ for iDataset = 1:nDatasets
     subject.standard           = 'rk'; % 'aasm' or 'rk'
     subject.scoring_dataoffset = 0;
     subject.eegchannels        = {'C3:A2', 'C4:A1'};
+    subject.eogchannels        = {'HEOG', 'VEOG'};
     
     %save subject individually
     save(['subject-' num2str(iDataset)],'subject');
@@ -1653,6 +1654,38 @@ cfg.prefix = 'example_multi';
 cfg.infix  = '';
 cfg.postfix = '';
 filelist_res_slowwaves_appended = st_write_res(cfg, res_slowwaves_channels_appended, res_slowwaves_events_appended);
+
+%% detect REMs (only as an example, in practice you need 2 proper channels like from AASM 'EOGLeft:M1','EOGRight:M1' (i.e. linked to one mastoid) and NOT 'HEOG' or 'VEOG'
+
+res_rems_channels = cell(1,numel(subjects));
+res_rems_events = cell(1,numel(subjects));
+res_rems_summarys = cell(1,numel(subjects));
+
+for iSubject = 1:numel(subjects)
+    subject = subjects{iSubject};
+    cfg = [];
+    cfg.scoring          = scoring_cycles_firsts{iSubject};
+    cfg.dataset          = subject.dataset;
+    %cfg.channel = {'EOGLeft:M1','EOGRight:M1'};
+    cfg.channel          = subject.eegchannels;
+    %cfg.RemoveSignalThatIsNotREM = 'no';
+    [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg);
+    
+    res_rems_channels{iSubject} = res_rems_channel;
+    res_rems_events{iSubject} = res_rems_event;
+    res_rems_summarys{iSubject} = res_rems_summary;
+end
+
+% put the results together and write them out
+[res_rems_channels_appended] = st_append_res(res_rems_channels{:});
+[res_rems_events_appended] = st_append_res(res_rems_events{:});
+[res_rems_summarys_appended] = st_append_res(res_rems_summarys{:});
+
+cfg = [];
+cfg.prefix = 'example_multi';
+cfg.infix  = '';
+cfg.postfix = '';
+filelist_res_rems_appended = st_write_res(cfg, res_rems_channels_appended, res_rems_events_appended, res_rems_summarys_appended);
 
 %% plot spindles and slow waves on a hypnogram per subject and save as pdf
 
