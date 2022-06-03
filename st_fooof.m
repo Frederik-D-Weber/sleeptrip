@@ -874,52 +874,54 @@ function [model_params,peak_function] = fit_peaks(freqs, flat_iter, max_n_peaks,
 %       -------
 %       gaussian_params : mx3 array, where m = No. of peaks.
 %           Parameters that define the peak fit(s). Each row is a peak, as [mean, height, st. dev. (gamma)].
-    switch peakType 
-        case 'gaussian' % gaussian only
-            peak_function = @gaussian; % Identify peaks as gaussian
-            % Initialize matrix of guess parameters for gaussian fitting.
-            guess_params = zeros(max_n_peaks, 3);
-            % Save intact flat_spectrum
-            flat_spec = flat_iter;
-            % Find peak: Loop through, finding a candidate peak, and fitting with a guess gaussian.
-            % Stopping procedure based on either the limit on # of peaks,
-            % or the relative or absolute height thresholds.
-            for guess = 1:max_n_peaks
-                % Find candidate peak - the maximum point of the flattened spectrum.
-                max_ind = find(flat_iter == max(flat_iter));
+switch peakType
+    case 'gaussian' % gaussian only
+        peak_function = @gaussian; % Identify peaks as gaussian
+        % Initialize matrix of guess parameters for gaussian fitting.
+        guess_params = zeros(max_n_peaks, 3);
+        % Save intact flat_spectrum
+        flat_spec = flat_iter;
+        % Find peak: Loop through, finding a candidate peak, and fitting with a guess gaussian.
+        % Stopping procedure based on either the limit on # of peaks,
+        % or the relative or absolute height thresholds.
+        for guess = 1:max_n_peaks
+            % Find candidate peak - the maximum point of the flattened spectrum.
+            max_ind = find(flat_iter == max(flat_iter));
+            if ~isempty(max_ind)
+                
                 max_height = flat_iter(max_ind);
-
+                
                 % Stop searching for peaks once max_height drops below height threshold.
                 if max_height <= peak_threshold * std(flat_iter)
                     break
                 end
-
+                
                 % Set the guess parameters for gaussian fitting - mean and height.
                 guess_freq = freqs(max_ind);
                 guess_height = max_height;
-
+                
                 % Halt fitting process if candidate peak drops below minimum height.
                 if guess_height <= min_peak_height
                     break
                 end
-
+                
                 % Data-driven first guess at standard deviation
                 % Find half height index on each side of the center frequency.
                 half_height = 0.5 * max_height;
-
+                
                 le_ind = sum(flat_iter(1:max_ind) <= half_height);
                 ri_ind = length(flat_iter) - sum(flat_iter(max_ind:end) <= half_height);
-
+                
                 % Keep bandwidth estimation from the shortest side.
                 % We grab shortest to avoid estimating very large std from overalapping peaks.
                 % Grab the shortest side, ignoring a side if the half max was not found.
                 % Note: will fail if both le & ri ind's end up as None (probably shouldn't happen).
                 short_side = min(abs([le_ind,ri_ind]-max_ind));
-
+                
                 % Estimate std from FWHM. Calculate FWHM, converting to Hz, get guess std from FWHM
                 fwhm = short_side * 2 * (freqs(2)-freqs(1));
                 guess_std = fwhm / (2 * sqrt(2 * log(2)));
-
+                
                 % Check that guess std isn't outside preset std limits; restrict if so.
                 % Note: without this, curve_fitting fails if given guess > or < bounds.
                 if guess_std < gauss_std_limits(1)
@@ -928,36 +930,39 @@ function [model_params,peak_function] = fit_peaks(freqs, flat_iter, max_n_peaks,
                 if guess_std > gauss_std_limits(2)
                     guess_std = gauss_std_limits(2);
                 end
-
+                
                 % Collect guess parameters.
                 guess_params(guess,:) = [guess_freq, guess_height, guess_std];
-
+                
                 % Subtract best-guess gaussian.
                 peak_gauss = gaussian(freqs, guess_freq, guess_height, guess_std);
                 flat_iter = flat_iter - peak_gauss;
-
+            else
             end
-            % Remove unused guesses
+        end
+        % Remove unused guesses
+        if ~isempty(guess_params)
             guess_params(guess_params(:,1) == 0,:) = [];
-
+            
             % Check peaks based on edges, and on overlap
             % Drop any that violate requirements.
             guess_params = drop_peak_cf(guess_params, proxThresh, [min(freqs) max(freqs)]);
             guess_params = drop_peak_overlap(guess_params, proxThresh);
-
-            % If there are peak guesses, fit the peaks, and sort results.
-            if ~isempty(guess_params)
-                model_params = fit_peak_guess(guess_params, freqs, flat_spec, 1, guess_weight, gauss_std_limits,hOT);
-            else
-                model_params = zeros(1, 3);
-            end
-            
-        case 'cauchy' % cauchy only
-            peak_function = @cauchy; % Identify peaks as cauchy
-            guess_params = zeros(max_n_peaks, 3);
-            flat_spec = flat_iter;
-            for guess = 1:max_n_peaks
-                max_ind = find(flat_iter == max(flat_iter));
+        end
+        % If there are peak guesses, fit the peaks, and sort results.
+        if ~isempty(guess_params)
+            model_params = fit_peak_guess(guess_params, freqs, flat_spec, 1, guess_weight, gauss_std_limits,hOT);
+        else
+            model_params = zeros(1, 3);
+        end
+        
+    case 'cauchy' % cauchy only
+        peak_function = @cauchy; % Identify peaks as cauchy
+        guess_params = zeros(max_n_peaks, 3);
+        flat_spec = flat_iter;
+        for guess = 1:max_n_peaks
+            max_ind = find(flat_iter == max(flat_iter));
+            if ~isempty(max_ind)
                 max_height = flat_iter(max_ind);
                 if max_height <= peak_threshold * std(flat_iter)
                     break
@@ -971,7 +976,7 @@ function [model_params,peak_function] = fit_peaks(freqs, flat_iter, max_n_peaks,
                 le_ind = sum(flat_iter(1:max_ind) <= half_height);
                 ri_ind = length(flat_iter) - sum(flat_iter(max_ind:end) <= half_height);
                 short_side = min(abs([le_ind,ri_ind]-max_ind));
-
+                
                 % Estimate gamma from FWHM. Calculate FWHM, converting to Hz, get guess gamma from FWHM
                 fwhm = short_side * 2 * (freqs(2)-freqs(1));
                 guess_gamma = fwhm/2;
@@ -983,31 +988,36 @@ function [model_params,peak_function] = fit_peaks(freqs, flat_iter, max_n_peaks,
                 if guess_gamma > gauss_std_limits(2)
                     guess_gamma = gauss_std_limits(2);
                 end
-
+                
                 % Collect guess parameters.
                 guess_params(guess,:) = [guess_freq(1), guess_height, guess_gamma];
-
+                
                 % Subtract best-guess cauchy.
                 peak_cauchy = cauchy(freqs, guess_freq(1), guess_height, guess_gamma);
                 flat_iter = flat_iter - peak_cauchy;
-
+            else
             end
+            
+        end
+        if ~isempty(guess_params)
+            
             guess_params(guess_params(:,1) == 0,:) = [];
             guess_params = drop_peak_cf(guess_params, proxThresh, [min(freqs) max(freqs)]);
             guess_params = drop_peak_overlap(guess_params, proxThresh);
-
-            % If there are peak guesses, fit the peaks, and sort results.
-            if ~isempty(guess_params)
-                model_params = fit_peak_guess(guess_params, freqs, flat_spec, 2, guess_weight, gauss_std_limits,hOT);
-            else
-                model_params = zeros(1, 3);
-            end
-        case 'best' % best of both: model both fits and compare error, save best
-            % Gaussian Fit
-            guess_params = zeros(max_n_peaks, 3);
-            flat_spec = flat_iter;
-            for guess = 1:max_n_peaks
-                max_ind = find(flat_iter == max(flat_iter));
+        end
+        % If there are peak guesses, fit the peaks, and sort results.
+        if ~isempty(guess_params)
+            model_params = fit_peak_guess(guess_params, freqs, flat_spec, 2, guess_weight, gauss_std_limits,hOT);
+        else
+            model_params = zeros(1, 3);
+        end
+    case 'best' % best of both: model both fits and compare error, save best
+        % Gaussian Fit
+        guess_params = zeros(max_n_peaks, 3);
+        flat_spec = flat_iter;
+        for guess = 1:max_n_peaks
+            max_ind = find(flat_iter == max(flat_iter));
+            if ~isempty(max_ind)
                 max_height = flat_iter(max_ind);
                 if max_height <= peak_threshold * std(flat_iter)
                     break
@@ -1030,29 +1040,37 @@ function [model_params,peak_function] = fit_peaks(freqs, flat_iter, max_n_peaks,
                     guess_std = gauss_std_limits(2);
                 end
                 guess_params(guess,:) = [guess_freq, guess_height, guess_std];
+                
                 peak_gauss = gaussian(freqs, guess_freq, guess_height, guess_std);
                 flat_iter = flat_iter - peak_gauss;
+            else
             end
+        end
+        if ~isempty(guess_params)
+            
             guess_params(guess_params(:,1) == 0,:) = [];
             guess_params = drop_peak_cf(guess_params, proxThresh, [min(freqs) max(freqs)]);
             guess_params = drop_peak_overlap(guess_params, proxThresh);
-            if ~isempty(guess_params)
-                gauss_params = fit_peak_guess(guess_params, freqs, flat_spec, 1, guess_weight, gauss_std_limits,hOT);
-                flat_gauss = zeros(size(freqs));
-                for peak = 1:size(gauss_params,1)
-                    flat_gauss =  flat_gauss + gaussian(freqs,gauss_params(peak,1),...
-                        gauss_params(peak,2),gauss_params(peak,3));
-                end
-                error_gauss = sum((flat_gauss-flat_spec).^2);
-            else
-                gauss_params = zeros(1, 3); error_gauss = 1E10;
+        end
+        if ~isempty(guess_params)
+            gauss_params = fit_peak_guess(guess_params, freqs, flat_spec, 1, guess_weight, gauss_std_limits,hOT);
+            flat_gauss = zeros(size(freqs));
+            for peak = 1:size(gauss_params,1)
+                flat_gauss =  flat_gauss + gaussian(freqs,gauss_params(peak,1),...
+                    gauss_params(peak,2),gauss_params(peak,3));
             end
-            
-            % Cauchy Fit
-            guess_params = zeros(max_n_peaks, 3);
-            flat_iter = flat_spec;
-            for guess = 1:max_n_peaks
-                max_ind = find(flat_iter == max(flat_iter));
+            error_gauss = sum((flat_gauss-flat_spec).^2);
+        else
+            gauss_params = zeros(1, 3); error_gauss = 1E10;
+        end
+        
+        % Cauchy Fit
+        guess_params = zeros(max_n_peaks, 3);
+        flat_iter = flat_spec;
+        for guess = 1:max_n_peaks
+            max_ind = find(flat_iter == max(flat_iter));
+            if ~isempty(max_ind)
+                
                 max_height = flat_iter(max_ind);
                 if max_height <= peak_threshold * std(flat_iter)
                     break
@@ -1075,33 +1093,39 @@ function [model_params,peak_function] = fit_peaks(freqs, flat_iter, max_n_peaks,
                     guess_gamma = gauss_std_limits(2);
                 end
                 guess_params(guess,:) = [guess_freq(1), guess_height, guess_gamma];
+                
                 peak_cauchy = cauchy(freqs, guess_freq(1), guess_height, guess_gamma);
                 flat_iter = flat_iter - peak_cauchy;
+            else
             end
+        end
+        if ~isempty(guess_params)
+            
             guess_params(guess_params(:,1) == 0,:) = [];
             guess_params = drop_peak_cf(guess_params, proxThresh, [min(freqs) max(freqs)]);
             guess_params = drop_peak_overlap(guess_params, proxThresh);
-            if ~isempty(guess_params)
-                cauchy_params = fit_peak_guess(guess_params, freqs, flat_spec, 2, guess_weight, gauss_std_limits,hOT);
-                flat_cauchy = zeros(size(freqs));
-                for peak = 1:size(cauchy_params,1)
-                    flat_cauchy =  flat_cauchy + cauchy(freqs,cauchy_params(peak,1),...
-                        cauchy_params(peak,2),cauchy_params(peak,3));
-                end
-                error_cauchy = sum((flat_cauchy-flat_spec).^2);
-            else
-                cauchy_params = zeros(1, 3); error_cauchy = 1E10;
+        end
+        if ~isempty(guess_params)
+            cauchy_params = fit_peak_guess(guess_params, freqs, flat_spec, 2, guess_weight, gauss_std_limits,hOT);
+            flat_cauchy = zeros(size(freqs));
+            for peak = 1:size(cauchy_params,1)
+                flat_cauchy =  flat_cauchy + cauchy(freqs,cauchy_params(peak,1),...
+                    cauchy_params(peak,2),cauchy_params(peak,3));
             end
-            % Save least-error model
-                if min([error_gauss,error_cauchy]) == error_gauss
-                    model_params = gauss_params;
-                    peak_function = @gaussian;
-                else
-                    model_params = cauchy_params;
-                    peak_function = @cauchy;
-                end
-    end
-            
+            error_cauchy = sum((flat_cauchy-flat_spec).^2);
+        else
+            cauchy_params = zeros(1, 3); error_cauchy = 1E10;
+        end
+        % Save least-error model
+        if min([error_gauss,error_cauchy]) == error_gauss
+            model_params = gauss_params;
+            peak_function = @gaussian;
+        else
+            model_params = cauchy_params;
+            peak_function = @cauchy;
+        end
+end
+
 end
 
 function guess = drop_peak_cf(guess, bw_std_edge, freq_range)
