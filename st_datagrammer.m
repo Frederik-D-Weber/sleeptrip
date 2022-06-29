@@ -14,14 +14,25 @@ function data = st_datagrammer(cfg, data)
 %
 %   GRAMMERS TO USE ARE:
 %     'normtomean' norms to a mean ignoring nans
+%     '< [threshold] [replace_with_constant]' replaces all values with a contstant below a certain threshold
+%     '> [threshold] [replace_with_constant]' replaces all values with a contstant above a certain threshold
+%     '<= [threshold] [replace_with_constant]' replaces all values with a contstant below a certain threshold including that threshold
+%     '>= [threshold] [replace_with_constant]' replaces all values with a contstant above a certain threshold including that threshold
+%     '= [constant] [replace_with_constant]' replaces all values with a contstant that equal to the constant
+%     'between [value1] [value2] [replace_with_constant]' replaces all values between value1 and value2 with a contstant 
+%     'between_including [value1] [value2] [replace_with_constant]' replaces all values between value1 and value2 with a contstant including values equal to value1 or value2 
 %     'min' sets the channel signal to a constant equivalent of the minimum of the signal
 %     'max' sets the channel signal to a constant equivalent of the maximum of the signal
 %     'ztransform' z-transforms the data
-%     'smooth [window_seconds]' smoothes the signal with a carbox filter with window size of [window_seconds]
+%     'smooth [window_seconds] [[type]]' smoothes the signal with a (carbox) filter with window size of [window_seconds] using the default smoothing type called 'moving' (carbox filter), other types are listed below
+%     'medianfilter [window_seconds] [[nan_treatment]] [[paddingType]]' uses a median filter with window size of [window_seconds] and optional nan treatment (either 'includenan' (default) or 'omitnan') and optional padding type ('zeropad' (default) | 'truncate'), see matlab medfilt1 documentation for detail
 %     'envpeaks [min_interval_seconds]' get the peaks of the envelope with an interval of at least [min_interval_seconds]
 %     'rect' is rectifying the data (i.e. abs(signal))
 %     'env' in creating the hilbert envelope of the signal
+%     'dev' creating the (first) deviation of the signal, note that the deviation to the first sample is always 0 to keep trial length
 %     'mult [factor]' multiplies the data with a constant [factor]
+%     'nanreplace [constant]' replaces nans in the signal with a constant number
+%     '( ... ) naninsert ( ... )' inserts nans from the first term signal before it into the second term signal after it
 %     'bp [low_Hz] [high_Hz] [[filter_order]] [[iir|fir]]' applies a band-pass filter with to preserve signal between [low_Hz] [high_Hz] with optional parameters of [filter_order] and filter type as either fir or iir fitler [[fir|iir]]
 %     'hp [low_Hz] [[filter_order]] [[iir|fir]]' applies a high-pass filter with to preserve signal above [low_Hz] with optional parameters of [filter_order] and filter type as either fir or iir fitler [[fir|iir]]
 %     'lp [high_Hz] [[filter_order]] [[iir|fir]]' applies a low-pass filter with to preserve signal below [high_Hz] with optional parameters of [filter_order] and filter type as either fir or iir fitler [[fir|iir]]
@@ -34,13 +45,27 @@ function data = st_datagrammer(cfg, data)
 %     'instfreq' for transformation into instantaenous frequency, please use apply a filter band first
 %     'waveletband [low_Hz] [high_Hz] [[filter_order]]' applies a band-pass filter based on wavelet filtering with to preserve signals activity between [low_Hz] [high_Hz] with optional parameters of [cycle_witdh] fro the width of the wavelet in number of cycles
 %     'no' apply nothing
-%     '+' add signals together sample by sample
-%     '-' substract signals from each other sample by sample
+%     '( ... ) + ( ... )' add signals together sample by sample of two terms enclosed in brackets
+%     '( ... ) - ( ... )' substract signals from each other sample by sample of two terms  enclosed in brackets
 %     '( ... )' enclose operations in brackets
 %
 %     EXAMPLE:
 %     cfg.grammer = 'hp 0.3 lp 35'
 %     cfg.grammer = '( ( bp 12 14 mult 4 ) + ( hp 0.5 lp 2 ) ) + ( bp 6 8 mult 2 )'
+%
+%    smooth types (as decribed in matlab documentation for function smooth):
+%         'moving'
+%         Moving average (default). A lowpass filter with filter coefficients equal to the reciprocal of the span.
+%         'lowess'
+%         Local regression using weighted linear least squares and a 1st degree polynomial model
+%         'loess'
+%         Local regression using weighted linear least squares and a 2nd degree polynomial model
+%         'sgolay'
+%         Savitzky-Golay filter. A generalized moving average with filter coefficients determined by an unweighted linear least-squares regression and a polynomial model of specified degree (default is 2). The method can accept nonuniform predictor data.
+%         'rlowess'
+%         A robust version of 'lowess' that assigns lower weight to outliers in the regression. The method assigns zero weight to data outside six mean absolute deviations.
+%         'rloess'
+%         A robust version of 'loess' that assigns lower weight to outliers in the regression. The method assigns zero weight to data outside six mean absolute deviations.
 %
 % See also FT_PREPROCESSING, FT_APPLY_MONTAGE
 
@@ -117,7 +142,6 @@ if (strcmp(core_cfg.hpfilttype,'FIRdesigned') || strcmp(core_cfg.hpfilttype,'IIR
     error(['high pass filter instability fix not supported for FIRdesigned or IIRdesigned'])
 end
 
-
 if ~strcmp(core_cfg.bpfilttype,'FIRdesigned')
     error(['filter type for band pass not supported, only FIRdesigned allowed'])
 end
@@ -139,6 +163,8 @@ use_bp = true;
 adapt_filter_settings_to_toolbox
 
 cfg.core_cfg = core_cfg;
+
+cfg.grammer = assure_wellformed_grammer(cfg.grammer);
 
 curr_filterdefs = strtrim(cfg.grammer);
 curr_filterdefs = strsplit(char(curr_filterdefs));
@@ -178,7 +204,10 @@ for iChannelbyOrder = 1:numel(channel_all)
         %curr_operator_applied = false;
         curr_operator_wait_for_second_term = {};
         %curr_operator = '';
-        data_store = {};%stack
+        data_store = {};%stack for brackets
+        data_stack = {};%stack for explict storage
+        data_stack_name = {};%stack for explict storage names
+        
         used_specified_filtering_once_bp = false;
         used_specified_filtering_once_hp = false;
         used_specified_filtering_once_lp = false;
@@ -189,12 +218,53 @@ for iChannelbyOrder = 1:numel(channel_all)
             FpassRight = -1;
             MultFactor = 1;
             SmoothSeconds = -1;
+            medianfilterSeconds = -1;
             conversion_state_success = true;
             useSpecifiedFilterOrder = false;
             overwriteFilterType = false;
             filterType = '';
+            smoothingType = 'moving';
+            median_nan_treatment = 'omitnan';
+            median_paddingType = 'zeropad';
+            nanreplace_constant = 0;
+            threshold_value = 0;
+            replace_value = 0;
+            between_lower = 0;
+            between_higher = 0;
             try
                 switch curr_filter
+                    case 'push'
+                        name = char(curr_filterdefs(curr_filterdefs_filterPos+1));
+                         data_stack_name{end+1} = name;%stack
+                        data_stack{end+1} = data_new{iChanCount};%stack
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
+                        continue;
+                    case 'get'
+                        name = char(curr_filterdefs(curr_filterdefs_filterPos+1));
+                        [~, iStack] = ismember(name, data_stack_name);
+                        if iStack > 0
+                            data_new{iChanCount} = data_stack{iStack};
+                        else 
+                            ft_error(['converion of grammer parameter failed for filter settings of channel '  curr_channel_label ', could not retrieve the pushed state called ' name])
+                        end
+                        data_stack{end+1} = data_new{iChanCount};%stack
+                        data_stack_name{end+1} = name;%stack
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
+                        continue;
+                    case {'<' '>' '=' '>=' '<='}
+                        [threshold_value conversion_state_success1] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
+                        [replace_value   conversion_state_success2] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+2)));
+                        conversion_state_success = conversion_state_success1 & conversion_state_success2;
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 3;
+                   case {'between' 'between_including'}
+                        [between1 conversion_state_success1] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
+                        [between2 conversion_state_success2] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+2)));
+                        [replace_value   conversion_state_success3] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+2)));
+                        between_lower = min([between1 between2]);
+                        between_higher = max([between1 between2]);
+                        conversion_state_success = conversion_state_success1 & conversion_state_success2 & conversion_state_success3;
+
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 4;
                     case 'normtomean'
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'min'
@@ -205,7 +275,48 @@ for iChannelbyOrder = 1:numel(channel_all)
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'smooth'
                         [SmoothSeconds conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
-                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
+                        temp_additional_values = 0;
+                        if conversion_state_success
+                            if (numel(curr_filterdefs) >= curr_filterdefs_filterPos+2)
+                                pot_smoothingType = char(curr_filterdefs(curr_filterdefs_filterPos+3));
+                                if any(ismember(pot_smoothingType,{'moving', 'lowess', 'loess', 'sgolay', 'sgolay', 'rlowess', 'rloess'}))
+                                    temp_additional_values = temp_additional_values + 1;
+                                    smoothingType = pot_smoothingType;
+                                end
+                            end
+                        end
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2 + temp_additional_values;
+                    case 'medianfilter'
+                        % 'medianfilter [window_seconds] [[nan_treatment]] [[paddingType]]' uses a median filter with window size of [window_seconds] and optional nan treatment (either 'includenan' (default) or 'omitnan') and optional padding type ('zeropad' (default) | 'truncate'), see matlab medfilt1 documentation for detail
+                        [medianfilterSeconds conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
+                        temp_additional_values = 0;
+                        
+                        if conversion_state_success
+                            
+                            if (numel(curr_filterdefs) >= curr_filterdefs_filterPos+2)
+                                pot_param = char(curr_filterdefs(curr_filterdefs_filterPos+3));
+                                
+                                if any(ismember(pot_smoothingType,{'omitnan', 'includenan'}))
+                                    temp_additional_values = temp_additional_values + 1;
+                                    median_nan_treatment = pot_param;
+                                elseif any(ismember(pot_smoothingType,{'zeropad', 'truncate'}))
+                                    temp_additional_values = temp_additional_values + 1;
+                                    median_paddingType = pot_param;
+                                end
+                                if (numel(curr_filterdefs) >= curr_filterdefs_filterPos+3)
+                                    pot_param = char(curr_filterdefs(curr_filterdefs_filterPos+4));
+                                    if any(ismember(pot_smoothingType,{'omitnan', 'includenan'}))
+                                        temp_additional_values = temp_additional_values + 1;
+                                        median_nan_treatment = pot_param;
+                                    elseif any(ismember(pot_smoothingType,{'zeropad', 'truncate'}))
+                                        temp_additional_values = temp_additional_values + 1;
+                                        median_paddingType = pot_param;
+                                    end
+                                end
+                                
+                            end
+                        end
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2 + temp_additional_values;
                     case 'envpeaks'
                         [minPeakDistanceSeconds conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
@@ -213,12 +324,17 @@ for iChannelbyOrder = 1:numel(channel_all)
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'env'
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
+                    case 'dev'
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'instfreq'
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case {'phase_wrapped_rad', 'phase_wrapped_deg', 'phase_wrapped_turns', 'phase_unwrapped_rad', 'phase_unwrapped_deg', 'phase_unwrapped_turns'}
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                     case 'mult'
                         [MultFactor conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
+                        curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
+                    case 'nanreplace'
+                        [nanreplace_constant conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2;
                     case {'bp', 'waveletband'}
                         [FpassLeft conversion_state_success] = str2num(char(curr_filterdefs(curr_filterdefs_filterPos+1)));
@@ -290,7 +406,7 @@ for iChannelbyOrder = 1:numel(channel_all)
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 2 + temp_additional_values;
                     case 'no'
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
-                    case {'+' '-'}
+                    case {'+' '-' 'naninsert'}
                         curr_operator_wait_for_second_term{end+1} = curr_filter;
                         curr_filterdefs_filterPos = curr_filterdefs_filterPos + 1;
                         continue;
@@ -316,6 +432,9 @@ for iChannelbyOrder = 1:numel(channel_all)
                                     data_term1 = [];
                                 case '-'
                                     data_new{iChanCount}.trial{1} = data_term1.trial{1} - data_new{iChanCount}.trial{1};
+                                    data_term1 = [];
+                                case 'naninsert'
+                                    data_new{iChanCount}.trial{1}(isnan(data_term1.trial{1})) = NaN;
                                     data_term1 = [];
                                 otherwise
                                     error(['filter not well defined for channel ' curr_channel_label])
@@ -354,6 +473,20 @@ for iChannelbyOrder = 1:numel(channel_all)
             cfg_tmp.channel = curr_channel_label;
             
             switch curr_filter
+                case '<'
+                    data_new{iChanCount}.trial{1}(data_new{iChanCount}.trial{1} < threshold_value) = replace_value;
+                case '>'
+                    data_new{iChanCount}.trial{1}(data_new{iChanCount}.trial{1} > threshold_value) = replace_value;
+                case '='
+                    data_new{iChanCount}.trial{1}(data_new{iChanCount}.trial{1} == threshold_value) = replace_value;
+                case '>='
+                    data_new{iChanCount}.trial{1}(data_new{iChanCount}.trial{1} >= threshold_value) = replace_value;
+                case '<='
+                    data_new{iChanCount}.trial{1}(data_new{iChanCount}.trial{1} <= threshold_value) = replace_value;
+                case 'between'
+                    data_new{iChanCount}.trial{1}((between_lower < data_new{iChanCount}.trial{1}) & (data_new{iChanCount}.trial{1} < between_higher)) = replace_value;
+                case 'between_including'
+                    data_new{iChanCount}.trial{1}((between_lower <= data_new{iChanCount}.trial{1}) & (data_new{iChanCount}.trial{1} <= between_higher)) = replace_value;
                 case 'normtomean'
                     data_new{iChanCount}.trial{1} = (data_new{iChanCount}.trial{1} - nanmean(data_new{iChanCount}.trial{1}));
                 case 'min'
@@ -363,13 +496,17 @@ for iChannelbyOrder = 1:numel(channel_all)
                 case 'ztransform'
                     data_new{iChanCount}.trial{1} = (data_new{iChanCount}.trial{1} - nanmean(data_new{iChanCount}.trial{1}))./nanstd(data_new{iChanCount}.trial{1});
                 case 'smooth'
-                    data_new{iChanCount}.trial{1} = smooth(data_new{iChanCount}.trial{1},max(1,round(SmoothSeconds*data_new{iChanCount}.fsample)),'moving')';
+                    data_new{iChanCount}.trial{1} = smooth(data_new{iChanCount}.trial{1},max(1,round(SmoothSeconds*data_new{iChanCount}.fsample)), smoothingType)';
+                case 'medianfilter'
+                    data_new{iChanCount}.trial{1} = medfilt1(data_new{iChanCount}.trial{1},max(1,round(medianfilterSeconds*data_new{iChanCount}.fsample)), median_nan_treatment, median_paddingType)';
                 case 'envpeaks'
-                    data_new{iChanCount}.trial{1} = envpeaks(data_new{iChanCount}.trial{1},data_new{iChanCount}.fsample,minPeakDistanceSeconds);
+                    data_new{iChanCount}.trial{1} = envpeaks(data_new{iChanCount}.trial{1},data_new{iChanCount}.fsample, minPeakDistanceSeconds);
                 case 'rect'
                     data_new{iChanCount}.trial{1} = abs(data_new{iChanCount}.trial{1});
                 case 'env'
                     data_new{iChanCount}.trial{1} = abs(hilbert(data_new{iChanCount}.trial{1}));
+                case 'dev'
+                    data_new{iChanCount}.trial{1} = [0 diff(data_new{iChanCount}.trial{1})];
                 case 'instfreq'
                     instfreq = (diff(unwrap(angle(hilbert(data_new{iChanCount}.trial{1})))) / (2.0 * pi) * fsample); 
                     if numel(instfreq) >= 1
@@ -412,6 +549,10 @@ for iChannelbyOrder = 1:numel(channel_all)
                     data_new{iChanCount}.trial{1} = unwrap(angle(hilbert(data_new{iChanCount}.trial{1})))/(2*pi);
                 case 'mult'
                     data_new{iChanCount}.trial{1} = data_new{iChanCount}.trial{1} .* MultFactor;
+                case 'nanreplace'
+                    data_new{iChanCount}.trial{1}(isnan(data_new{iChanCount}.trial{1})) = nanreplace_constant;
+                %case 'naninsert'
+                %    data_new{iChanCount}.trial{1}(isnan(data_new{iChanCount}.trial{1})) = nanreplace_constant;
                 case 'waveletband'
                     usedFilterOrder_bp = NaN;
                     bp_hdm = NaN;
@@ -644,3 +785,22 @@ function signal = envpeaks(x,fsample,seconds)
 [pks locs] = findpeaks(x,'MINPEAKDISTANCE',max(1,floor(seconds*fsample)));
 signal = interp1([1 locs numel(x)],[x(1) pks x(end)],1:numel(x),'linear');
 end
+
+function g = assure_wellformed_grammer(g)
+g = strrep(g, '(', ' ( ');
+g = strrep(g, ')', ' ) ');
+g = strrep(g, '+', ' + ');
+g = strrep(g, '-', ' - ');
+
+while ~strcmp(g,strrep(g, '  ', ' '))
+    g = strrep(g, '  ', ' ');
+end
+
+g = strrep(g, ' - - ', ' + ');
+g = strrep(g, ' + - ', ' - ');
+g = strrep(g, ' - + ', ' - ');
+g = strrep(g, ' + + ', ' + ');
+
+g = strtrim(g);
+end
+

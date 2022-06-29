@@ -24,7 +24,13 @@
 
 cfg = [];
 cfg.renderer = 'opengl';
+bg_options = {'white', 'dark'};
+[indx,tf] = listdlg('PromptString',{'Select a background color.'},...
+    'SelectionMode','single','ListString',bg_options, 'InitialValue',1);
 cfg.bgcolor = 'white'; %'dark' or 'white'
+if tf
+    cfg.bgcolor = bg_options{indx};
+end
 cfg.datainteractive = 'yes';
 cfg.colorgroups = 'jet';
 cfg.colorgroups = 'jet';

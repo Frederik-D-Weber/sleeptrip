@@ -5,10 +5,10 @@ function [samples ind_non_matching] = st_times2samples(data, times_seconds, rmna
 % continous data
 %
 % Use as
-%   samples = st_convertsamples(data, times_seconds)
-%   samples = st_convertsamples(data, times_seconds, 'rmnanrows')
-%   [samples ind_non_matching] = st_convertsamples(data, times_seconds)
-%   [samples ind_non_matching] = st_convertsamples(data, times_seconds, 'rmnanrows')
+%   samples = st_times2samples(data, times_seconds)
+%   samples = st_times2samples(data, times_seconds, 'rmnanrows')
+%   [samples ind_non_matching] = st_times2samples(data, times_seconds)
+%   [samples ind_non_matching] = st_times2samples(data, times_seconds, 'rmnanrows')
 %
 %
 %
