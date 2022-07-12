@@ -57,6 +57,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          (default = 0)
 %  cfg.fileencoding      = string, with encoding e.g. 'UTF-8', see matlab help of
 %                          READTABLE for FileEncoding, (default = '', try system specific)
+%  cfg.filetype          = how readtable function filetype assertion should be. see help for readtable for details (default = 'text')
 %  cfg.eventsoffset      = string, describing if the
 %                          event times in the original scoring file refer
 %                          either to 'scoringonset' or 'dataonset' (default
@@ -194,6 +195,7 @@ cfg.exclcolumnstr      = ft_getopt(cfg, 'exclcolumnstr', {'1', '2', '3'});
 cfg.epochlength        = ft_getopt(cfg, 'epochlength', 30);
 cfg.dataoffset         = ft_getopt(cfg, 'dataoffset', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
+cfg.filetype           = ft_getopt(cfg, 'filetype', 'text');
 cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
 
 cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
@@ -743,6 +745,10 @@ switch readoption
         parampairs = {};
         parampairs = [parampairs, {'ReadVariableNames',false}];
         %parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
+        
+        if ~isempty(cfg.filetype)
+        	parampairs = [parampairs, {'FileType',cfg.filetype}];
+        end
         
         if ~isempty(cfg.columndelimimter)
             parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
