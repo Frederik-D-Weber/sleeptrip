@@ -116,11 +116,15 @@ if istrue(cfg.resamplerereadsafe)
     if abs(data.fsample-fs2) < abs(data.fsample-fs)
         fs = fs2;
     end
-    if fs ~= data.fsample
-        ft_warning('sampling rate changed from original %f Hz to %f Hz for save storage and reading in again.',data.fsample,1e6/round(1e6/data.fsample))
-        cfg_rs = [];
-        cfg_rs.resamplefs = fs;
-        data = ft_resampledata(cfg_rs, data);
+    if fs > 0
+        if fs ~= data.fsample
+            ft_warning('sampling rate changed from original %f Hz to %f Hz for save storage and reading in again.',data.fsample,fs)
+            cfg_rs = [];
+            cfg_rs.resamplefs = fs;
+            data = ft_resampledata(cfg_rs, data);
+        end
+    else
+        ft_error('sampling rate COULD NOT BE CHANGED from original %f Hz to %f Hz for save storage.',data.fsample,fs)
     end
 end
 
