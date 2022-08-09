@@ -1527,7 +1527,7 @@ hold(axh,'off')
 if saveFigure
     cfg.functionname = functionname;
     cfg.subfolder = 'hypnograms';
-    cfg = st_savefigure(cfg,hhyp);
+    cfg = st_savefigure(cfg, hhyp);
 end
 fh = hhyp;
 

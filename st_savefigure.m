@@ -39,18 +39,18 @@ timestampfix = '';
         [path filename ext] = fileparts(cfg.figureoutputfile);
         postpath = subfolderpath;
         if ~isempty(postpath)
-            postpath = [path filesep];
+            postpath = [postpath filesep];
         else
-            postpath = [path];
+            postpath = [postpath];
         end
         cfg.figureoutputfile = [postpath filename timestampfix ext];
     else
         [path filename ext] = fileparts(cfg.figureoutputfile);
         postpath = path;
         if ~isempty(postpath)
-            postpath = [path filesep];
+            postpath = [postpath filesep];
         else
-            postpath = [path];
+            postpath = [postpath];
         end
         cfg.figureoutputfile = [postpath filename timestampfix ext];
     end
