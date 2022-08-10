@@ -202,6 +202,10 @@ function [fh, axh] = st_hypnoplot(cfg, scoring)
 %   cfg.figureoutputresolution = scalar, choose resolution in pixesl per inches (1 in = 2.54 cm) of hypnograms. (default = 300)
 %   cfg.figureoutputfontsize   = scalar, Font size in units stated in
 %                                parameter cfg.figureoutputunit (default = 0.1)
+%   cfg.figureoutputfontname   = change the figure font (e.g. 'Times' or
+%                                'Arial' or 'Helvetica'. For a list of
+%                                available fonts use the matlab function
+%                                listfonts. (default = 'Arial')
 %   cfg.timestamp              = either 'yes' or 'no' if a time stamp should be
 %                                added to filename (default = 'yes')
 %   cfg.folderstructure        = either 'yes' or 'no' if a folder structure should
@@ -281,6 +285,7 @@ cfg.figureoutputwidth       = ft_getopt(cfg, 'figureoutputwidth', 9);
 cfg.figureoutputheight      = ft_getopt(cfg, 'figureoutputheight', 3);
 cfg.figureoutputresolution  = ft_getopt(cfg, 'figureoutputresolution', 300);
 cfg.figureoutputfontsize    = ft_getopt(cfg, 'figureoutputfontsize', 0.1);
+cfg.figureoutputfontname    = ft_getopt(cfg, 'figureoutputfontname', 'Arial');
 cfg.timestamp               = ft_getopt(cfg, 'timestamp', 'yes');
 cfg.folderstructure         = ft_getopt(cfg, 'folderstructure', 'yes');
 cfg.legacymode              = ft_getopt(cfg, 'legacymode', 'no');
@@ -1520,7 +1525,12 @@ else
     ylabel(axh,'Sleep stage');
 end
 
-cfg = st_adjustfigure(cfg,hhyp);
+cfg = st_adjustfigure(cfg, hhyp);
+
+if isfield(cfg, 'figureoutputfontname')
+    set(axh,'fontname',cfg.figureoutputfontname)
+end
+%listfonts
 
 hold(axh,'off')
 
