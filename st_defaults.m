@@ -19,6 +19,19 @@ function st_defaults
 %   st_default.option1 = value1
 %   st_default.option2 = value2
 
+%------- toolbox selection (FieldTrip)-------- 
+%by default, Fieldtrip uses its own (slow) versions of (at least) 3 toolboxes:
+%attempt to use Matlab's built-in toolboxes (Fieldtrip will check if these are available)
+
+%first set ft_default (variable) as global
+global ft_default
+
+%set defaults for below tookboxes by adding fields to ft_default
+ft_default.toolbox.signal='matlab'; %compat or matlab
+ft_default.toolbox.stats='matlab';
+ft_default.toolbox.images='matlab';
+
+%ft_defaults (function) now considers ft_default (variable) and will setup paths accordingly
 ft_defaults
 
 % global ft_defaults
@@ -35,10 +48,10 @@ try
     ft_hastoolbox('external/automatic_sleep_scoring/z3score/z3score-api/cfslib-MATLAB/utilities', 1, 1);
     ft_hastoolbox('external/automatic_sleep_scoring/z3score/z3score-api/cfslib-MATLAB/utilities/encoder', 1, 1);
     ft_hastoolbox('external/automatic_sleep_scoring/z3score/z3score-api/cfslib-MATLAB/utilities/jsonlab', 1, 1);
-    
+
     % enhanced rdir
     ft_hastoolbox('external/enhanced_rdir', 1, 1);
-    
+
     % natsort
     ft_hastoolbox('external/natsortfiles', 1, 1);
 
@@ -46,6 +59,10 @@ try
     ft_hastoolbox('external/REMs_detector/marek_adamczyk/REMdetector', 1, 1);
 
 end
+
+%add cleaning functions
+try; ft_hastoolbox('cleaning',1,1); end
+try; ft_hastoolbox('cleaning/channels',1,1); end
 
 % avoid using the dsp toolbox from 2021-06-03 on
 % toggleToolbox('dsp','off')
