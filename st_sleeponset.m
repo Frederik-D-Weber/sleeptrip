@@ -1,5 +1,5 @@
 function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepaftersleepopoff] = st_sleeponset(cfg,scoring)
-% 
+%
 % ST_SLEEPONSET determines the sleep onset of a sleep scoring
 % Use as
 %   [onsetnumber, lastscoredsleepstagenumber, onsetepoch, lastscoredsleepstage, allowedsleeponsetbeforesleepopon allowedsleepaftersleepopoff] = st_sleeponset(cfg,scoring)
@@ -12,14 +12,14 @@ function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage
 %
 % Optional configuration parameters are
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
-%                        'N2' or 'N3' or 'SWS' or 'S4' or 'R', 
+%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or
+%                        'N2' or 'N3' or 'SWS' or 'S4' or 'R',
 %                        see below for details (default = 'N1_XR')
 %   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
-%                        opportunity (or lights off moment if former is not present) 
+%                        opportunity (or lights off moment if former is not present)
 %                        either 'yes' or 'no' (default = 'no')
 %   cfg.allowsleepaftersleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
-%                        opportunity (or lights on moment if former is not present) 
+%                        opportunity (or lights on moment if former is not present)
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'yes')
 %
 %  Here are the possible sleep onset definitions, where NR referes to
@@ -73,7 +73,7 @@ end
 
 hasSleepOpportunityOn = false;
 sleepOpportunityOnMoment = 0;
-if isfield(scoring, 'sleepopon') 
+if isfield(scoring, 'sleepopon')
     if ~isnan(scoring.sleepopon)
         hasSleepOpportunityOn = true;
         sleepOpportunityOnMoment = scoring.sleepopon;
@@ -84,9 +84,9 @@ else
     if hasLightsOff && ~isnan(lightsOffMoment)
         sleepOpportunityOnMoment = lightsOffMoment;
         hasSleepOpportunityOn = true;
-    	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
+        ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
     else
-    	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset.');
+        ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset.');
     end
 end
 
@@ -103,9 +103,9 @@ else
     if hasLightsOn && ~isnan(lightsOnMoment)
         sleepOpportunityOffMoment = lightsOnMoment;
         hasSleepOpportunityOff = true;
-    	ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The lights on moment is used instead');
+        ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The lights on moment is used instead');
     else
-    	ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The last sleep stage is assumed to best match this.');
+        ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n The last sleep stage is assumed to best match this.');
     end
 end
 
@@ -121,81 +121,81 @@ onsetnumber = -1;
 
 allowedsleeponsetbeforesleepopon = false;
 if hasSleepOpportunityOn
-        for iOnset = 1:numel(scoring.epochs)
-            if strcmp(hypnStages(iOnset,4),'S') 
-                break;
-            end
-        end  
-        if (iOnset-1)*scoring.epochlength < sleepOpportunityOnMoment
-                if istrue(cfg.allowsleeponsetbeforesleepopon)
-                    allowedsleeponsetbeforesleepopon = true;
-                    ft_warning('There were sleep stages scored at epoch %d BEFORE the sleep opportunity onset (which might have defaulted to ligths off moment) at %f s!\n BUT sleep onset is allowed to start before sleep opportunity onset!',iOnset,sleepOpportunityOnMoment);
-                else
-                	ft_warning('There were sleep stages scored at epoch %d BEFORE the sleep opportunity onset (which might have defaulted to ligths off moment) at %f s!\n The epoch after sleep opportunity onset is thus assumed as sleep onset. or use the cfg.allowsleeponsetbeforesleepopon = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
-                end
+    for iOnset = 1:numel(scoring.epochs)
+        if strcmp(hypnStages(iOnset,4),'S')
+            break;
         end
+    end
+    if (iOnset-1)*scoring.epochlength < sleepOpportunityOnMoment
+        if istrue(cfg.allowsleeponsetbeforesleepopon)
+            allowedsleeponsetbeforesleepopon = true;
+            ft_warning('There were sleep stages scored at epoch %d BEFORE the sleep opportunity onset (which might have defaulted to lights off moment) at %f s!\n BUT sleep onset is allowed to start before sleep opportunity onset!',iOnset,sleepOpportunityOnMoment);
+        else
+            ft_warning('There were sleep stages scored at epoch %d BEFORE the sleep opportunity onset (which might have defaulted to lights off moment) at %f s!\n The epoch after sleep opportunity onset is thus assumed as sleep onset. or use the cfg.allowsleeponsetbeforesleepopon = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
+        end
+    end
 end
 
 
 switch cfg.sleeponsetdef
-     case 'NR'
+    case 'NR'
         for iOnset = 1:numel(scoring.epochs)
             if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end  
-     case 'N2'
+        end
+    case 'N2'
         for iOnset = 1:numel(scoring.epochs)
             if ( strcmp(hypnStages(iOnset,1),'N2') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end 
-      case 'N3'
+        end
+    case 'N3'
         for iOnset = 1:numel(scoring.epochs)
             if ( strcmp(hypnStages(iOnset,1),'N3') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end  
-     case 'S4'
+        end
+    case 'S4'
         for iOnset = 1:numel(scoring.epochs)
             if ( strcmp(hypnStages(iOnset,1),'S4') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end 
+        end
     case 'R'
         for iOnset = 1:numel(scoring.epochs)
             if ( strcmp(hypnStages(iOnset,1),'R') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end  
+        end
     case 'SWS'
         for iOnset = 1:numel(scoring.epochs)
             if ( strcmp(hypnStages(iOnset,1),'N3') || strcmp(hypnStages(iOnset,1),'S4') ) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end  
+        end
     case 'N2R'
         for iOnset = 1:numel(scoring.epochs)
             if strcmp(hypnStages(iOnset,3),'NR') && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end  
+        end
 
-     case 'X2R'
+    case 'X2R'
         for iOnset = 1:numel(scoring.epochs)
             if (strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment) || allowedsleeponsetbeforesleepopon)
                 onsetnumber = iOnset;
                 break;
             end
-        end      
-        
+        end
+
     case {'XR' 'AASM'}
         for iOnset = 1:numel(scoring.epochs)
             if (strcmp(hypnStages(iOnset,1),'N1') || strcmp(hypnStages(iOnset,3),'NR') ||  strcmp(hypnStages(iOnset,3),'R')) && (((iOnset-1)*scoring.epochlength >= sleepOpportunityOnMoment)  || allowedsleeponsetbeforesleepopon)
@@ -203,9 +203,9 @@ switch cfg.sleeponsetdef
                 break;
             end
         end
-        
+
     case {'N1' 'N1_NR' 'N1_XR'}
-        
+
         consecN1 = 0;
         hasN1 = logical(0);
         for iOnset = 1:numel(scoring.epochs)
@@ -239,25 +239,25 @@ lastscoredsleepstagenumber = max(find(strcmp(hypnStages(:,1),'N1') | strcmp(hypn
 
 allowedsleepaftersleepopoff = false;
 if hasSleepOpportunityOff
-%         if (scoring.epochlength*numel(scoring.epochs)) > sleepOpportunityOffMoment
-%             
-%         else
-        if lastscoredsleepstagenumber*scoring.epochlength > sleepOpportunityOffMoment
-                if istrue(cfg.allowsleepaftersleepopoff)
-                    allowedsleepaftersleepopoff = true;
-                    ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n BUT sleep off is allowed to end after sleep opportunity off!',lastscoredsleepstagenumber,sleepOpportunityOffMoment);
-                else
-                    temp_sleepopoff_epoch = min(numel(hypnStages(:,1)),ceil(sleepOpportunityOffMoment/scoring.epochlength));
-                    lastscoredsleepstagenumber_sleep_opoff = max(find(strcmp(hypnStages(1:temp_sleepopoff_epoch,1),'N1') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'NR') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'R') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'MT')));
-                    lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,lastscoredsleepstagenumber_sleep_opoff);
-                	ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n The epoch in which the sleep opportunity off ends is thus assumed as sleep offset. or use the cfg.allowsleepaftersleepopoff = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
-                end
+    %         if (scoring.epochlength*numel(scoring.epochs)) > sleepOpportunityOffMoment
+    %
+    %         else
+    if lastscoredsleepstagenumber*scoring.epochlength > sleepOpportunityOffMoment
+        if istrue(cfg.allowsleepaftersleepopoff)
+            allowedsleepaftersleepopoff = true;
+            ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n BUT sleep off is allowed to end after sleep opportunity off!',lastscoredsleepstagenumber,sleepOpportunityOffMoment);
+        else
+            temp_sleepopoff_epoch = min(numel(hypnStages(:,1)),ceil(sleepOpportunityOffMoment/scoring.epochlength));
+            lastscoredsleepstagenumber_sleep_opoff = max(find(strcmp(hypnStages(1:temp_sleepopoff_epoch,1),'N1') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'NR') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'R') | strcmp(hypnStages(1:temp_sleepopoff_epoch,3),'MT')));
+            lastscoredsleepstagenumber = min(lastscoredsleepstagenumber,lastscoredsleepstagenumber_sleep_opoff);
+            ft_warning('There were sleep stages scored at epoch %d AFTER the sleep opportunity off (which might have defaulted to ligths on moment) at %f s!\n The epoch in which the sleep opportunity off ends is thus assumed as sleep offset. or use the cfg.allowsleepaftersleepopoff = ''yes'' to ignore this case!',iOnset,sleepOpportunityOnMoment);
         end
-%         end
-        
+    end
+    %         end
+
 
 else
-    
+
 end
 
 
@@ -267,9 +267,9 @@ if isempty(lastscoredsleepstagenumber) || isnan(lastscoredsleepstagenumber)
 end
 
 if (lastscoredsleepstagenumber > 0) && (lastscoredsleepstagenumber <= numel(scoring.epochs))
-lastscoredsleepstage = scoring.epochs{lastscoredsleepstagenumber};
+    lastscoredsleepstage = scoring.epochs{lastscoredsleepstagenumber};
 else
-  lastscoredsleepstage = '';  
+    lastscoredsleepstage = '';
 end
 
 if onsetnumber == -1;
@@ -280,5 +280,5 @@ else
     onsetepoch = scoring.epochs{onsetnumber};
 end
 
-end
+
 

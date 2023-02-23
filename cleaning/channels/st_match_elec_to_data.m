@@ -63,16 +63,10 @@ if ft_abort
 end
 
 %-----core function start---
-% set defaults
-cfg.elec  = ft_getopt(cfg, 'elec',[]);
-cfg.data  = ft_getopt(cfg, 'data',[]);
+%---input checks and defaults----
+ft_checkconfig(cfg,'required',{'elec','data'});
 
-%return empty elec_new if data and/or elec fields empty
-if isempty(cfg.elec) || isempty(cfg.data)
-    elec_new=[];
-    fprintf('WARNING: cfg.data and/or cfg.elec not specified\n')
-    return
-end
+fprintf([functionname ' function initialized\n']);
 
 elec_ori=cfg.elec;
 data=cfg.data;

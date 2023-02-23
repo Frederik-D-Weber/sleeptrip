@@ -62,8 +62,8 @@ if ft_abort
 end
 
 %-----core function start---
-% set defaults
-cfg.elec  = ft_getopt(cfg, 'elec', []);
+%---input checks and defaults----
+ft_checkconfig(cfg,'required','elec');
 cfg.skipscale = ft_getopt(cfg,'skipscale', 'yes');
 cfg.skipcomnt = ft_getopt(cfg,'skipcomnt','yes');
 

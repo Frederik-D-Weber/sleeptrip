@@ -63,6 +63,8 @@ end
 %add cleaning functions
 try; ft_hastoolbox('cleaning',1,1); end
 try; ft_hastoolbox('cleaning/channels',1,1); end
+try; ft_hastoolbox('cleaning/detect',1,1); end
+
 
 % avoid using the dsp toolbox from 2021-06-03 on
 % toggleToolbox('dsp','off')
