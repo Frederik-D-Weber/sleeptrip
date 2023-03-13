@@ -393,7 +393,19 @@ switch  cfg.scoringformat
         
         switch cfg.scoringformat
             % Somnomedics English or German version exported profile xlsx
-            case {'somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
+            case {'somnomedics_xlsx'}
+                try 
+                    readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet','Sleep profile');
+                    cfg.scoringformat = 'somnomedics_xlsx_english';
+                catch
+                    
+                end
+                try 
+                    readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet','Schlafprofil');
+                    cfg.scoringformat = 'somnomedics_xlsx_german';
+                catch
+                    
+                end
                 switch cfg.scoringformat
                     case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                         arousal_sheet_name = 'Classification Arousals';
