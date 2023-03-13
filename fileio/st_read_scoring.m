@@ -411,10 +411,12 @@ switch  cfg.scoringformat
                         arousal_sheet_name = 'Classification Arousals';
                         scoring_sheet_name = 'Sleep profile';
                         dtformat = 'dd.MM.yyyy HH:mm:ss';
+                        dtformat2 = 'dd.MMM.yyyy HH:mm:ss';
                     case {'somnomedics_xlsx_german'}
                         arousal_sheet_name = 'Klassifizierte Arousal';
                         scoring_sheet_name = 'Schlafprofil';
                         dtformat = 'dd.MM.yyyy HH:mm:ss';
+                        dtformat2 = 'dd-MMM-yyyy HH:mm:ss';
                 end
                 
                 processTableStucture = true;
@@ -428,8 +430,13 @@ switch  cfg.scoringformat
                 end
                 start_datetime_offset_scoring_string = tb_sc{find(ismember(tb_sc{:,1},'Start Time'),1,'first'),2};
                 
-                scoring.scoringstartdatetime = datetime(start_datetime_offset_scoring_string,'InputFormat',dtformat);
-                
+                dtformats = {dtformat, dtformat2};
+                for iDtFormats = 1:numel(dtformats)
+                    try
+                        scoring.scoringstartdatetime = datetime(start_datetime_offset_scoring_string,'InputFormat',dtformats{iDtFormats});
+                    catch
+                    end
+                end
                 tableScoring = tb_sc((cfg.skiplines+1):end,:);
                 readoption = 'table';
                 
@@ -440,26 +447,31 @@ switch  cfg.scoringformat
                 
                 if isempty(filename_arousals)
                     filename_arousals = cfg.scoringfile;
-                    
                     try
                         try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
                             tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name,'DatetimeType','text');
                         catch
                             tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name);
                         end
-                        
+  
                         start_datetime_offset_string = tb_a{find(ismember(tb_a{:,1},'Start Time'),1,'first'),2};
                         
                         
                         if size(tb_a,1) > cfg.skiplines
                             tb_a_ev = tb_a((cfg.skiplines+1):end,:);
-                            
-                            offsetdt = datetime(start_datetime_offset_string,'InputFormat',dtformat);
-                            dt = datetime(tb_a_ev{1:end,1},'InputFormat',dtformat);
-                            start_a = datenum(dt-offsetdt)*24*3600;
-                            
-                            dt = datetime(tb_a_ev{1:end,2},'InputFormat',dtformat);
-                            stop_a = datenum(dt-offsetdt)*24*3600;
+                            dtformats = {dtformat, dtformat2};
+                            for iDtFormats = 1:numel(dtformats)
+                                try
+                                    offsetdt = datetime(start_datetime_offset_string,'InputFormat',dtformats{iDtFormats});
+                                    dt = datetime(tb_a_ev{1:end,1},'InputFormat',dtformats{iDtFormats});
+                                    start_a = datenum(dt-offsetdt)*24*3600;
+                                    
+                                    dt = datetime(tb_a_ev{1:end,2},'InputFormat',dtformats{iDtFormats});
+                                    stop_a = datenum(dt-offsetdt)*24*3600;
+                                    break
+                                catch
+                                end
+                            end
                             
                             duration_a = stop_a - start_a;
                             
