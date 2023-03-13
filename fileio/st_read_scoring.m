@@ -396,11 +396,9 @@ switch  cfg.scoringformat
             case {'somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                 switch cfg.scoringformat
                     case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
-                        %TODO check if this is actually the case
-                        arousal_sheet_name = 'Classified arousal';
+                        arousal_sheet_name = 'Classification Arousals';
                         scoring_sheet_name = 'Sleep profile';
                         dtformat = 'dd.MM.yyyy HH:mm:ss';
-                        ft_error('the cfg.scoringformat = %s or %s are currently not supported.','somnomedics_xlsx_english', 'somnomedics_xlsx')
                     case {'somnomedics_xlsx_german'}
                         arousal_sheet_name = 'Klassifizierte Arousal';
                         scoring_sheet_name = 'Schlafprofil';
@@ -410,7 +408,12 @@ switch  cfg.scoringformat
                 processTableStucture = true;
                 
                 
-                tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name);
+                
+                try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
+                    tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name,'DatetimeType','text');
+                catch
+                    tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name);
+                end
                 start_datetime_offset_scoring_string = tb_sc{find(ismember(tb_sc{:,1},'Start Time'),1,'first'),2};
                 
                 scoring.scoringstartdatetime = datetime(start_datetime_offset_scoring_string,'InputFormat',dtformat);
@@ -427,7 +430,11 @@ switch  cfg.scoringformat
                     filename_arousals = cfg.scoringfile;
                     
                     try
-                        tb_a = readtable(filename_arousals,'ReadRowNames',false,'Sheet',arousal_sheet_name);
+                        try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
+                            tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name,'DatetimeType','text');
+                        catch
+                            tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name);
+                        end
                         
                         start_datetime_offset_string = tb_a{find(ismember(tb_a{:,1},'Start Time'),1,'first'),2};
                         
