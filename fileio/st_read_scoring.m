@@ -357,34 +357,7 @@ switch  cfg.scoringformat
         cfg.columnnum        = 1;
         
     case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
-        scoremap = [];
-        % Somnomedics german or english version exported profile txt
-        switch cfg.scoringformat
-            case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_xlsx_english', 'somnomedics_xlsx'}
-                scoremap.labelold  = {'Wake', 'WAKE', 'N1', 'N2', 'N3', 'REM', 'Rem', 'A', 'Artifact'};
-                switch cfg.standard
-                    case 'aasm'
-                        scoremap.labelnew  = {'W', 'W', 'N1', 'N2', 'N3', 'R', 'R', '?', '?'};
-                    case 'rk'
-                        ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
-                        scoremap.labelnew  = {'W', 'W', 'S1', 'S2', 'S3', 'R', 'R', '?', '?'};
-                end
-            case {'somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german'}
-                
-                scoremap.labelold  = {'Wach','WACH', 'Stadium 1', 'STADIUM 1', 'S1', 'N1', 'Stadium 2', 'STADIUM 2', 'S2', 'N2', 'Stadium 3', 'STADIUM 3', 'S3', 'N3', 'Stadium 4', 'STADIUM 4', 'S4', 'N4', 'REM','Rem', 'Artefact', 'A', 'Bewegung', 'MT'};
-                switch cfg.standard
-                    case 'aasm'
-                        scoremap.labelnew  = {'W', 'W', 'N1', 'N1', 'N1', 'N1', 'N2', 'N2', 'N2', 'N2', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'R', 'R', '?', '?', 'W', 'W'};
-                    case 'rk'
-                        ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
-                        scoremap.labelnew  = {'W', 'W', 'S1', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4', 'R', 'R', '?', '?', 'W', 'W'};
-                end
-                
-                
-        end
         
-        
-        scoremap.unknown   = '?';
         
         %cfg.scoremap         = scoremap;
         cfg.columndelimimter = ';';
@@ -406,6 +379,36 @@ switch  cfg.scoringformat
                 catch
                     
                 end
+                
+                scoremap = [];
+                % Somnomedics german or english version exported profile txt
+                switch cfg.scoringformat
+                    case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_xlsx_english', 'somnomedics_xlsx'}
+                        scoremap.labelold  = {'Wake', 'WAKE', 'N1', 'N2', 'N3', 'REM', 'Rem', 'A', 'Artifact'};
+                        switch cfg.standard
+                            case 'aasm'
+                                scoremap.labelnew  = {'W', 'W', 'N1', 'N2', 'N3', 'R', 'R', '?', '?'};
+                            case 'rk'
+                                ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                                scoremap.labelnew  = {'W', 'W', 'S1', 'S2', 'S3', 'R', 'R', '?', '?'};
+                        end
+                    case {'somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german'}
+                        
+                        scoremap.labelold  = {'Wach','WACH', 'Stadium 1', 'STADIUM 1', 'S1', 'N1', 'Stadium 2', 'STADIUM 2', 'S2', 'N2', 'Stadium 3', 'STADIUM 3', 'S3', 'N3', 'Stadium 4', 'STADIUM 4', 'S4', 'N4', 'REM','Rem', 'Artefact', 'A', 'Bewegung', 'MT'};
+                        switch cfg.standard
+                            case 'aasm'
+                                scoremap.labelnew  = {'W', 'W', 'N1', 'N1', 'N1', 'N1', 'N2', 'N2', 'N2', 'N2', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'R', 'R', '?', '?', 'W', 'W'};
+                            case 'rk'
+                                ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                                scoremap.labelnew  = {'W', 'W', 'S1', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4', 'R', 'R', '?', '?', 'W', 'W'};
+                        end
+                        
+                        
+                end
+                
+                
+                scoremap.unknown   = '?';
+                
                 switch cfg.scoringformat
                     case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                         arousal_sheet_name = 'Classification Arousals';
