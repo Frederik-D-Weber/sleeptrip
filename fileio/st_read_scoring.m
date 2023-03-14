@@ -409,17 +409,15 @@ switch  cfg.scoringformat
                 
                 scoremap.unknown   = '?';
                 
+                dtformats = {'dd.MM.yyyy HH:mm:ss', 'dd-MMM-yyyy HH:mm:ss', 'dd.MMM.yyyy HH:mm:ss.SSS', 'dd-MMM-yyyy HH:mm:ss.SSS'};
+                
                 switch cfg.scoringformat
                     case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                         arousal_sheet_name = 'Classification Arousals';
                         scoring_sheet_name = 'Sleep profile';
-                        dtformat = 'dd.MM.yyyy HH:mm:ss';
-                        dtformat2 = 'dd.MMM.yyyy HH:mm:ss';
                     case {'somnomedics_xlsx_german'}
                         arousal_sheet_name = 'Klassifizierte Arousal';
                         scoring_sheet_name = 'Schlafprofil';
-                        dtformat = 'dd.MM.yyyy HH:mm:ss';
-                        dtformat2 = 'dd-MMM-yyyy HH:mm:ss';
                 end
                 
                 processTableStucture = true;
@@ -433,10 +431,11 @@ switch  cfg.scoringformat
                 end
                 start_datetime_offset_scoring_string = tb_sc{find(ismember(tb_sc{:,1},'Start Time'),1,'first'),2};
                 
-                dtformats = {dtformat, dtformat2};
+                
                 for iDtFormats = 1:numel(dtformats)
                     try
                         scoring.scoringstartdatetime = datetime(start_datetime_offset_scoring_string,'InputFormat',dtformats{iDtFormats});
+                        break
                     catch
                     end
                 end
@@ -459,18 +458,20 @@ switch  cfg.scoringformat
   
                         start_datetime_offset_string = tb_a{find(ismember(tb_a{:,1},'Start Time'),1,'first'),2};
                         
-                        
-                        if size(tb_a,1) > cfg.skiplines
-                            tb_a_ev = tb_a((cfg.skiplines+1):end,:);
-                            dtformats = {dtformat, dtformat2};
+                        if ismember('SignalID',tb_a.Properties.VariableNames)
+                            tb_a = tb_a((cfg.skiplines+1):end,:);
+                            
+                        end
+                        if size(tb_a,1) > 0
+                            
+
                             for iDtFormats = 1:numel(dtformats)
                                 try
-                                    offsetdt = datetime(start_datetime_offset_string,'InputFormat',dtformats{iDtFormats});
-                                    dt = datetime(tb_a_ev{1:end,1},'InputFormat',dtformats{iDtFormats});
-                                    start_a = datenum(dt-offsetdt)*24*3600;
+                                    dt = datetime(tb_a{1:end,1},'InputFormat',dtformats{iDtFormats});
+                                    start_a = datenum(dt-scoring.scoringstartdatetime)*24*3600;
                                     
-                                    dt = datetime(tb_a_ev{1:end,2},'InputFormat',dtformats{iDtFormats});
-                                    stop_a = datenum(dt-offsetdt)*24*3600;
+                                    dt = datetime(tb_a{1:end,2},'InputFormat',dtformats{iDtFormats});
+                                    stop_a = datenum(dt-scoring.scoringstartdatetime)*24*3600;
                                     break
                                 catch
                                 end
@@ -478,7 +479,7 @@ switch  cfg.scoringformat
                             
                             duration_a = stop_a - start_a;
                             
-                            event_a = tb_a_ev{1:end,4};
+                            event_a = tb_a{1:end,4};
                             
                             tableArousal = table(event_a,start_a,stop_a,duration_a,'VariableNames',{'event','start','stop','duration'});
                             tableArousal.channel = repmat('all',size(tableArousal,1),1);
