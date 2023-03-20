@@ -16,6 +16,8 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          'custom' with a scoremap file
 %                          'zmax'   for hypnodyne corp Zmax exported scoring
 %                                   files
+%                          'zmax_autoscored'   for hypnodyne corp Zmax exported scoring
+%                                   files that were autoscored
 %                          'somnomedics_english' or 'somnomedics' or or 'somnomedics_txt_english' for
 %                                   somnomedics exproted scoring files from
 %                                   DOMINO software. Only the English
@@ -358,7 +360,6 @@ switch  cfg.scoringformat
         
     case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
         
-        
         %cfg.scoremap         = scoremap;
         cfg.columndelimimter = ';';
         cfg.skiplines        = 7;
@@ -379,47 +380,49 @@ switch  cfg.scoringformat
                 catch
                     
                 end
+        end
                 
-                scoremap = [];
-                % Somnomedics german or english version exported profile txt
-                switch cfg.scoringformat
-                    case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_xlsx_english', 'somnomedics_xlsx'}
-                        scoremap.labelold  = {'Wake', 'WAKE', 'N1', 'N2', 'N3', 'REM', 'Rem', 'A', 'Artifact'};
-                        switch cfg.standard
-                            case 'aasm'
-                                scoremap.labelnew  = {'W', 'W', 'N1', 'N2', 'N3', 'R', 'R', '?', '?'};
-                            case 'rk'
-                                ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
-                                scoremap.labelnew  = {'W', 'W', 'S1', 'S2', 'S3', 'R', 'R', '?', '?'};
-                        end
-                    case {'somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german'}
-                        
-                        scoremap.labelold  = {'Wach','WACH', 'Stadium 1', 'STADIUM 1', 'S1', 'N1', 'Stadium 2', 'STADIUM 2', 'S2', 'N2', 'Stadium 3', 'STADIUM 3', 'S3', 'N3', 'Stadium 4', 'STADIUM 4', 'S4', 'N4', 'REM','Rem', 'Artefact', 'A', 'Bewegung', 'MT'};
-                        switch cfg.standard
-                            case 'aasm'
-                                scoremap.labelnew  = {'W', 'W', 'N1', 'N1', 'N1', 'N1', 'N2', 'N2', 'N2', 'N2', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'R', 'R', '?', '?', 'W', 'W'};
-                            case 'rk'
-                                ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
-                                scoremap.labelnew  = {'W', 'W', 'S1', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4', 'R', 'R', '?', '?', 'W', 'W'};
-                        end
-                        
-                        
+        scoremap = [];
+        % Somnomedics german or english version exported profile txt
+        switch cfg.scoringformat
+            case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_xlsx_english', 'somnomedics_xlsx'}
+                scoremap.labelold  = {'Wake', 'WAKE', 'N1', 'N2', 'N3', 'REM', 'Rem', 'A', 'Artifact'};
+                switch cfg.standard
+                    case 'aasm'
+                        scoremap.labelnew  = {'W', 'W', 'N1', 'N2', 'N3', 'R', 'R', '?', '?'};
+                    case 'rk'
+                        ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                        scoremap.labelnew  = {'W', 'W', 'S1', 'S2', 'S3', 'R', 'R', '?', '?'};
+                end
+                
+            case {'somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german'}
+                scoremap.labelold  = {'Wach','WACH', 'Stadium 1', 'STADIUM 1', 'S1', 'N1', 'Stadium 2', 'STADIUM 2', 'S2', 'N2', 'Stadium 3', 'STADIUM 3', 'S3', 'N3', 'Stadium 4', 'STADIUM 4', 'S4', 'N4', 'REM','Rem', 'Artefact', 'A', 'Bewegung', 'MT'};
+                switch cfg.standard
+                    case 'aasm'
+                        scoremap.labelnew  = {'W', 'W', 'N1', 'N1', 'N1', 'N1', 'N2', 'N2', 'N2', 'N2', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'R', 'R', '?', '?', 'W', 'W'};
+                    case 'rk'
+                        ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                        scoremap.labelnew  = {'W', 'W', 'S1', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4', 'R', 'R', '?', '?', 'W', 'W'};
                 end
                 
                 
-                scoremap.unknown   = '?';
-                
-                dtformats = {'dd.MM.yyyy HH:mm:ss', 'dd-MMM-yyyy HH:mm:ss', 'dd.MMM.yyyy HH:mm:ss.SSS', 'dd-MMM-yyyy HH:mm:ss.SSS'};
-                
-                switch cfg.scoringformat
-                    case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
-                        arousal_sheet_name = 'Classification Arousals';
-                        scoring_sheet_name = 'Sleep profile';
-                    case {'somnomedics_xlsx_german'}
-                        arousal_sheet_name = 'Klassifizierte Arousal';
-                        scoring_sheet_name = 'Schlafprofil';
-                end
-                
+        end
+        
+        scoremap.unknown   = '?';
+        
+        dtformats = {'dd.MM.yyyy HH:mm:ss', 'dd-MMM-yyyy HH:mm:ss', 'dd.MMM.yyyy HH:mm:ss.SSS', 'dd-MMM-yyyy HH:mm:ss.SSS'};
+        
+        switch cfg.scoringformat
+            case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
+                arousal_sheet_name = 'Classification Arousals';
+                scoring_sheet_name = 'Sleep profile';
+            case {'somnomedics_xlsx_german'}
+                arousal_sheet_name = 'Klassifizierte Arousal';
+                scoring_sheet_name = 'Schlafprofil';
+        end
+         
+        switch cfg.scoringformat
+            case {'somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                 processTableStucture = true;
                 
                 
@@ -455,7 +458,7 @@ switch  cfg.scoringformat
                         catch
                             tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name);
                         end
-  
+                        
                         start_datetime_offset_string = tb_a{find(ismember(tb_a{:,1},'Start Time'),1,'first'),2};
                         
                         if ismember('SignalID',tb_a.Properties.VariableNames)
@@ -464,7 +467,7 @@ switch  cfg.scoringformat
                         end
                         if size(tb_a,1) > 0
                             
-
+                            
                             for iDtFormats = 1:numel(dtformats)
                                 try
                                     dt = datetime(tb_a{1:end,1},'InputFormat',dtformats{iDtFormats});
@@ -497,7 +500,7 @@ switch  cfg.scoringformat
                     filename_arousals = []; % reset this again so no further reading in later in code
                 end
             otherwise
-                % .txt version                
+                % .txt version
                 parampairs = {};
                 parampairs = [parampairs, {'ReadVariableNames',false}];
                 %parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
@@ -955,12 +958,12 @@ if processTableStucture
         
         ignore = logical(zeros(size(tableScoring,1),1));
         if ~isempty(cfg.ignorelines)
-            ignore = cellfun(@(x)  any(ismember(cfg.ignorelines, x)), startline, 'UniformOutput', 1);
+            ignore = cellfun(@(x)  any(startsWith(x, cfg.ignorelines)), startline, 'UniformOutput', 1);
         end
         
         select = logical(ones(size(tableScoring,1),1));
         if ~isempty(cfg.selectlines)
-            select = cellfun(@(x)  any(ismember(cfg.selectlines, x)), startline, 'UniformOutput', 1);
+            select = cellfun(@(x)  any(startsWith(x, cfg.selectlines)), startline, 'UniformOutput', 1);
         end
         % get only the rows that matter and update the new table dimension
         tableScoring = tableScoring((select & ~ignore),:);

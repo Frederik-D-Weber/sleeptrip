@@ -6240,11 +6240,12 @@ if strcmp(cfg.viewmode, 'butterfly')
     set(gca, 'yTickLabel', yTickLabel)
     
 elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
+     % determine channel indices into data outside of loop
+    laysels = match_str(opt.laytime.label, opt.hdr.label);
     
     if istrue(cfg.plotsignal)
 
-    % determine channel indices into data outside of loop
-    laysels = match_str(opt.laytime.label, opt.hdr.label);
+   
     
     % only plot labels when current chanlabel objects are less then the total number of channels (see bug 2065)
     % this is a cheap quick fix. If it causes error in plotting components, do this conditional on viewmode
