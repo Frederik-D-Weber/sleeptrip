@@ -96,7 +96,7 @@ all_detectors_cfg={};
 %%
 %--absolute amplitude detector
 cfg_detector=[];
-cfg_detector.label='absamp';
+cfg_detector.label='highamp';
 
 %st
 cfg_detector.st.method='threshold';
@@ -178,7 +178,7 @@ cfg_detector.st.mergeduration=1; %merge artifacts if within this range (in secon
 
 all_detectors_cfg{end+1}=cfg_detector;
 %%
-%--flatline detector
+%--flatline detector (also smooth)
 cfg_detector=[];
 cfg_detector.label='flatline';
 
@@ -187,13 +187,27 @@ cfg_detector.st.method='threshold';
 cfg_detector.st.diff='yes';
 cfg_detector.st.abs='yes';
 cfg_detector.st.thresholddirection='below';
-cfg_detector.st.thresholdvalue = 0.5; %artifact threshold: < minAmpDiff. Assuming data in microV
+cfg_detector.st.thresholdvalue = 1*250/fsample; %artifact threshold: < thresholdvalue. For a sample rate of 250 Hz, max allowed sample diff is 1.Assuming data in microV (was 0.5. changed to 1 for zmax)
 cfg_detector.st.minduration = 1; %min artifact duration (in seconds)
 cfg_detector.st.paddingduration = 0.1; %extend/pad (in seconds). minor extension before/after event
 cfg_detector.st.mergeduration=1; %merge artifacts if within this range (in seconds)
 
 all_detectors_cfg{end+1}=cfg_detector;
+%%
+%--low amplitude detector
+cfg_detector=[];
+cfg_detector.label='lowamp';
 
+%st
+cfg_detector.st.method='threshold';
+cfg_detector.st.abs='yes';
+cfg_detector.st.thresholddirection='below';
+cfg_detector.st.thresholdvalue = 10; %artifact threshold: < thresholdvalue. Assuming data in microV
+cfg_detector.st.minduration = 30; %min artifact duration (in seconds)
+cfg_detector.st.paddingduration = 0.1; %extend/pad (in seconds). minor extension before/after event
+cfg_detector.st.mergeduration=1; %merge artifacts if within this range (in seconds)
+
+all_detectors_cfg{end+1}=cfg_detector;
 %%
 %--deviation from neighbors detector
 cfg_detector=[];

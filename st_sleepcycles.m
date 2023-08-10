@@ -17,11 +17,11 @@ function [res_cycle] = st_sleepcycles(cfg,scoring)
 %                        cfg.smoothepochs if present
 %
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
+%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or
 %                        'N2' or 'N3' or 'SWS' or 'S4' or 'R, see ST_SLEEPONSET for details (default = 'AASM')
 %   cfg.maxduration    = duration in minutes a sleep cycle can maximally
-%                        have cannot be lower than 2. (default = Inf) 
-%   cfg.completesleepbuffer  = duration of sleep in minutes a 
+%                        have cannot be lower than 2. (default = Inf)
+%   cfg.completesleepbuffer  = duration of sleep in minutes a
 %                              sleep cycle has to be followed to be
 %                              considered complete (default = 5)
 %
@@ -36,15 +36,21 @@ fprintf([functionname ' function started\n']);
 
 
 
-cfg.smoothepochs      = ft_getopt(cfg, 'smoothepochs', 15*60/scoring.epochlength);
-
+%cfg.smoothepochs      = ft_getopt(cfg, 'smoothepochs', 15*60/scoring.epochlength);
+%better called "max REM period interruption"
 if isfield(cfg, 'smoothminutes')
     cfg.smoothepochs       = ft_getopt(cfg, 'smoothepochs', floor(cfg.smoothminutes*60/scoring.epochlength));
 else
     cfg.smoothepochs       = ft_getopt(cfg, 'smoothepochs', floor(15*60/scoring.epochlength));
 end
 
-cfg.maxduration        = ft_getopt(cfg, 'maxduration', Inf);
+if isfield(cfg,'minremminutes')
+    cfg.minremepochs=ft_getopt(cfg, 'minremminutes',floor(cfg.minremminutes*60/scoring.epochlength));
+else
+    cfg.minremepochs=ft_getopt(cfg, 'minremminutes',floor(5*60/scoring.epochlength));
+
+end
+cfg.maxduration        = ft_getopt(cfg, 'maxduration', 120);
 cfg.completesleepbuffer        = ft_getopt(cfg, 'completesleepbuffer', 5);
 
 cfg.sleeponsetdef      = upper(ft_getopt(cfg, 'sleeponsetdef', 'AASM'));
@@ -71,41 +77,39 @@ if isempty(preOffsetCandidate)
     preOffsetCandidate = nEpochs;
 end
 
-% hypnStages = [cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0) ...
-%     cellfun(@sleepStage2str_alt,scoring.epochs','UniformOutput',0) ...
-%     cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0) ...
-%     cellfun(@sleepStage2str_alt3,scoring.epochs','UniformOutput',0)];
-%
-% epochs = hypnStages(:,3)';
 
+%sleepStage2str_alt2 -> convert N2/N3 to NR
 epochs = cellfun(@sleepStage2str_alt2,scoring.epochs','UniformOutput',0)';
 
-[Rstarts, Rends] = getCycleStartEndsByLabel('R',cfg.smoothepochs,epochs);
+%---------REM periods------
+% note: REM period end =  cycle ends
 
-hasREM = true;
-if isempty(Rstarts)
-    hasREM = false;
-    ft_warning('There is no REM at all!')
-    
+% get REM periods (allowing REM period interruptions of length "smoothepochs")
+smoothepochs=cfg.smoothepochs;
+[Rstarts, Rends] = getCycleStartEndsByLabel('R',smoothepochs,epochs);
+
+RperiodLengths=(Rends-Rstarts)+1;
+
+%exclusion 1) REM periods (inc interruptions) of insufficient length
+if length(RperiodLengths)>1
+    idx=[true ;RperiodLengths(2:end) >= cfg.minremepochs]; %first R period ok even if single epoch
+elseif length(RperiodLengths)==1
+    idx=true;
 else
-    
-    idx = Rends > onsetCandidateIndex;
-    Rends = Rends(idx);
-    Rstarts = Rstarts(idx);
-    
-    if isempty(Rstarts)
-        ft_warning('There is no REM after sleep onset!')
-        hasREM = false;
-    end
-
-end
-    
-if isempty(Rends)
-    hasREM = false;
-    Rends = preOffsetCandidate;
+    idx=[];
 end
 
+Rends = Rends(idx);
+Rstarts = Rstarts(idx);
+RperiodLengths=RperiodLengths(idx);
 
+%exclusion 2) REM periods ending entirely before sleep onset
+idx = Rends > onsetCandidateIndex;
+Rends = Rends(idx);
+Rstarts = Rstarts(idx);
+RperiodLengths=RperiodLengths(idx);
+
+%set REM starts occuring before sleep onset to sleep onset
 if ~isempty(Rstarts)
     Rstarts(Rstarts < onsetCandidateIndex) = onsetCandidateIndex;
 
@@ -114,50 +118,70 @@ if ~isempty(Rstarts)
     end
 end
 
-cycleStarts = onsetCandidateIndex;
-cycleEnds = Rends(1);
+hasREM = true;
+if isempty(Rstarts)
+    hasREM = false;
+    ft_warning('There is no REM at all!')
 
-for iREM_ends = 2:numel(Rends)
-    cycleStarts = [cycleStarts; Rends(iREM_ends-1)+1];
-    cycleEnds   = [cycleEnds;   Rends(iREM_ends)];
+else
+
+    %     %exclude REM periods ending entirely before sleep onset
+    %     idx = Rends > onsetCandidateIndex;
+    %     Rends = Rends(idx);
+    %     Rstarts = Rstarts(idx);
+    %     RperiodLengths=RperiodLengths(idx);
+
+
+    if isempty(Rstarts)
+        ft_warning('There is no REM after sleep onset!')
+        hasREM = false;
+    end
+
+end
+
+if isempty(Rends)
+    hasREM = false;
+    Rends = preOffsetCandidate;
 end
 
 
+
+%-------overall cycle----
+% - cycle start/ends are always adjacent (no epochs skipped)
+% - cycle may commence with W (except cycle 1)
+
+%first cycle starts at sleep onset, ends at first REM offset
+cycleStarts = onsetCandidateIndex;
+cycleEnds = Rends(1);
+
+%..subsequent cycles:
+for iREM_ends = 2:numel(Rends)
+    cycleStarts = [cycleStarts; Rends(iREM_ends-1)+1]; %end of previous REM period (+1): could be W
+    cycleEnds   = [cycleEnds;   Rends(iREM_ends)]; %end of REM period
+end
+
+% %if final REM offset is before sleep offset, add another cycle
+% if Rends(end) < preOffsetCandidate
+%     cycleStarts = [cycleStarts; Rends(end)+1];
+%     cycleEnds   = [cycleEnds; preOffsetCandidate];
+% end
 
 cycleLengths = (cycleEnds - cycleStarts + 1);
 
 whichCycleLengthsExcede = find(cycleLengths > maxDurationEpochs);
 for iCycleIndex = 1:numel(whichCycleLengthsExcede)
     iCycle = whichCycleLengthsExcede(iCycleIndex);
-    ft_warning(['Cyle ' num2str(iCycle) ' exceded the maximal duration of the epochs'])
-    
-%     %convert the sleep stages to hypnogram numbers
-%     hypn = [cellfun(@(st) sleepStage2hypnNum(st,~istrue(cfg.plotunknown),false),scoring.epochs','UniformOutput',1), scoring.excluded'];
-%     
-%     
-%     smoothingepochlength = cfg.smoothepochs;
-%     if exist('smooth','file') == 2
-%         smoothhyp = smooth(hypn(:,1),smoothingepochlength,'moving');
-%     else
-%         smoothhyp = smoothwd(hypn(:,1),smoothingepochlength)';
-%     end
-%     
-%     hypn_part = smoothhyp(startepochs(iCycle):cycleEnds(iCycle));
-%     
-%     
-    
-    
+    ft_warning(['Cyle ' num2str(iCycle) ' exceeded the maximal duration of the epochs'])
 
 end
-
-
-
-
 
 startepochs = cycleStarts;
 endepochs = cycleEnds;
 
 
+
+
+%------NREM periods-----
 NRstarts = cycleStarts;
 if hasREM
     NRends = Rstarts-1;
@@ -165,16 +189,37 @@ else
     NRends = endepochs;
 end
 
+%if final REM offset is before sleep offset, add another NR period
 if Rends(end) < preOffsetCandidate
     NRstarts = [NRstarts; Rends(end)+1];
     NRends   = [NRends; preOffsetCandidate];
 end
 
+NRperiodLengths=(NRends-NRstarts)+1;
 
 if ~hasREM
     Rstarts(1:end) = NaN;
     Rends(1:end) = NaN;
 end
+
+% cycleInfo=table;
+%
+% %cycles
+% cycleInfo.cycleNum=[1:numel(cycleStarts)]';
+% cycleInfo.cycleStart=cycleStarts;
+% cycleInfo.cycleEnd=cycleEnds;
+% cycleInfo.cycleLength=cycleLengths;
+%
+% %NR period
+% cycleInfo.NRperStart=NRstarts;
+% cycleInfo.NRperEnd=NRends;
+% cycleInfo.NRperLength=NRperiodLengths;
+%
+% %R period
+% cycleInfo.RperStart=Rstarts;
+% cycleInfo.RperEnd=Rends;
+% cycleInfo.RperLength=RperiodLengths;
+
 
 maxCycle = max([numel(startepochs),numel(endepochs),numel(Rstarts),numel(Rends),numel(NRstarts),numel(NRends)]);
 
@@ -187,8 +232,8 @@ NRends((end+1):maxCycle) = NaN;
 
 for iCycle = 1:numel(startepochs)
     if isnan(startepochs(iCycle))
-       startepochs(iCycle) = min([NRstarts(iCycle) Rstarts(iCycle)]);
-       endepochs(iCycle) = min([NRends(iCycle) Rends(iCycle)]);
+        startepochs(iCycle) = min([NRstarts(iCycle) Rstarts(iCycle)]);
+        endepochs(iCycle) = min([NRends(iCycle) Rends(iCycle)]);
     end
 end
 
@@ -215,6 +260,7 @@ NRends_ascending =  NaN(size(NRends));
 NRdeepest_state = cellstr(repmat('none',size(NRstarts)));
 NRdeepest_state_min_epochs = NaN(size(NRstarts));
 
+%sleepStage2str_alt -> convert N3/S4 to SWS
 epochs_standardized = cellfun(@sleepStage2str_alt,scoring.epochs,'UniformOutput',0);
 
 for iNR = 1:numel(NRstarts)
@@ -229,9 +275,9 @@ for iNR = 1:numel(NRstarts)
                     deepestStage = 'N2';
                 case 'rk'
                     deepestStage = 'S2';
-            end;
+            end
         end
-        
+
         if isempty(idx_label_first)
             [idx_label_first idx_label_last boutSplitLengthfinal] = findIndices(epochs_standardized_temp,'N1',minBoutSplitLength,boutSplitLength);
             switch scoring.standard
@@ -239,9 +285,9 @@ for iNR = 1:numel(NRstarts)
                     deepestStage = 'N1';
                 case 'rk'
                     deepestStage = 'S1';
-            end;
+            end
         end
-        
+
         if ~isempty(idx_label_first)
             NRstarts_descending(iNR) = NRstarts(iNR);
             NRstarts_deep(iNR) = NRstarts(iNR)+idx_label_first-1;
@@ -307,7 +353,7 @@ end
 nCycles = size(res_cycle.table,1);
 res_cycle.table.complete = logical(zeros(nCycles,1));
 for iCycle = 1:(nCycles-1)
-    if res_cycle.table.durationepochs(iCycle+1) >= completesleepbufferDurationEpochs;
+    if res_cycle.table.durationepochs(iCycle+1) >= completesleepbufferDurationEpochs
         res_cycle.table.complete(iCycle) = logical(1);
     end
 end
@@ -316,6 +362,9 @@ fprintf([functionname ' function finished\n']);
 toc(ttic)
 memtoc(mtic)
 end
+
+
+%---------subfunctions----------
 
 function [starts, ends] = getCycleStartEndsByLabel(label,max_merge_inbetween_stages,stages)
 stages = getSmoothedLabels(label,max_merge_inbetween_stages,stages);
@@ -363,7 +412,7 @@ consecBegins = consecBegins - 1;
 consecEnds = consecEnds - 1;
 SWSboutLengths = consecEnds-consecBegins+1;
 while (boutSplitLength >= minBoutSplitLength) && isempty(idx_label_first)
-    
+
     idx_SWS_long = SWSboutLengths >= boutSplitLength;
     idx_bout_first = find(idx_SWS_long,1,'first');
     idx_bout_last = find(idx_SWS_long,1,'last');
@@ -382,29 +431,29 @@ end
 % is_stage = strcmp(stages,label);
 % if (length(is_stage) > 1)
 %     run_len = seqle(is_stage);
-%     
+%
 %     run_len.lengths.cumsum = cumsum(run_len$lengths)
 %     run_select = which(run_len$values == T & run_len$lengths >= 1)
-%     
+%
 %     ends = run_len.lengths.cumsum[run_select]
-%     
+%
 %     newindex = ifelse(run_select>1, run_select-1, 0);
 %     starts = run_len.lengths.cumsum[newindex] + 1;
 %     if (0 %in% newindex) starts = c(1,starts)
-%         
+%
 %     elseif (length(is_stage) == 1)
-%         
+%
 %         if (is_stage(1))
 %             starts = 1;
 %             ends = 1;
 %         end
-%         
+%
 %     end
-%     
+%
 % end
 % end
-% 
-% 
+%
+%
 
 
 

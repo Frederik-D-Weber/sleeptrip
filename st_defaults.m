@@ -31,11 +31,11 @@ ft_default.toolbox.signal='matlab'; %compat or matlab
 ft_default.toolbox.stats='matlab';
 ft_default.toolbox.images='matlab';
 
+%disable tracking
+ft_default.trackusage = 'no';
+
 %ft_defaults (function) now considers ft_default (variable) and will setup paths accordingly
 ft_defaults
-
-% global ft_defaults
-% ft_default.trackusage = 'no'
 
 global st_default
 

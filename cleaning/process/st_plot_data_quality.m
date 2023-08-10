@@ -234,10 +234,10 @@ insert_ind=find(strcmp(allDetails(:,1),'temporal exp.'));
 allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold' [num2str(100*cfg.channelexpandthresh,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
 %add before ANY:
 insert_ind=find(strcmp(allDetails(:,1),'ANY'));
-allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold (raw)' [num2str(100*cfg.badchannelthresh,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
-%add before ANY:
-insert_ind=find(strcmp(allDetails(:,1),'ANY'));
-allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold (true)' [num2str(100*badchannelthresh_adjusted,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
+allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold' [num2str(100*cfg.badchannelthresh,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
+% %add before ANY:
+% insert_ind=find(strcmp(allDetails(:,1),'ANY'));
+% allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold (true)' [num2str(100*badchannelthresh_adjusted,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
 
 
 
@@ -404,6 +404,8 @@ elseif hasScoring
     ylim([0.5 1.5])
 
 end
+
+
 %%
 %-------------GRID------------
 axes(ax_grid);
@@ -665,7 +667,7 @@ set(l,'Position',[1.5 50 0],'Rotation',270)
 
 %%
 %titles
-sgtitle(fh,fig_title,'Fontsize',12,'FontWeight','bold')
+sgtitle(fh,strrep(fig_title,'_','\_'),'Fontsize',12,'FontWeight','bold')
 fh.Name=fig_title;
 
 % do the general cleanup and bookkeeping at the end of the function
