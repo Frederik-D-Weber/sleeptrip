@@ -62,8 +62,10 @@ ft_nargout  = nargout;
 st_defaults
 
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'grid','neighbours'});
-cfg_grid=cfg_artifacts.grid;
+ft_checkconfig(cfg_artifacts,'required',{'neighbours'});
+ft_checkconfig(cfg_artifacts.artifacts,'required',{'grid'});
+
+cfg_grid=cfg_artifacts.artifacts.grid;
 
 
 artifact_grid=cfg_grid.artifact_grid_merged;
@@ -107,7 +109,7 @@ artifact_grid_channel_expansion=artifact_grid_channel_expanded & ~artifact_grid;
 cfg_grid.artifact_grid_channel_expanded=artifact_grid_channel_expanded;
 cfg_grid.artifact_grid_channel_expansion=artifact_grid_channel_expansion;
 
-cfg_artifacts.grid=cfg_grid;
+cfg_artifacts.artifacts.grid=cfg_grid;
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)

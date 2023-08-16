@@ -82,7 +82,7 @@ st_defaults
 
 %-----core function start---
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'continuous','detector_set','data','elec'});
+ft_checkconfig(cfg_artifacts,'required',{'artifacts','detector_set','data','elec'});
 cfg_artifacts.keepeventtables  = ft_getopt(cfg_artifacts, 'keepeventtables', 'yes');
 
 fprintf([functionname ' function initialized\n'])
@@ -122,20 +122,20 @@ cfg_artifacts=st_expand_artifacts_to_segments(cfg_artifacts);
 %--------------5: repair matrix (= original or time-interpolated artifacts, minus
 cfg_artifacts=st_repair_grid(cfg_artifacts);
 
+%--------6: turn all grids into to continuous event tables
+cfg_artifacts=st_artifact_segment_to_continuous(cfg_artifacts);
 
-
-%-- 6 calculate summary table
+%-- 7 calculate summary table
 cfg_artifacts=st_artifact_summary(cfg_artifacts);
 
 
-if strcmp(cfg_artifacts.keepeventtables,'yes')
-    %turn all grids into to continuous event tables
-    cfg_artifacts=st_artifact_segment_to_continuous(cfg_artifacts);
-
-    %remove the continuous event tables (memory intensive)
-elseif strcmp(cfg_artifacts.keepeventtables,'no')
-    cfg_artifacts=removefields(cfg_artifacts,{'continuous','continuous_from_grid'});
-end
+% if strcmp(cfg_artifacts.keepeventtables,'yes')
+%
+%
+%     %remove the continuous event tables (memory intensive)
+% elseif strcmp(cfg_artifacts.keepeventtables,'no')
+%     cfg_artifacts=removefields(cfg_artifacts,{'continuous','continuous_from_grid'});
+% end
 
 % do the general cleanup and bookkeeping at the end of the function
 % ft_postamble debug

@@ -57,11 +57,11 @@ ft_nargout  = nargout;
 st_defaults
 
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'continuous'});
+ft_checkconfig(cfg_artifacts.artifacts,'required',{'raw_events'});
 
 %grid field may or may not exist
-if isfield(cfg_artifacts,'grid')
-    cfg_grid=cfg_artifacts.grid;
+if isfield(cfg_artifacts.artifacts,'grid')
+    cfg_grid=cfg_artifacts.artifacts.grid;
 else
     cfg_grid=[];
 end
@@ -72,18 +72,18 @@ cfg_grid.segment_length=cfg_artifacts.segment_length; %copy over to grid
 cfg_artifacts.merge_detectors=ft_getopt(cfg_artifacts,'include_detectors','all');
 
 %extract event tables of requested artifact types
+detectorLabelsAvailable=fieldnames(cfg_artifacts.artifacts.raw_events)';
 if strcmp(cfg_artifacts.merge_detectors,'all') %select artifacts from all detectors
-    includeDetectors=1:cfg_artifacts.detector_set.number;
+    includeDetectorLabels=detectorLabelsAvailable;
 else %include only artifacts from requested detectors
 
-    %determine which ones we have
-    [detectorAvailable,idx]=ismember(cfg_artifacts.merge_detectors,cfg_artifacts.detector_set.label);
-    includeDetectors=idx(detectorAvailable);
+    includeDetectorLabels=intersect(detectorLabelsAvailable,cfg_artifacts.merge_detectors);
+
 end
 
-event_tables=cfg_artifacts.continuous.artifacts(includeDetectors);
-cfg_grid.label=cfg_artifacts.continuous.label(includeDetectors);
-numArtifactTypes=length(event_tables);
+
+cfg_grid.label=includeDetectorLabels;
+numArtifactTypes=length(includeDetectorLabels);
 
 data=cfg_artifacts.data;
 numSample=data.sampleinfo(2)-data.sampleinfo(1)+1;
@@ -104,8 +104,7 @@ cfg_grid.channel_number=numChan;
 artifact_grid_by_type = false(numArtifactTypes,numChan,numSeg);
 
 for artType_i=1:numArtifactTypes
-    event_table=event_tables{artType_i};
-
+    event_table=cfg_artifacts.artifacts.raw_events.(includeDetectorLabels{artType_i}).events;
     numEvents=size(event_table,1);
 
     for ev_i=1:numEvents
@@ -134,7 +133,7 @@ artifact_grid_merged=squeeze(any(artifact_grid_by_type,1));
 cfg_grid.artifact_grid_by_type=artifact_grid_by_type;
 cfg_grid.artifact_grid_merged=artifact_grid_merged;
 
-cfg_artifacts.grid=cfg_grid;
+cfg_artifacts.artifacts.grid=cfg_grid;
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)

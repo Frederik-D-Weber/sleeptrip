@@ -1,15 +1,10 @@
 function cfg_artifacts=st_artifact_segment_to_continuous(cfg_artifacts)
 
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'grid','data'});
-cfg_grid=cfg_artifacts.grid;
+ft_checkconfig(cfg_artifacts,'required',{'data'});
+ft_checkconfig(cfg_artifacts.artifacts,'required',{'grid'});
 
-%continuous_from_grid field may or may not exist
-if isfield(cfg_artifacts,'continuous_from_grid')
-    cfg_cont_from_grid=cfg_artifacts.continuous_from_grid;
-else
-    cfg_cont_from_grid=[];
-end
+cfg_grid=cfg_artifacts.artifacts.grid;
 
 
 segmentLength=cfg_grid.segment_length;
@@ -23,11 +18,13 @@ segmentLengthSample=round(segmentLength*srate);
 grid_names=fieldnames(cfg_grid)';
 grid_names=grid_names(contains(grid_names,'grid'));
 
-%initialize cell array of eventTables
-eventTables={};eventLabels={};
+%initialize artifacts struct
+artifacts=struct;
 for grid_var_i=1:length(grid_names)
 
     eventLabel=grid_names{grid_var_i};
+
+    eventLabelSimple=['grid_' erase(eventLabel,{'grid_','artifact_','_grid'})]; %for later use in event tables and artifacts.grid_events
     segments=cfg_grid.(eventLabel);
 
     %only consider 2D grids
@@ -46,9 +43,6 @@ for grid_var_i=1:length(grid_names)
     %
     dataDims=size(segments);
 
-
-    %populate event labels
-    eventLabels{end+1}=eventLabel;
 
     %get each start/end sample
     start_end_sample=cellfun(@(X) [(find(X)-1)*segmentLengthSample+1; find(X)*segmentLengthSample]',...
@@ -77,21 +71,19 @@ for grid_var_i=1:length(grid_names)
     %add duration
     eventTable.duration=eventTable.stop-eventTable.start;
 
-    eventTable(:,'event')={eventLabel};
+    eventTable(:,'event')={eventLabelSimple};
 
     %reorder
     [~, varOrder] = ismember(eventTable.Properties.VariableNames, {'event','channel','start','stop','duration'});
     [~, resortOrder] = sort(varOrder);
     eventTable = eventTable(:,resortOrder);
 
-    %add to cell array of eventTables
-    eventTables{end+1}=eventTable;
+
+    %collect grid event artifact info
+    artifacts.(eventLabelSimple).label=eventLabelSimple;
+    artifacts.(eventLabelSimple).events=eventTable;
 
 
 end
 
-%assign to cfg
-cfg_cont_from_grid.label=eventLabels;
-cfg_cont_from_grid.event_tables=eventTables;
-
-cfg_artifacts.continuous_from_grid=cfg_cont_from_grid;
+cfg_artifacts.artifacts.grid_events=artifacts;

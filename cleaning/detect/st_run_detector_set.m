@@ -75,13 +75,14 @@ fprintf([functionname ' function initialized\n'])
 
 
 %initialize cell array of eventTables
-eventTables={};
+%eventTables={};
 
 [numChan, numSample]=size(data.trial{1});
 srate=data.fsample;
 
 %for every detector
-detector_runtime=[];
+%detector_runtime=[];
+artifacts=struct;
 for detector_i=1:cfg_detector_set.number
 
     tic_detector=tic;
@@ -92,7 +93,7 @@ for detector_i=1:cfg_detector_set.number
     %verify existence of fields
     ft_checkconfig(cfg_detector,'required',{'label','st'});
 
-    fprintf('detection artifacts of type: %s\n',cfg_detector.label);
+    fprintf('detecting artifacts of type: %s\n',cfg_detector.label);
 
     %----extract and check st cfg----
     cfg_st=cfg_detector.st;
@@ -309,18 +310,28 @@ for detector_i=1:cfg_detector_set.number
     eventTable = eventTable(:,resortOrder);
 
     %add to cell array of eventTables
-    eventTables{detector_i}=eventTable;
+    %eventTables{detector_i}=eventTable;
 
-    detector_runtime(detector_i)=toc(tic_detector);
+    %detector_runtime(detector_i)=toc(tic_detector);
+
+    %collect raw artifact info
+    artifacts.(cfg_detector.label).label=cfg_detector.label;
+    artifacts.(cfg_detector.label).detector=cfg_detector;
+    artifacts.(cfg_detector.label).detector_runtime=toc(tic_detector);
+        artifacts.(cfg_detector.label).events=eventTable;
+
 end
 
-cfg_artifacts=[];
-cfg_artifacts.continuous.label=cfg_detector_set.label;
-cfg_artifacts.continuous.artifacts=eventTables;
+cfg_artifacts=struct;
+% cfg_artifacts.continuous.label=cfg_detector_set.label;
+% cfg_artifacts.continuous.artifacts=eventTables;
+cfg_artifacts.artifacts.raw_events=artifacts;
 cfg_artifacts.detector_set=cfg_detector_set;
+%cfg_artifacts.detector_runtime=detector_runtime;
 cfg_artifacts.data=rmfield(data,{'trial'}); %add data struct (without actual data)
 cfg_artifacts.elec=cfg_detector_set.elec;
-cfg_artifacts.detector_runtime=detector_runtime;
+
+%for 
 
 % do the general cleanup and bookkeeping at the end of the function
 %ft_postamble debug

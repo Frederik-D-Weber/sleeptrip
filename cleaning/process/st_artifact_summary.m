@@ -54,8 +54,8 @@ ft_nargout  = nargout;
 st_defaults
 
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'grid'});
-cfg_grid=cfg_artifacts.grid;
+ft_checkconfig(cfg_artifacts.artifacts,'required',{'grid'});
+cfg_grid=cfg_artifacts.artifacts.grid;
 
 hasScoring=false;
 if isfield(cfg_artifacts,'scoring')
@@ -195,7 +195,7 @@ end
 
 
 
-cfg_artifacts.artifact_summary=summaryTable;
+cfg_artifacts.artifacts.summary=summaryTable;
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)

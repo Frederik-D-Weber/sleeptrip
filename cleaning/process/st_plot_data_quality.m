@@ -49,13 +49,16 @@ st_defaults
 
 %-----core function start---
 %---input checks and defaults----
-ft_checkconfig(cfg,'required',{'grid','artifact_summary'});
+ft_checkconfig(cfg,'required',{'artifacts'});
+ft_checkconfig(cfg.artifacts,'required',{'summary'});
+
+
 cfg.title  = ft_getopt(cfg, 'title', '');
 fig_title=cfg.title;
 cfg.style  = ft_getopt(cfg, 'style', 'full');
 
 %get the grid
-cfg_grid=cfg.grid;
+cfg_grid=cfg.artifacts.grid;
 
 %check if plotting style is permitted
 detector_labels=cfg_grid.label;
@@ -175,7 +178,7 @@ ax_width=1;
 
 %precalculate some things
 
-bad_chan_inds=find(mean(cfg.grid.artifact_grid_segment_expanded,2)==1);
+bad_chan_inds=find(mean(cfg_grid.artifact_grid_segment_expanded,2)==1);
 
 reject_grid=double(cfg_grid.reject_grid);
 rejectprop=mean(reject_grid(1,:),2);
@@ -198,7 +201,7 @@ recordingDetails={'plot style' plot_style;...
     'channels' num2str(numChan,'%i')};
 
 
-summaryTable=cfg.artifact_summary;
+summaryTable=cfg.artifacts.summary;
 
 %find all detector values (in convenient order)
 rowNames=summaryTable.Properties.RowNames;
@@ -518,10 +521,10 @@ if strcmp(cfg.style,'full')
 
     %add threshold used for bad channel expansion (adjusted)
 
-%     H=vline(100*badchannelthresh_adjusted);
-%     H.LineStyle='--';
-%     H.LineWidth=1;
-%     H.Color=dark_green;
+    %     H=vline(100*badchannelthresh_adjusted);
+    %     H.LineStyle='--';
+    %     H.LineWidth=1;
+    %     H.Color=dark_green;
 end
 
 xlim([0 100])
@@ -552,11 +555,11 @@ end
 if strcmp(cfg.style,'full')
     b(end+1)=bar(1:numSegment,100*mean(reject_grid,1),'FaceColor',colormap_bar(end,:),'FaceAlpha',reject_alpha,'EdgeColor','none','BarWidth',1);
 
-%     %add threshold used for rejection
-%     V=hline(100*cfg.segmentrejectthresh);
-%     V.LineStyle='--';
-%     V.LineWidth=1;
-%     V.Color=dark_green;
+    %     %add threshold used for rejection
+    %     V=hline(100*cfg.segmentrejectthresh);
+    %     V.LineStyle='--';
+    %     V.LineWidth=1;
+    %     V.Color=dark_green;
 end
 
 %calculate time vector for ticks

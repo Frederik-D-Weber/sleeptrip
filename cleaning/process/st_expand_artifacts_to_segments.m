@@ -58,8 +58,8 @@ ft_nargout  = nargout;
 st_defaults
 
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'grid'});
-cfg_grid=cfg_artifacts.grid;
+ft_checkconfig(cfg_artifacts.artifacts,'required',{'grid'});
+cfg_grid=cfg_artifacts.artifacts.grid;
 numSeg=cfg_grid.segment_number;
 
 
@@ -87,7 +87,7 @@ expansion_seg_mat=expanded_seg_mat & ~artifact_grid_channel_expanded;
 cfg_grid.artifact_grid_segment_expanded=expanded_seg_mat;
 cfg_grid.artifact_grid_segment_expansion=expansion_seg_mat;
 
-cfg_artifacts.grid=cfg_grid;
+cfg_artifacts.artifacts.grid=cfg_grid;
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)

@@ -52,8 +52,8 @@ ft_nargout  = nargout;
 st_defaults
 
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'grid'});
-cfg_grid=cfg_artifacts.grid;
+ft_checkconfig(cfg_artifacts.artifacts,'required',{'grid'});
+cfg_grid=cfg_artifacts.artifacts.grid;
 
 %determine repair matrix (= original or channel-expanded or segment-expanded artifacts, minus rejected)
 repair_grid=(cfg_grid.artifact_grid_merged | cfg_grid.artifact_grid_channel_expansion | cfg_grid.artifact_grid_segment_expansion) & ~cfg_grid.reject_grid;
@@ -65,7 +65,7 @@ end
 
 cfg_grid.repair_grid=repair_grid;
 
-cfg_artifacts.grid=cfg_grid;
+cfg_artifacts.artifacts.grid=cfg_grid;
 
 fprintf([functionname ' function finished\n']);
 toc(ttic)
