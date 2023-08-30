@@ -21,6 +21,7 @@ end
 srates=edf_info.NumSamples(chanInds)./seconds(edf_info.DataRecordDuration);
 
 if ~all(srates==srates(1))
+    fprintf('unequal sample rates, aborting\n')
     return
 end
 srate=srates(1);
@@ -33,34 +34,11 @@ fprintf('reading data...\n')
 edf_data=edfread(edf_file);
 edf_data=cell2mat(edf_data{:,chanInds})';
 
-% edf_info=edfinfo(edf_file);
-% edf_data=edfread(edf_file);
-%
-% RecTime = seconds(edf_data.('Record Time')); %edf-specific
-%
-% if iscell(edf_data{:,1})
-%
-%     signal = cat(1,edf_data{:,1}{:});       % Concatenate The data
-%     srate = numel(edf_data{1,1}{1})/mean(diff(RecTime));                                  % Sampling Intervals (Samples/Second)
-%
-% else
-%     signal=edf_data{:,1};
-%     srate = numel(edf_data{1,1})/mean(diff(RecTime));                                  % Sampling Intervals (Samples/Second)
-%
-% end
-%
-% time_vect = linspace(0, numel(signal)-1, numel(signal)).'/srate;
-%
-% %%quick version
-% srates=edf_info.NumSamples./seconds(edf_info.DataRecordDuration)
-%
-% useChans={'EEG L Cleaned','EEG R Cleaned'};
-% edf_selected=edfread(edf_file,'SelectedSignals',useChans)
+if ~iscell(useChans)
+    useChans={useChans};
+end
 
-%%
-
-
-%data_edf.label={convertStringsToChars(edf_info.SignalLabels)}; %ZMax has non-unique signallabels...
+%populate data struct
 data_edf.label=useChans(:);
 data_edf.time={time_vect'};
 data_edf.trial={edf_data};
