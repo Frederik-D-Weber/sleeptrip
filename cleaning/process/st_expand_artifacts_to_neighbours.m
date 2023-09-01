@@ -76,8 +76,6 @@ numSeg=cfg_grid.segment_number;
 %defaults for expanding artifacts to neighbors:
 %become less aggressive with fewer channels
 if numChan>128
-    channelexpandthresh=0.25;
-elseif numChan>64
     channelexpandthresh=0.5;
 elseif numChan>10
     channelexpandthresh=0.75;
