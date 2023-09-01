@@ -52,7 +52,7 @@ st_defaults
 ft_checkconfig(cfg,'required',{'artifacts'});
 ft_checkconfig(cfg.artifacts,'required',{'summary'});
 
-
+%get defaults
 cfg.title  = ft_getopt(cfg, 'title', '');
 fig_title=cfg.title;
 cfg.style  = ft_getopt(cfg, 'style', 'full');
@@ -75,8 +75,6 @@ if isfield(cfg,'scorings')
     scoring=cfg.scorings.scoring_artifact_level;
     hasScoring=true;
 end
-
-
 
 numChan=cfg_grid.channel_number;
 numSegment=cfg_grid.segment_number;
@@ -119,7 +117,6 @@ reject_col=red;
 artifact_type_reject_labels=[artifact_type_labels reject_label];
 colormap_bar=[artifact_cols; reject_col];
 colormap_grid=[default_col; artifact_cols; reject_col];
-
 
 
 %topography colormap
@@ -166,8 +163,9 @@ ax_topo=subplot(fig_rows,fig_cols,reshape(subplot_layout(seg_rows,grid_cols(end)
 
 %plotting details
 fsize=10; %general fontsize
-fsize_legend=8;
+fsize_legend=8; %hypnogram summary and topoplot colorbar axis
 fsize_small=7;
+fsize_xticklabels=7;
 fsize_big=12;
 
 maxChanLabels=30; %max channel labels to plot
@@ -177,16 +175,12 @@ ax_width=1;
 %%
 
 %precalculate some things
-
 bad_chan_inds=find(mean(cfg_grid.artifact_grid_segment_expanded,2)==1);
-
 reject_grid=double(cfg_grid.reject_grid);
-rejectprop=mean(reject_grid(1,:),2);
-badchannelthresh_adjusted=cfg.badchannelthresh*(1-rejectprop)+rejectprop;
+
 %%
+%----SUMMARY TABLE---
 axes(ax_table);
-
-
 
 ycoor_start=0;
 
@@ -238,9 +232,7 @@ allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold' [num2str(100*cfg.channel
 %add before ANY:
 insert_ind=find(strcmp(allDetails(:,1),'ANY'));
 allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold' [num2str(100*cfg.badchannelthresh,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
-% %add before ANY:
-% insert_ind=find(strcmp(allDetails(:,1),'ANY'));
-% allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold (true)' [num2str(100*badchannelthresh_adjusted,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
+
 
 
 
@@ -281,7 +273,6 @@ for text_i=1:size(allTextProps,1)
 
 end
 
-
 g=gca;
 set(g,'TickDir','none',...
     'XTick',[],...
@@ -291,8 +282,6 @@ set(g,'TickDir','none',...
 
 xlim([0 5])
 ylim([0 10])
-
-
 
 
 %%
@@ -375,7 +364,7 @@ elseif hasScoring
 
     %make the labels
     legend_labels=[stage_labels;...
-        cellfun(@(X) [num2str(X,'%.1f') ' min'],num2cell(stage_minutes),'UniformOutput',false);...
+        cellfun(@(X) [num2str(X,'%.1f') ' m'],num2cell(stage_minutes),'UniformOutput',false);...
         cellfun(@(X) [num2str(X,'%.1f') '%'],num2cell(stage_percentage),'UniformOutput',false)];
 
     legend_labels=mat2cell(legend_labels,3,ones(1,length(stage_labels)));
@@ -486,7 +475,7 @@ if strcmp(cfg.style,'full')
 end
 
 %customize plot appearance
-xticks=[];
+
 label_interval=ceil(numChan/maxChanLabels);
 chan_ticks=1:label_interval:numChan;
 chan_ticklabels=chanLabel(chan_ticks);
@@ -494,8 +483,9 @@ chan_ticklabels=chanLabel(chan_ticks);
 
 g=gca;
 set(g,'TickDir','out',...
-    'XTick',xticks,...
+    'XTick',[],...
     'YTick',chan_ticks,'YTickLabel',chan_ticklabels,...
+    'TickLength',[0.005 0],...
     'FontSize',fsize,'box','off',...
     'YDir','reverse',...%'TickLength',[0.01 0.01],...
     'XColor',xax_col,'YColor',yax_col)
@@ -518,13 +508,6 @@ end
 
 if strcmp(cfg.style,'full')
     b(end+1)=barh(1:numChan,100*mean(reject_grid,2),'FaceColor',colormap_bar(end,:),'FaceAlpha',reject_alpha,'EdgeColor','none','BarWidth',1);
-
-    %add threshold used for bad channel expansion (adjusted)
-
-    %     H=vline(100*badchannelthresh_adjusted);
-    %     H.LineStyle='--';
-    %     H.LineWidth=1;
-    %     H.Color=dark_green;
 end
 
 xlim([0 100])
@@ -534,7 +517,8 @@ g=gca;
 set(g,'TickDir','out',...
     'XAxisLocation','bottom',...
     'XTick',0:25:100,'XGrid','on',...
-    'YTick',[],...%'TickLength',[0.01 0.01],...
+    'YTick',[],...
+    'TickLength',[0.005 0],...
     'FontSize',fsize,'box','off','XColor',xax_col,'YColor',yax_col,'LineWidth',1)
 g.XAxis.LineWidth=ax_width;
 g.YAxis.LineWidth=ax_width;
@@ -554,35 +538,47 @@ end
 
 if strcmp(cfg.style,'full')
     b(end+1)=bar(1:numSegment,100*mean(reject_grid,1),'FaceColor',colormap_bar(end,:),'FaceAlpha',reject_alpha,'EdgeColor','none','BarWidth',1);
-
-    %     %add threshold used for rejection
-    %     V=hline(100*cfg.segmentrejectthresh);
-    %     V.LineStyle='--';
-    %     V.LineWidth=1;
-    %     V.Color=dark_green;
 end
 
 %calculate time vector for ticks
-time_vect_sec=segmentLength*((1:numSegment)-1);
-
+time_vect_segment=segmentLength*((1:numSegment)-1);
 tick_interval_sec=60*30;
-duration_vect=seconds(time_vect_sec);
-duration_vect.Format='hh:mm';
+num_intervals=max(floor(time_vect_segment/tick_interval_sec));
+search_values=[[0:num_intervals]'*tick_interval_sec;time_vect_segment(end)];
 
-num_intervals=max(floor(time_vect_sec/tick_interval_sec));
-xticks=dsearchn(time_vect_sec',[0:num_intervals]'*tick_interval_sec);
-xticklabels=char(duration_vect(xticks));
+xticks=dsearchn(time_vect_segment',search_values);
+
+
+duration_vect=seconds(time_vect_segment);
+duration_vect.Format='hh:mm';
+xticklabels_time=cellstr(duration_vect(xticks));
+xticklabels_segment=cellfun(@num2str,num2cell(xticks'),'UniformOutput',false);
+xticklabels_epoch=cellfun(@num2str,num2cell(ceil(xticks'/(30/segmentLength))),'UniformOutput',false);
+
+xticklabels_cell=strjust(pad([xticklabels_segment;xticklabels_epoch;xticklabels_time]),'center');
+xticklabels=sprintf('%s\\newline%s\\newline%s\n', xticklabels_cell{:});
 
 xlim([0.5 numSegment+0.5])
 ylim([0 100])
 ylabel('channels (%)')
-xlabel('elapsed time (hh:mm)')
+xlabel('segment / epoch / time elapsed (hh:mm)')
 g=gca;
 set(g,'TickDir','out',...
     'XTick',xticks,'XTickLabel',xticklabels,...
     'YTick',0:25:100,'YGrid','on',...
-    'FontSize',fsize,'box','off',...%'TickLength',[0.01 0.01],...
+    'TickLength',[0.005 0],...
+    'FontSize',fsize,'box','off',...
     'XColor',xax_col,'YColor',yax_col)
+
+%adjust xticklabel font size (workaround)
+xl = get(g,'XLabel');
+xlFontSize = get(xl,'FontSize');
+xAX = get(g,'XAxis');
+set(xAX,'FontSize', fsize_xticklabels)
+set(xl, 'FontSize', xlFontSize);
+
+
+
 g.XAxis.LineWidth=ax_width;
 g.YAxis.LineWidth=ax_width;
 
@@ -631,7 +627,7 @@ if ~isempty(bad_chan_inds) && strcmp(plot_style,'full')
     cfg.highlightchannel=chanLabel(bad_chan_inds);
     cfg.highlightsymbol='.';
     cfg.highlightsize=8;
-    cfg.highlightcolor='r';%artifact_grid_plot_cols(4,:);
+    cfg.highlightcolor='r';
 
 end
 
