@@ -39,6 +39,8 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   cfg.signallinewidth         = the line width of the signals to draw (default = 0.5);
 %   cfg.precision               = the precision that the data is stored in, either 'single' or 'single_trial' (32bit float) or 'double' or 'double_trial' (64bit float) or 'original' (unchanged).
 %                                 Note that 'single_trial' and 'double_trial' only convert the data.trial to the desired precision (default = 'single_trial')
+%   cfg.highlightscoringchannels = either 'yes' or 'no' if the scoring channels
+%                                 should be highlighted (default = 'yes')
 %   cfg.events                  = a table or events with the columns named: event start stop duration channel
 %                                 ... with the columns giving:
 %                                 event: the name of the event type, note
@@ -54,19 +56,20 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                          of uses wildcards if cfg.eventchannelmatching = 'wildcard' e.g. 'C*' to match all
 %                                          channels that start with C, or 'all' to
 %                                          match all channels, SEE FT_CHANNELSELECTION for details.
-%   cfg.highlightscoringchannels = either 'yes' or 'no' if the scoring channels
-%                                 should be highlighted (default = 'yes')
 %   cfg.eventchannelmatching    = either match channels of events to the
 %                                 one in the data using a 'wildcard' or be 'exact' (default = 'exact').
 %                                 Note that using 'wildcard' can be much
 %                                 much slower than 'exact' approach.
 %   cfg.eventsplothypnogram     = if events should be plotted also in the
 %                                 hypnogram, either 'yes' or 'no' (default = 'no')
-%   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' or 'boxdimple' or 'boxdimple+snake'(default = 'box');
 %   cfg.eventcolors             = a Nx3 RGB color matrix of the different N events types as (alphabetically) ordered by matlab 'unique' function, missing colors for the number of event types will be complemented;
 %                                 (default = flipud(brighten(lines(N_EventTypes))) )
-%   cfg.eventcolormapping       = specify colors for each unique event label. provide as Nx2 cell array of N event labels and N RGB color triplets, e.g., [{'event 1','event 2'}' {[1 0 0] [0 0 1]}']. event labels must cover all unique labels in events.event
+%   cfg.eventhighlighting       = how to highlight events in the signals 'snake+box' or 'snake' or 'box' or 'boxdimple' or 'boxdimple+snake'(default = 'box');
+%   cfg.eventorder              = specify order of events for legend and plotting, provided as N length cell array of event types. event types present in cfg.events but missing from cfg.eventorder are plotted last
+%   cfg.eventcolormapping       = specify colors for each unique event label. provide as Nx2 cell array of N event labels and N RGB color triplets, e.g., [{'event_type 1','event_type 2'}' {[1 0 0] [0 0 1]}']. event types present in cfg.events but missing from cfg.eventorder are plotted in default colors
+%   cfg.eventhighlightmapping   = specify event highlighting for each unique event label. provide as Nx2 cell array of N event labels and N highlight labels, e.g., [{'event_type 1','event_type 2'}' {'snake' 'box'}']. event types present in cfg.events but missing from cfg.eventorder are set to cfg.eventhighlighting
 %   cfg.eventcolorsalpha        = the alpha value (non-transparency) of the event colors (default = 0.38)
+%   cfg.snakewidth              = for event highlighting of type "snake", the mulitplier of linewidth
 %   cfg.eventminduration        = the minimal duration in seconds of an
 %                                 event to better display it e.g. if duration is 0 seconds then
 %                                 this will be changed to
@@ -252,7 +255,6 @@ cfg.viewmode        = ft_getopt(cfg, 'viewmode', 'vertical');
 cfg.startepoch      = ft_getopt(cfg, 'startepoch', 1);
 cfg.datainteractive = ft_getopt(cfg, 'datainteractive', 'no');
 cfg.signallinewidth = ft_getopt(cfg, 'signallinewidth', 0.5);
-cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'box');
 cfg.eventminduration = ft_getopt(cfg, 'eventminduration', 0.05);
 cfg.precision = ft_getopt(cfg, 'precision', 'single_trial');
 
@@ -566,37 +568,50 @@ if isfield(cfg,'events')
     cfg.eventssamples = eventssamples;
     eventssamples = [];
 
+    %events as present in cfg.events
     cfg.EventTypes = unique(cfg.eventssamples.event); %default: alphabetically
     cfg.nEventTypes = numel(cfg.EventTypes);
 
+    %---event order
+    %requested event order (may contain more or fewer events than cfg.EventTypes)
+    cfg.eventorder=ft_getopt(cfg,'eventorder',cfg.EventTypes);
+
+    %reorder existing event types
+    [isM, ind]=ismember(cfg.eventorder,cfg.EventTypes); %first by requested order
+    cfg.EventTypes=[cfg.EventTypes(ind(isM)) ; setdiff(cfg.EventTypes,cfg.eventorder)]; %plus all remaining events
+
+    %---event colors
     %default event colors
     cfg.eventcolors = ft_getopt(cfg, 'eventcolors',flipud(brighten(lines(cfg.nEventTypes), .8)));
     cfg.eventcolorsalpha = ft_getopt(cfg, 'eventcolorsalpha',0.38);
 
-    %take eventcolormapping from cfg when present, but check if all event labels accounted for
-    cfg.eventcolormapping=ft_getopt(cfg, 'eventcolormapping',[cfg.EventTypes num2cell(cfg.eventcolors,2)]);
-    if all(ismember(cfg.EventTypes,cfg.eventcolormapping(:,1)))
+    defaultEventcolormapping=[cfg.EventTypes num2cell(cfg.eventcolors,2)];
 
-        can_map=ismember(cfg.eventcolormapping(:,1),cfg.EventTypes);
-        cfg.EventTypes=cfg.eventcolormapping(can_map,1); %note: reorders event types
-        cfg.eventcolors=cell2mat(cfg.eventcolormapping(can_map,2));
-    else
-        fprintf('cfg.eventcolormapping does not cover all events present: using default colors\n')
-        cfg.eventcolormapping=[cfg.EventTypes num2cell(cfg.eventcolors,2)];
-    end
+    %take eventcolormapping from cfg when present, otherwise take default
+    cfg.eventcolormapping=ft_getopt(cfg, 'eventcolormapping',defaultEventcolormapping);
+
+    %sort eventcolormapping according to eventorder/EventTypes, using requested colors if provided and default otherwise
+    [isM, ind]=ismember(cfg.EventTypes,cfg.eventcolormapping(:,1));
+    cfg.eventcolormapping=[cfg.eventcolormapping(ind(isM),:); defaultEventcolormapping(~isM,:)];
+
+    %update eventcolors
+    cfg.eventcolors=cell2mat(cfg.eventcolormapping(:,2));
+
+    %---event highlighting
+
+    cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'box');
 
     %take eventhighlightmapping from cfg when present, otherwise default to cfg.eventhighlighting
     defaultEventhighlightmapping=[cfg.EventTypes repmat({cfg.eventhighlighting},[cfg.nEventTypes 1])];
+
     cfg.eventhighlightmapping=ft_getopt(cfg,'eventhighlightmapping',defaultEventhighlightmapping);
 
-    if all(ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1)))
-        [can_map, map_ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
+    %sort eventcolormapping according to eventorder/EventTypes, using requested colors if provided and default otherwise
+    [isM, ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
+    cfg.eventhighlightmapping=[cfg.eventhighlightmapping(ind(isM),:); defaultEventhighlightmapping(~isM,:)];
 
-        cfg.eventhighlightmapping=cfg.eventhighlightmapping(map_ind,:);
-    else
-        fprintf('cfg.eventhighlightmapping does not cover all events present: using cfg.eventhighlighting\n')
-        cfg.eventhighlightmapping=defaultEventhighlightmapping;
-    end
+    %event snake width
+    cfg.snakewidth=ft_getopt(cfg,'snakewidth',10);
 
     cfg.times_ind_per_channel_evtypes = {};
     cfg.begin_end_per_channel_evtypes = {};
@@ -6003,11 +6018,11 @@ if strcmp(cfg.displayEvents,'yes')
 
                             %to set line transparency, supply eventcolorsalpha as 4th column in 'color'
                             try
-                                ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', [eventdarkercolor  repmat(cfg.eventcolorsalpha,[size(eventdarkercolor,1) 1])], 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*5,...
+                                ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', [eventdarkercolor  repmat(cfg.eventcolorsalpha,[size(eventdarkercolor,1) 1])], 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*cfg.snakewidth,...
                                     'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.laytime.width(iChannel), 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(iChannel),:));
 
                             catch
-                                ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', eventdarkercolor, 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*10,...
+                                ft_plot_vector(tim(evbeg(k):evend(k)), dat(iChannel, evbeg(k):evend(k)), 'box', false, 'color', eventdarkercolor, 'tag', 'event_begin_end', 'linewidth', cfg.signallinewidth*cfg.snakewidth,...
                                     'hpos', opt.laytime.pos(iChannel,1), 'vpos', opt.laytime.pos(iChannel,2), 'width', opt.laytime.width(iChannel), 'height', opt.laytime.height(iChannel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(iChannel),:));
                             end
                     end
@@ -6064,7 +6079,9 @@ if strcmp(cfg.displayEvents,'yes')
 
                         end
                 end
-            end
+            end %end channel loop
+
+            %plot actual boxes
             switch cfg.eventhighlighting
                 case {'box'}
                     if iEvcount > 0
