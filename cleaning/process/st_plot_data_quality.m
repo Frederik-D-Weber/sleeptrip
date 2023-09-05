@@ -71,8 +71,8 @@ fprintf([functionname ' function initialized\n'])
 
 
 hasScoring=false;
-if isfield(cfg,'scorings')
-    scoring=cfg.scorings.scoring_artifact_level;
+if isfield(cfg,'scoring_artifact_level')
+    scoring=cfg.scoring_artifact_level;
     hasScoring=true;
 end
 

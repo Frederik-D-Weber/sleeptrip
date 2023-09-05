@@ -1,18 +1,18 @@
 function cfg_artifacts=st_artifact_summary(cfg_artifacts)
 
 % ST_ARTIFACT_SUMMARY calculates a summary table based on information in
-% cfg.grid. If a scoring is present, details are also provided by sleep
+% cfg_artifacts.artifacts.grid. If a scoring is present, details are also provided by sleep
 % stage.
 %
 % Use as:
-%     cfg=st_artifact_summary(cfg)
+%     cfg_artifacts=st_artifact_summary(cfg_artifacts)
 %
 % Required configuration parameters:
-%     cfg.grid      = structure containing segment-based artifact grids
+%     cfg_artifacts.artifacts.grid      = structure containing segment-based artifact grids
 %
 %Output:
-%     cfg = artifact configuration with added field:
-%     - cfg.artifact_summary
+%     cfg_artifacts = artifact configuration with added subfield:
+%     - cfg_artifacts.artifacts.summary
 %
 % See also ST_PROCESS_DETECTOR_RESULTS ST_GET_DEFAULT_DETECTOR_SET ST_RUN_DETECTOR_SET
 
@@ -96,77 +96,25 @@ art_nonrejected_pct=calc_percentage(artifact_grids(:,:,~reject_grid(1,:)));
 summaryTable=array2table([art_pct art_nonrejected_pct],'RowNames',artifact_labels,'VariableNames',{'artifact_data_global_perc','artifact_nonrejected_global_perc'});
 
 
-% %rejection grid (global)
-% reject_total_perc=100*mean(reject_grid(1,:)); %percentage of total data
-% reject_total_min=sum(reject_grid(1,:))*cfg_grid.segment_length/60; %minutes of total data
-%
-% %repair grid as perc of unrejected data
-% repair_unrejected_total_perc=100*mean(repair_grid(:,~reject_grid(1,:)),'all');
-%
-%
-% %repair grid (excluding rejected) as perc of total data
-% repair_data_total_perc=100*mean(repair_grid,'all'); %percentage of total data
-%
-% summaryTable=table(reject_total_perc,reject_total_min,repair_unrejected_total_perc,repair_data_total_perc);
+
 %%
 %get segment-wise sleep scores (length dependent on scoring length)
 if hasScoring
 
-    segment_length=cfg_grid.segment_length;
-    numArtifactSegment=cfg_grid.segment_number;
+    %get artfact-level scoring
+    cfg_tmp=[];
+    cfg_tmp.scoring=scoring;
+    cfg_tmp.cfg_artifacts=cfg_artifacts;
 
-    %rescore to match artifact segments
-    tmp_cfg=[];
-    tmp_cfg.new_epochlength_seconds=segment_length;
-    scoring_artifact_level = st_scoring_change_epochlength(tmp_cfg, scoring);
+    scoring_artifact_level=st_scoring_artifact_level(cfg_tmp);
 
-    numScoringSegment=length(scoring_artifact_level.epochs);
-
-    %artifact-level scoring may be longer or shorter than artifact segments:
-    if numArtifactSegment<numScoringSegment % trim scoring if needed
-        scoring_artifact_level.epochs=scoring_artifact_level.epochs(1:numArtifactSegment);
-        scoring_artifact_level.excluded=scoring_artifact_level.excluded(1:numArtifactSegment);
-        scoring_artifact_level.prob=scoring_artifact_level.prob(:,1:numArtifactSegment);
-        scoring_artifact_level.numbers=scoring_artifact_level.numbers(1:numArtifactSegment);
-    elseif numArtifactSegment>numScoringSegment %extend scoring by repeating last epoch info
-        scoring_artifact_level.epochs(end+1:numArtifactSegment)=scoring_artifact_level.epochs(end);
-        scoring_artifact_level.excluded(end+1:numArtifactSegment)= scoring_artifact_level.excluded(end);
-        scoring_artifact_level.prob(:,end+1:numArtifactSegment)=repmat(scoring_artifact_level.prob(:,end),[1 numArtifactSegment-numScoringSegment]);
-        scoring_artifact_level.numbers(end+1:numArtifactSegment)= scoring_artifact_level.numbers(end);
-    end
-
-    %extract epoch lists:
-    %regular
+    %extract epoch list:
     epochList=scoring_artifact_level.epochs;
-%     %non_rejected only
-%     epochList_nonrejected=epochList(~reject_grid(1,:));
-
     scoring_labels=scoring_artifact_level.label;
 
     for label_i=1:length(scoring_labels)
 
         currLabel=scoring_labels{label_i};
-
-        %         %----rejection
-        %         %percentage of stage
-        %         reject_stage_perc=100*mean(reject_grid(1,strcmp(scoring_artifact_level_exclude.epochs,currLabel)));
-        %         varName=strjoin({'reject' currLabel,'perc'},'_');
-        %         summaryTable=[summaryTable table(reject_stage_perc,'VariableNames',{varName})];
-        %
-        %         %minutes of stage
-        %         reject_stage_min=sum(reject_grid(1,strcmp(scoring_artifact_level_exclude.epochs,currLabel)))*segment_length/60;
-        %         varName=strjoin({'reject' currLabel,'min'},'_');
-        %         summaryTable=[summaryTable table(reject_stage_min,'VariableNames',{varName})];
-        %
-        %         %--repair (of non-rejected)
-        %         repair_unrejected_stage_perc=100*mean(repair_grid(:,strcmp(scoring_artifact_level_exclude.epochs,currLabel) & ~scoring_artifact_level_exclude.excluded),'all');
-        %         varName=strjoin({'repair' 'unrejected', currLabel,'perc'},'_');
-        %         summaryTable=[summaryTable table(repair_unrejected_stage_perc,'VariableNames',{varName})];
-        %
-        %         %--repair (of total)
-        %         repair_data_stage_perc=100*mean(repair_grid(:,strcmp(scoring_artifact_level_exclude.epochs,currLabel)),'all');
-        %         varName=strjoin({'repair' 'data', currLabel,'perc'},'_');
-        %         summaryTable=[summaryTable table(repair_unrejected_stage_perc,'VariableNames',{varName})];
 
         %calculate stage-wise percentages (all of stage, and non-rejected
         %of stage)
@@ -182,17 +130,10 @@ if hasScoring
 
     end
 
-    %copy scoring and set excluded to match the reject_mat
-    scoring_artifact_level_exclude=scoring_artifact_level;
-    scoring_artifact_level_exclude.excluded=reject_grid(1,1:length(scoring_artifact_level_exclude.excluded));
-
     %scorings
-    cfg_artifacts.scorings.scoring_epoch_level=scoring;
-    cfg_artifacts.scorings.scoring_artifact_level=scoring_artifact_level;
-    cfg_artifacts.scorings.scoring_artifact_level_exclude=scoring_artifact_level_exclude;
+    cfg_artifacts.scoring_artifact_level=scoring_artifact_level;
 
 end
-
 
 
 cfg_artifacts.artifacts.summary=summaryTable;
