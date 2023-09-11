@@ -4,10 +4,10 @@ function data=st_repair_artifacts(cfg_artifacts,data)
 % the repair grid created by ST_PROCESS_DETECTOR_RESULTS
 %
 % Use as:
-%     data=st_repair_artifacts(cfg,data)
+%     data=st_repair_artifacts(cfg_artifacts,data)
 %
 % Required configuration parameters:
-%     cfg.grid      = structure containing segment-based artifact grids (including repair grid)
+%     cfg_artifacts.artifacts.grid      = structure containing segment-based artifact grids (including repair grid)
 %     data          =  data structure to be cleaned
 %
 % Output:

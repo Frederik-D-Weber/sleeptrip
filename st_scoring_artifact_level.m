@@ -83,7 +83,7 @@ scoring_artifact_level = st_scoring_change_epochlength(tmp_cfg, scoring);
 
 numScoringSegment=length(scoring_artifact_level.epochs);
 
-fprintf('Changing epoch length to match artifact segment length: %i epochs versus %i artifact segments\n',numScoringSegment,numArtifactSegment)
+fprintf('Changing scoring epoch length to match artifact segment length: %i epochs versus %i artifact segments\n',numScoringSegment,numArtifactSegment)
 
 segmentDisagree=abs(numScoringSegment-numArtifactSegment);
 minutesDisagree=segmentDisagree*segment_length/60;

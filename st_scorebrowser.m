@@ -1074,8 +1074,8 @@ if strcmp(cfg.cuttoscoring,'yes')
 end
 
 if strcmp(cfg.cuttoscoring,'yes') && isfield(cfg, 'scoring')
-    epochLengthSamples = round(cfg.scoring.epoch_length * data.fsample);
-    data_cut_samples = epochLengthSamples*numel(scorng.epochs);
+    epochLengthSamples = round(cfg.scoring.epochlength * data.fsample);
+    data_cut_samples = epochLengthSamples*numel(cfg.scoring.epochs);
 
     dataoffset = 0;
     if isfield(cfg.scoring,'dataoffset')

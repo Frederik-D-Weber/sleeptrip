@@ -119,7 +119,6 @@ for artType_i=1:numArtifactTypes
         segEnd=floor(evEnd/segment_length)+1;
 
         seg_inds=segStart:segEnd;
-        seg_inds=intersect(seg_inds,1:numSeg);%to prevent inclusion of final incomplete segment
 
         artifact_grid_by_type(artType_i,chan_ind,seg_inds)=artifact_grid_by_type(artType_i,chan_ind,seg_inds) | true;
     end
