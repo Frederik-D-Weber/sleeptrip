@@ -37,7 +37,9 @@ function [cfg] = ft_singleplotER(cfg, varargin)
 %   cfg.renderer      = 'painters', 'zbuffer', ' opengl' or 'none' (default = [])
 %   cfg.linestyle     = linestyle/marker type, see options of the PLOT function (default = '-')
 %                       can be a single style for all datasets, or a cell-array containing one style for each dataset
-%   cfg.linewidth     = linewidth in points (default = 0.5)
+%   cfg.linewidth     = linewidth in points (default = 0.5), either a
+%                       single number or a nx1 vector of positive numbers
+%                       for each line to plot
 %   cfg.linecolor     = color(s) used for plotting the dataset(s) (default = 'brgkywrgbkywrgbkywrgbkyw')
 %                       alternatively, colors can be specified as nx3 matrix of RGB values
 %   cfg.directionality = '', 'inflow' or 'outflow' specifies for
@@ -195,6 +197,10 @@ cfg.renderer        = ft_getopt(cfg, 'renderer',       []); % let MATLAB decide 
 % check for linestyle being a cell-array
 if ischar(cfg.linestyle)
   cfg.linestyle = repmat({cfg.linestyle}, 1, Ndata);
+end
+
+if numel(cfg.linewidth) == 1
+  cfg.linewidth = repmat(cfg.linewidth, 1, Ndata);
 end
 % check it's length, and lengthen it if does not have enough styles in it
 if (length(cfg.linestyle) > 1) && (length(cfg.linestyle) < Ndata )
@@ -464,11 +470,11 @@ mask = maskmatrix;
 
 if strcmp(cfg.maskstyle, 'difference')
   % combine the conditions in a single plot, highlight the difference
-  ft_plot_vector(xval, yval, 'color', linecolor, 'style', cfg.linestyle{1}, 'linewidth', cfg.linewidth, 'highlight', mask, 'highlightstyle', cfg.maskstyle, 'hlim', [xmin xmax], 'vlim', [ymin ymax], 'facealpha', cfg.maskfacealpha);
+  ft_plot_vector(xval, yval, 'color', linecolor, 'style', cfg.linestyle{1}, 'linewidth', cfg.linewidth(1), 'highlight', mask, 'highlightstyle', cfg.maskstyle, 'hlim', [xmin xmax], 'vlim', [ymin ymax], 'facealpha', cfg.maskfacealpha);
 else
   % loop over the conditions, plot them on top of each other
   for i=1:Ndata
-    ft_plot_vector(xval, yval(i,:), 'color', linecolor(i,:), 'style', cfg.linestyle{i}, 'linewidth', cfg.linewidth, 'highlight', mask, 'highlightstyle', cfg.maskstyle, 'hlim', [xmin xmax], 'vlim', [ymin ymax], 'facealpha', cfg.maskfacealpha);
+    ft_plot_vector(xval, yval(i,:), 'color', linecolor(i,:), 'style', cfg.linestyle{i}, 'linewidth', cfg.linewidth(i), 'highlight', mask, 'highlightstyle', cfg.maskstyle, 'hlim', [xmin xmax], 'vlim', [ymin ymax], 'facealpha', cfg.maskfacealpha);
   end
 end
 

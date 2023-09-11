@@ -46,6 +46,8 @@ function [res_channel, res_event, res_filter] = st_slowwaves(cfg, data)
 %                             Should be greater than cfg.minfreqdetectfilt 
 %                             (default = 3.5)
 %  cfg.meanfactoramp      = Factor in means for threshold of amplitude (negative peak to positive peak) (default = 1)
+%  cfg.usedwnpkthreshold  = if the negative trough downslope value should be used in
+%                            addition to select for slow waves (default = 'yes')
 %  cfg.meanfactordwnpk    = Factor in means for threshold of negative down peaks default (default = 1)
 %  cfg.minamplitude       = Minimum absolute potential difference previous to take means to select as valid event (i.e. peak to peak or peak to trough)                         
 %                             (default = 0)
@@ -142,6 +144,7 @@ cfg.minamplitude     = ft_getopt(cfg, 'minamplitude', 0);
 cfg.maxamplitude     = ft_getopt(cfg, 'maxamplitude', 600);
 cfg.minuppeak        = ft_getopt(cfg, 'minuppeak', 10);
 cfg.maxdownpeak      = ft_getopt(cfg, 'maxdownpeak', -15);
+cfg.usedwnpkthreshold = ft_getopt(cfg, 'usedwnpkthreshold', 'yes');
 % cfg.leftofcenterfreq  = ft_getopt(cfg, 'leftofcenterfreq', 1);
 % cfg.rightofcenterfreq  = ft_getopt(cfg, 'rightofcenterfreq', 1);
 % cfg.thresholdaggmeth  = ft_getopt(cfg, 'thresholdaggmeth', 'respectivechan');
@@ -795,8 +798,12 @@ for iChan = 1:nChannels
         ch_meanNegativePeak{iChan} =  nanmean(trl_detectedSignalMin(tempIndexAboveMeanThreshold_premean));
         ch_meanPeak2Peak{iChan} =  nanmean(trl_detectedPeak2Peaks(tempIndexAboveMeanThreshold_premean));
         
-        tempIndexAboveMeanThreshold_temp = (trl_detectedTroughsSamples >= (ch_meanNegativePeak{iChan}*cfg.meanfactordwnpk)) ...
-            & (trl_detectedPeak2Peaks >= (ch_meanPeak2Peak{iChan}*cfg.meanfactoramp));
+        if istrue(cfg.usedwnpkthreshold)
+            tempIndexAboveMeanThreshold_temp = (trl_detectedSignalMin <= (ch_meanNegativePeak{iChan}*cfg.meanfactordwnpk)) ...
+                & (trl_detectedPeak2Peaks >= (ch_meanPeak2Peak{iChan}*cfg.meanfactoramp));
+        else
+            tempIndexAboveMeanThreshold_temp = (trl_detectedPeak2Peaks >= (ch_meanPeak2Peak{iChan}*cfg.meanfactoramp));
+        end
         
         tempIndexWithinThresholds = (tempIndexAboveMeanThreshold_temp & tempIndexAboveMeanThreshold_premean);
         

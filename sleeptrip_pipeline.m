@@ -675,6 +675,7 @@ hold off
 cfg = [];
 cfg.scoring          = scoring;
 cfg.stages           = {'N2', 'N3'};
+%cfg.stages           = {'S2', 'S3'};
 %cfg.thresholdstages  = {'N3'}; % if you want threshold on another sleep stage
 cfg.channel          = subject.eegchannels;
 
