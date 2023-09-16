@@ -2277,6 +2277,17 @@ switch selection,
 end
 end
 
+% SUBFUNCTION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function cleanup_cb_hhyp(hObject, eventdata, varargin)
+h_main = ft_getopt(varargin, 'h_main');
+h = getparent(h_main);
+opt = getappdata(h, 'opt');
+opt.changedBGcolor3 = false;
+setappdata(h, 'opt', opt);
+delete(hObject);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2470,6 +2481,8 @@ helptext = [ ...
     ' Non-Scoring:\n'...
     '  Shift + Left-arrow: decrease segment length\n'...
     '  Shift + Right-arrow: increase segment length\n'...
+    '  Shift + [: decrease segment length exponentially\n'...
+    '  Shift + ]: increase segment length exponentially\n'...
     '  Ctrl + Left-arrow: previous segment\n'...
     '  Ctrl + Right-arrow: next segment\n'...
     '  H: Horizontal scaling \n'...
@@ -4389,8 +4402,9 @@ if strcmp(cfg.doSleepScoring,'yes')
                 %figure(cfg.hhyp)
             else
                 cfg.hhyp = figure;
-                set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
+                set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main', h});
                 set(cfg.hhyp, 'NumberTitle', 'off');
+                set(cfg.hhyp, 'CloseRequestFcn', {@cleanup_cb_hhyp, 'h_main', h});
                 cfg.hhypfigax = gca;
             end
             
@@ -4399,6 +4413,7 @@ if strcmp(cfg.doSleepScoring,'yes')
             figure(cfg.hhyp)
             set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
             set(cfg.hhyp, 'NumberTitle', 'off');
+            set(cfg.hhyp, 'CloseRequestFcn', {@cleanup_cb_hhyp, 'h_main', h});
             cfg.hhypfigax = gca;
             %cfg.hhypfig = gcf;
         end

@@ -28,6 +28,11 @@ function [power, fooof, freqs, ePeaks, eAperiodics, eStats] = st_fooof(cfg, vara
 %                           'fooofed_periodic_fitted'  or
 %                           'fooofed_aperiodic_fitted' 
 %                            (default = 'fooofed_periodic')
+%                           'all' puts all the above in the freq output and
+%                           also the fooof values like peaks,of aperiodic courve fit values
+%                           error, r_squared, etc., also the
+%                           fooofed_periodic will be the default
+%                           powerspectrum output
 %  cfg.freq_range          = the frequency range of the available frequencies to fooof (default = [min(freqs) max(freqs)]);
 %  cfg.peak_width_limits   = the peak width limits (default = [0.5 12]); % Peak width limits
 %  cfg.max_peaks           = the maximum number of peaks (default = 3); % Maximum number of peaks
@@ -228,11 +233,35 @@ if isFreqInput
                     power = fooof.peak_fit;
                 case 'fooofed_aperiodic_fitted'
                     power = fooof.peak_fit;
+                case 'all'
+                    power = power - fooof.ap_fit;
+                    fooofed_periodic = power;
+                    foofed = fooof.fooofed_spectrum;
+                    fooofed_periodic_fitted = fooof.peak_fit;
+                    fooofed_aperiodic_fitted = fooof.peak_fit;
                 otherwise
                     %power = power;
             end
             end
             freq.powspctrm(iChannel,:,iTime) = power;
+            switch cfg.fooof
+                case 'all' 
+                    freq.fooofed_periodic(iChannel,:,iTime) = fooofed_periodic;
+                    freq.foofed(iChannel,:,iTime) = foofed;
+                    freq.fooofed_periodic_fitted(iChannel,:,iTime) = fooofed_periodic_fitted;
+                    freq.fooofed_aperiodic_fitted(iChannel,:,iTime) = fooofed_aperiodic_fitted;
+                    freq.peak_types = fooof.peak_types;
+                    if isempty(fooof.peak_params)
+                        pp = [NaN NaN NaN];
+                    else
+                        pp = fooof.peak_params;
+                    end
+                    freq.peak_params(iChannel,:,iTime) = pp;
+                    freq.error(iChannel,:,iTime) = fooof.error;
+                    freq.r_squared(iChannel,:,iTime) = fooof.r_squared;
+                    freq.aperiodic_params(iChannel,:,iTime) = fooof.aperiodic_params;
+
+            end
         end
     end
     power = freq;
