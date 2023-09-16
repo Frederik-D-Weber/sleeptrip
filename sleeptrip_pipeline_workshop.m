@@ -1704,7 +1704,7 @@ for iSubject = 1:numel(subjects)
     cfg.scoring          = scoring_cycles_firsts{iSubject};
     cfg.dataset          = subject.dataset;
     %cfg.channel = {'EOGLeft:M1','EOGRight:M1'};
-    cfg.channel          = subject.eegchannels;
+    cfg.channel          = {'HEOG'};
     %cfg.RemoveSignalThatIsNotREM = 'no';
     [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg);
     
@@ -1731,6 +1731,8 @@ for iSubject = 1:numel(subjects)
 
     res_spindles_event = res_spindles_events{iSubject};
     res_slowwaves_event = res_slowwaves_events{iSubject};
+    res_rems_event = res_rems_events{iSubject};
+
 
     
     scoring = scorings{iSubject};
@@ -1741,18 +1743,20 @@ for iSubject = 1:numel(subjects)
     spindle_troughs_subject.eegchannels{2} = res_spindles_event.table.seconds_trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
     slowwave_troughs_subject.eegchannels{1} = res_slowwaves_event.table.seconds_trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{1}}));
     slowwave_troughs_subject.eegchannels{2} = res_slowwaves_event.table.seconds_trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{2}}));
-
-
+    rem_troughs_subject = res_rems_event.table.seconds_center;
 
     % we can also get the amplitudes
     spindle_amplitude_subject.eegchannels{1} = res_spindles_event.table.amplitude_peak2trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{1}}));
     spindle_amplitude_subject.eegchannels{2} = res_spindles_event.table.amplitude_peak2trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
     slowwave_amplitude_subject.eegchannels{1} = res_slowwaves_event.table.amplitude_peak2trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{1}}));
     slowwave_amplitude_subject.eegchannels{2} = res_slowwaves_event.table.amplitude_peak2trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{2}}));
-
+    
     % ... or the frequency of each sleep spindle
     spindle_frequency_subject.eegchannels{1} = res_spindles_event.table.frequency_by_mean_pk_trgh_cnt_per_dur(strcmp(res_spindles_event.table.channel,{subject.eegchannels{1}}));
     spindle_frequency_subject.eegchannels{2} = res_spindles_event.table.frequency_by_mean_pk_trgh_cnt_per_dur(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
+
+    % ... or the REM velocity
+    rem_velocity_subject = res_rems_event.table.speed_uV_per_second_seconds;
 
     % also plot event properties like amplitude and frequency for each event
     cfg = [];
@@ -1765,23 +1769,28 @@ for iSubject = 1:numel(subjects)
                        spindle_troughs_subject.eegchannels{1}';...
                        spindle_troughs_subject.eegchannels{2}';...
                        slowwave_troughs_subject.eegchannels{1}';...
-                       slowwave_troughs_subject.eegchannels{2}'};
+                       slowwave_troughs_subject.eegchannels{2}';...
+                       rem_troughs_subject'};
     cfg.eventvalues = {spindle_amplitude_subject.eegchannels{1}';...
                        spindle_amplitude_subject.eegchannels{2}';...
                        spindle_frequency_subject.eegchannels{1}';...
                        spindle_frequency_subject.eegchannels{2}';...
                        slowwave_amplitude_subject.eegchannels{1}';...
-                       slowwave_amplitude_subject.eegchannels{2}'};
+                       slowwave_amplitude_subject.eegchannels{2}';
+                       rem_velocity_subject'};
     cfg.eventvalueranges = {[min(spindle_amplitude_subject.eegchannels{1}), max(spindle_amplitude_subject.eegchannels{1})];...
                        [min(spindle_amplitude_subject.eegchannels{2}), max(spindle_amplitude_subject.eegchannels{2})];...
                        [min(spindle_frequency_subject.eegchannels{1}), max(spindle_frequency_subject.eegchannels{1})];...
                        [min(spindle_frequency_subject.eegchannels{2}), max(spindle_frequency_subject.eegchannels{2})];...
                        [min(slowwave_amplitude_subject.eegchannels{1}), max(slowwave_amplitude_subject.eegchannels{1})];...
-                       [min(slowwave_amplitude_subject.eegchannels{2}), max(slowwave_amplitude_subject.eegchannels{2})]};
+                       [min(slowwave_amplitude_subject.eegchannels{2}), max(slowwave_amplitude_subject.eegchannels{2})];...
+                       [min(rem_velocity_subject), max(rem_velocity_subject)]
+                       };
     cfg.eventvalueranges = cellfun(@(x) round(x,2), cfg.eventvalueranges,'UniformOutput',false);               
     cfg.eventlabels = {['spd ' 'ampl ' subject.eegchannels{1}], ['spd ' 'ampl ' subject.eegchannels{2}], ...
                        ['spd ' 'freq ' subject.eegchannels{1}], ['spd ' 'freq ' subject.eegchannels{2}],...
-                       ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}]};
+                       ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}],...
+                       ['rem' 'vel']};
     figure_handle = st_hypnoplot(cfg, scoring);
 end
 
