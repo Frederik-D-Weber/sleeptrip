@@ -105,6 +105,11 @@ if isfield(data, 'trial') && isfield(data, 'time')
         ft_error('data structure does not look like continuous data and has more than one trial')
     end
 end
+if iscell(data.time)
+    nSamplesInData = numel(data.time{1});
+else
+    nSamplesInData = numel(data.time);
+end
 fsample = data.fsample;
 
 
@@ -143,6 +148,15 @@ if hasScoring
         ft_warning('requested sleep stages are not present in the scoring, will return empty begins_epochs ends_epochs.');
 
     end
+
+    %ignore any epochs with start sample outside range
+    begins_out_of_range=begins>nSamplesInData;
+    begins(begins_out_of_range)=[];
+    ends(begins_out_of_range)=[];
+    %set epochswith end sample out of range to end sample
+    ends_out_of_range=ends>nSamplesInData;
+    ends(ends_out_of_range)=nSamplesInData;
+
     cfg.contbegsample = begins+offsetSamples;
     cfg.contendsample = ends+offsetSamples;
 

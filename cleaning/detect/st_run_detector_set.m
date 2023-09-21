@@ -291,10 +291,6 @@ for detector_i=1:cfg_detector_set.number
     eventTable{eventTable{:,'start'}<1,'start'}=1;
     eventTable{eventTable{:,'stop'}>numSample,'stop'}=numSample;
 
-    %convert to time in s
-    %     eventTable.start=(eventTable.start-1)./srate;
-    %     eventTable.stop=(eventTable.stop-1)./srate;
-
     %convert to time in seconds (respecting time vector in data)
     eventTable.start=(eventTable.start-1)./srate+data.time{1}(1);
     eventTable.stop=(eventTable.stop-1)./srate+data.time{1}(1);
