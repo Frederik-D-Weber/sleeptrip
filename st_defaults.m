@@ -67,6 +67,11 @@ try; ft_hastoolbox('cleaning/detect',1,1); end
 try; ft_hastoolbox('cleaning/process',1,1); end
 try; ft_hastoolbox('cleaning/repair',1,1); end
 try; ft_hastoolbox('cleaning/shared',1,1); end
+try; ft_hastoolbox('cleaning/ica',1,1); end
+
+try; ft_hastoolbox('external/eeglab',1,1); end
+try; ft_hastoolbox('external/iclabel',1,1); end
+
 
 
 % avoid using the dsp toolbox from 2021-06-03 on

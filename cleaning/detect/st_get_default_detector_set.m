@@ -15,7 +15,8 @@ function cfg_detector_set=st_get_default_detector_set(cfg)
 %     include. (default: 'all' [string])
 %
 % The following detector names are recognized:
-%   'absamp'
+%   'highamp'
+%   'lowamp'
 %   'lowfreq'
 %   'highfreq'
 %   'jump'
