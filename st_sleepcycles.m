@@ -189,6 +189,13 @@ else
     NRends = endepochs;
 end
 
+if numel(NRstarts) == 1
+    if NRstarts == 0
+        NRstarts = [];
+        NRends = [];
+    end
+end
+
 %if final REM offset is before sleep offset, add another NR period
 if Rends(end) < preOffsetCandidate
     NRstarts = [NRstarts; Rends(end)+1];
@@ -368,16 +375,21 @@ end
 
 function [starts, ends] = getCycleStartEndsByLabel(label,max_merge_inbetween_stages,stages)
 stages = getSmoothedLabels(label,max_merge_inbetween_stages,stages);
-label_logical = strcmp(stages,label);
-if label_logical(end) == 1
-    label_logical = [label_logical 0];
+if ~isempty(stages)
+    label_logical = strcmp(stages,label);
+    if label_logical(end) == 1
+        label_logical = [label_logical 0];
+    end
+    onoff = diff(label_logical);
+    
+    starts = find(onoff == 1)+1;
+    ends   = find(onoff == -1);
+    starts = starts';
+    ends = ends';
+else
+    starts = [];
+    ends = [];
 end
-onoff = diff(label_logical);
-
-starts = find(onoff == 1)+1;
-ends   = find(onoff == -1);
-starts = starts';
-ends = ends';
 end
 
 function stages = getSmoothedLabels(label,max_merge_inbetween_stages,stages)

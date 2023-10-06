@@ -16,8 +16,23 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          'custom' with a scoremap file
 %                          'zmax'   for hypnodyne corp Zmax exported scoring
 %                                   files
-%                          'somnomedics_english' or 'somnomedics' for
-%                                   somnomedics exproted scoring files
+%                          'zmax_autoscored'   for hypnodyne corp Zmax exported scoring
+%                                   files that were autoscored
+%                          'somnomedics_english' or 'somnomedics' or or 'somnomedics_txt_english' for
+%                                   somnomedics exproted scoring files from
+%                                   DOMINO software. Only the English
+%                                   version.
+%                          'somnomedics_german' or 'somnomedics_txt_german' for
+%                                   somnomedics exproted scoring files from
+%                                   DOMINO software. Only the German
+%                                   version.
+%                          'somnomedics_xlsx_english' or 'somnomedic_xlsx' for
+%                                   somnomedics exproted scoring files from
+%                                   DOMINO software that are in one xlsx file. Only the English version.
+%                          'somnomedics_xlsx_german' for
+%                                   somnomedics exproted scoring files from
+%                                   DOMINO software that are in one xlsx
+%                                   file. Only the German version.
 %                          'spisop', 'schlafaus' or 'sleepin' for files
 %                                   that are from Schlafaus/SpiSOP or sleepin
 %                                   software
@@ -65,6 +80,10 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          adapted with reference for dataonset always, see cfg.dataoffset.
 %                          This will also apply for read in artifacts,
 %                          arousals and all other events
+%  cfg.excludebyarousals  = if epochs should be excluded if they contain
+%                           any arousal, either 'yes' or 'no' (default = 'no')
+%  cfg.excludebyartifacts = if epochs should be excluded if they contain an
+%                           artifact, either 'yes' or 'no' (default = 'no')
 %
 % Alternatively one can specify a more general data format with datatype
 % with a configuration of only the following necessary options
@@ -121,7 +140,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %  events, i.e. scoring.arousals, scoring.artifacts and scoring.events,
 %  respectively
 %  both are a table of the form
-
+%
 %  ---------------------------------------------
 %  event    | start | stop  | duration | channel
 %  ---------------------------------------------
@@ -197,9 +216,8 @@ cfg.dataoffset         = ft_getopt(cfg, 'dataoffset', 0);
 cfg.fileencoding       = ft_getopt(cfg, 'fileencoding', '');
 cfg.filetype           = ft_getopt(cfg, 'filetype', 'text');
 cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
-
-cfg.eventsoffset       = ft_getopt(cfg, 'eventsoffset', 'scoringonset');
-
+cfg.excludebyarousals  = ft_getopt(cfg, 'excludebyarousals', 'no');
+cfg.excludebyartifacts = ft_getopt(cfg, 'excludebyartifacts', 'no');
 
 
 % flag to determine which reading option to take
@@ -340,24 +358,174 @@ switch  cfg.scoringformat
         %cfg.ignorelines      = {'LOUT','LON'};
         cfg.columnnum        = 1;
         
-    case {'somnomedics_english', 'somnomedics'}
-        % Somnomedics english version exported profile txt
-        scoremap = [];
-        scoremap.labelold  = {'Wake', 'N1', 'N2', 'N3', 'REM', 'A'};
-        switch cfg.standard
-            case 'aasm'
-                scoremap.labelnew  = {'W',    'N1', 'N2', 'N3', 'R',   '?'};
-            case 'rk'
-                ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
-                scoremap.labelnew  = {'W',    'S1', 'S2', 'S3', 'R',   '?'};
-        end
-        scoremap.unknown   = '?';
+    case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
         
         %cfg.scoremap         = scoremap;
         cfg.columndelimimter = ';';
         cfg.skiplines        = 7;
         cfg.columnnum        = 2;
         
+        switch cfg.scoringformat
+            % Somnomedics English or German version exported profile xlsx
+            case {'somnomedics_xlsx'}
+                try 
+                    readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet','Sleep profile');
+                    cfg.scoringformat = 'somnomedics_xlsx_english';
+                catch
+                    
+                end
+                try 
+                    readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet','Schlafprofil');
+                    cfg.scoringformat = 'somnomedics_xlsx_german';
+                catch
+                    
+                end
+        end
+                
+        scoremap = [];
+        % Somnomedics german or english version exported profile txt
+        switch cfg.scoringformat
+            case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_xlsx_english', 'somnomedics_xlsx'}
+                scoremap.labelold  = {'Wake', 'WAKE', 'N1', 'N2', 'N3', 'REM', 'Rem', 'A', 'Artifact'};
+                switch cfg.standard
+                    case 'aasm'
+                        scoremap.labelnew  = {'W', 'W', 'N1', 'N2', 'N3', 'R', 'R', '?', '?'};
+                    case 'rk'
+                        ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                        scoremap.labelnew  = {'W', 'W', 'S1', 'S2', 'S3', 'R', 'R', '?', '?'};
+                end
+                
+            case {'somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german'}
+                scoremap.labelold  = {'Wach','WACH', 'Stadium 1', 'STADIUM 1', 'S1', 'N1', 'Stadium 2', 'STADIUM 2', 'S2', 'N2', 'Stadium 3', 'STADIUM 3', 'S3', 'N3', 'Stadium 4', 'STADIUM 4', 'S4', 'N4', 'REM','Rem', 'Artefact', 'A', 'Bewegung', 'MT'};
+                switch cfg.standard
+                    case 'aasm'
+                        scoremap.labelnew  = {'W', 'W', 'N1', 'N1', 'N1', 'N1', 'N2', 'N2', 'N2', 'N2', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'N3', 'R', 'R', '?', '?', 'W', 'W'};
+                    case 'rk'
+                        ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
+                        scoremap.labelnew  = {'W', 'W', 'S1', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4', 'R', 'R', '?', '?', 'W', 'W'};
+                end
+                
+                
+        end
+        
+        scoremap.unknown   = '?';
+        
+        dtformats = {'dd.MM.yyyy HH:mm:ss', 'dd-MMM-yyyy HH:mm:ss', 'dd.MMM.yyyy HH:mm:ss.SSS', 'dd-MMM-yyyy HH:mm:ss.SSS'};
+        
+        switch cfg.scoringformat
+            case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
+                arousal_sheet_name = 'Classification Arousals';
+                scoring_sheet_name = 'Sleep profile';
+            case {'somnomedics_xlsx_german'}
+                arousal_sheet_name = 'Klassifizierte Arousal';
+                scoring_sheet_name = 'Schlafprofil';
+        end
+         
+        switch cfg.scoringformat
+            case {'somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
+                processTableStucture = true;
+                
+                
+                
+                try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
+                    tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name,'DatetimeType','text');
+                catch
+                    tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name);
+                end
+                start_datetime_offset_scoring_string = tb_sc{find(ismember(tb_sc{:,1},'Start Time'),1,'first'),2};
+                
+                
+                for iDtFormats = 1:numel(dtformats)
+                    try
+                        scoring.scoringstartdatetime = datetime(start_datetime_offset_scoring_string,'InputFormat',dtformats{iDtFormats});
+                        break
+                    catch
+                    end
+                end
+                tableScoring = tb_sc((cfg.skiplines+1):end,:);
+                readoption = 'table';
+                
+                
+                % the arousals are a separate sheet in the
+                % same excel .xlsx file, otherwise use the
+                % previous arousal definition
+                
+                if isempty(filename_arousals)
+                    filename_arousals = cfg.scoringfile;
+                    try
+                        try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
+                            tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name,'DatetimeType','text');
+                        catch
+                            tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name);
+                        end
+                        
+                        start_datetime_offset_string = tb_a{find(ismember(tb_a{:,1},'Start Time'),1,'first'),2};
+                        
+                        if ismember('SignalID',tb_a.Properties.VariableNames)
+                            tb_a = tb_a((cfg.skiplines+1):end,:);
+                            
+                        end
+                        if size(tb_a,1) > 0
+                            
+                            
+                            for iDtFormats = 1:numel(dtformats)
+                                try
+                                    dt = datetime(tb_a{1:end,1},'InputFormat',dtformats{iDtFormats});
+                                    start_a = datenum(dt-scoring.scoringstartdatetime)*24*3600;
+                                    
+                                    dt = datetime(tb_a{1:end,2},'InputFormat',dtformats{iDtFormats});
+                                    stop_a = datenum(dt-scoring.scoringstartdatetime)*24*3600;
+                                    break
+                                catch
+                                end
+                            end
+                            
+                            duration_a = stop_a - start_a;
+                            
+                            event_a = tb_a{1:end,4};
+                            
+                            tableArousal = table(event_a,start_a,stop_a,duration_a,'VariableNames',{'event','start','stop','duration'});
+                            tableArousal.channel = repmat('all',size(tableArousal,1),1);
+                            
+                        end
+                        
+                        if ~isempty(tableArousal)
+                            tableArousal = tableArousal;
+                            hasArousals = true;
+                            filename_arousals = []; % reset this again so no
+                        end
+                    catch
+                        
+                    end
+                    filename_arousals = []; % reset this again so no further reading in later in code
+                end
+            otherwise
+                % .txt version
+                parampairs = {};
+                parampairs = [parampairs, {'ReadVariableNames',false}];
+                %parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
+                
+                if ~isempty(cfg.filetype)
+                    parampairs = [parampairs, {'FileType',cfg.filetype}];
+                end
+                
+                if ~isempty(cfg.columndelimimter)
+                    parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
+                end
+                
+                if ~isempty(cfg.fileencoding)
+                    parampairs = [parampairs, {'FileEncoding',cfg.fileencoding}];
+                end
+                try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
+                    parampairs2 = [parampairs, {'HeaderLines',cfg.skiplines}];
+                    tableScoring = readtable(filename,parampairs2{:});
+                catch
+                    parampairs2 = [parampairs, {'NumHeaderLines',cfg.skiplines}];
+                    tableScoring = readtable(filename,parampairs2{:});
+                end
+                %TODO arousals in the .txt format
+        end
+
     case {'spisop' 'schlafaus' 'sleepin'}
         scoremap = [];
         scoremap.labelold  = {'0', '1',  '2',  '3',  '4',  '5', '8', '-1'};
@@ -790,12 +958,12 @@ if processTableStucture
         
         ignore = logical(zeros(size(tableScoring,1),1));
         if ~isempty(cfg.ignorelines)
-            ignore = cellfun(@(x)  any(ismember(cfg.ignorelines, x)), startline, 'UniformOutput', 1);
+            ignore = cellfun(@(x)  any(startsWith(x, cfg.ignorelines)), startline, 'UniformOutput', 1);
         end
         
         select = logical(ones(size(tableScoring,1),1));
         if ~isempty(cfg.selectlines)
-            select = cellfun(@(x)  any(ismember(cfg.selectlines, x)), startline, 'UniformOutput', 1);
+            select = cellfun(@(x)  any(startsWith(x, cfg.selectlines)), startline, 'UniformOutput', 1);
         end
         % get only the rows that matter and update the new table dimension
         tableScoring = tableScoring((select & ~ignore),:);
@@ -1036,6 +1204,24 @@ if isfield(cfg,'to')
     end
     scoring = st_scoringconvert(cfg_sc, scoring);
 end
+
+
+%%% exclude arousals (with respect to data start time = 0, if present
+%%% exclude those epochs for further analysis
+if istrue(cfg.excludebyarousals)
+if isfield(scoring,'arousals')
+    [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.arousals.start, scoring.arousals.stop);
+end
+end
+
+%%% exclude artifacts (with respect to data start time = 0, if present
+%%% exclude those epochs for further analysis
+if istrue(cfg.excludebyartifacts)
+if isfield(scoring,'artifacts')
+    [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.artifacts.start, scoring.artifacts.stop);
+end
+end
+
 end
 
 function diffsec = datetimeDiffToOffsetInSeconds(offsetdts,dts,dtformat)

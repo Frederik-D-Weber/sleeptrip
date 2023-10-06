@@ -1880,8 +1880,8 @@ if strcmp(cfg.doSleepScoring,'yes')
     uicontrol('tag', 'scoptbuttons', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '?(7/D)','position', [0.52, temp_lower_line_y2 , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'd')
     uicontrol('tag', 'scoptbuttons_nextunk', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '[>]','position', [0.52, temp_lower_line_y , 0.04, 0.04],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'u')
 
-    uicontrol('tag', 'scoptbuttons_SOdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '(+)_.·\_.·\_.·','Fontsize',6,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'k')
-    uicontrol('tag', 'scoptbuttons_SOdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(_.·\)--','Fontsize',6,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'o')
+    uicontrol('tag', 'scoptbuttons_SOdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '(+)_.Â·\_.Â·\_.Â·','Fontsize',6,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'k')
+    uicontrol('tag', 'scoptbuttons_SOdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(_.Â·\)--','Fontsize',6,'FontUnits','normalized','position', [0.56, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'o')
     uicontrol('tag', 'scoptbuttons_SPdet', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--~~-~~--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y+0.08/3+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'j')
     uicontrol('tag', 'scoptbuttons_SPdisp', 'parent', h, 'units', 'normalized', 'style', 'pushbutton', 'string', '--(~~~)--','Fontsize',6,'FontUnits','normalized', 'position', [0.61, temp_lower_line_y+0.08/3 , 0.05, 0.08/3],'backgroundcolor',[0 0 0],'foregroundcolor',[1 1 1], 'userdata', 'n')
     if cfg.has_ECG
@@ -2333,6 +2333,17 @@ switch selection,
 end
 end
 
+% SUBFUNCTION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function cleanup_cb_hhyp(hObject, eventdata, varargin)
+h_main = ft_getopt(varargin, 'h_main');
+h = getparent(h_main);
+opt = getappdata(h, 'opt');
+opt.changedBGcolor3 = false;
+setappdata(h, 'opt', opt);
+delete(hObject);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2526,6 +2537,8 @@ helptext = [ ...
     ' Non-Scoring:\n'...
     '  Shift + Left-arrow: decrease segment length\n'...
     '  Shift + Right-arrow: increase segment length\n'...
+    '  Shift + [: decrease segment length exponentially\n'...
+    '  Shift + ]: increase segment length exponentially\n'...
     '  Ctrl + Left-arrow: previous segment\n'...
     '  Ctrl + Right-arrow: next segment\n'...
     '  H: Horizontal scaling \n'...
@@ -4231,9 +4244,9 @@ if strcmp(cfg.doSleepScoring,'yes')
         ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'BackgroundColor',  cfg.slowoscillation_mark_color);
         ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'FontWeight', 'bold');
         if cfg.SOdetection_orientation == 1;
-            ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'string', '(+)_.·\_.·\_.·');
+            ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'string', '(+)_.Â·\_.Â·\_.Â·');
         else
-            ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'string', '(-)`·/¯`·/¯`·/');
+            ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'string', '(-)`Â·/Â¯`Â·/Â¯`Â·/');
         end
     else
         ft_uilayout(h, 'tag', 'scoptbuttons_SOdet', 'BackgroundColor', [0.5 0.5 0.5]);
@@ -4445,8 +4458,9 @@ if strcmp(cfg.doSleepScoring,'yes')
                 %figure(cfg.hhyp)
             else
                 cfg.hhyp = figure;
-                set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
+                set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main', h});
                 set(cfg.hhyp, 'NumberTitle', 'off');
+                set(cfg.hhyp, 'CloseRequestFcn', {@cleanup_cb_hhyp, 'h_main', h});
                 cfg.hhypfigax = gca;
             end
 
@@ -4455,6 +4469,7 @@ if strcmp(cfg.doSleepScoring,'yes')
             figure(cfg.hhyp)
             set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
             set(cfg.hhyp, 'NumberTitle', 'off');
+            set(cfg.hhyp, 'CloseRequestFcn', {@cleanup_cb_hhyp, 'h_main', h});
             cfg.hhypfigax = gca;
             %cfg.hhypfig = gcf;
         end
@@ -6465,6 +6480,58 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                 end
 
             end
+
+if strcmp(cfg.viewmode, 'butterfly')
+    set(gca,'ColorOrder',opt.chancolors(chanindx,:)) % plot vector does not clear axis, therefore this is possible
+    if istrue(cfg.plotsignal)
+    ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
+        'hpos', opt.laytime.pos(1,1), 'vpos', opt.laytime.pos(1,2), 'width', opt.laytime.width(1), 'height', opt.laytime.height(1), 'hlim', opt.hlim, 'vlim', opt.vlim);
+    end
+    
+    % two ticks per channel
+    yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height/2); ...
+        opt.laytime.pos(:,2)+(opt.laytime.height/4); ...
+        opt.laytime.pos(:,2);                        ...
+        opt.laytime.pos(:,2)-(opt.laytime.height/4); ...
+        opt.laytime.pos(:,2)-(opt.laytime.height/2)]);
+    
+    yTickLabel = {num2str(yTick.*range(opt.vlim) + opt.vlim(1))};
+    
+    set(gca, 'yTick', yTick);
+    set(gca, 'yTickLabel', yTickLabel)
+    
+elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
+     % determine channel indices into data outside of loop
+    laysels = match_str(opt.laytime.label, opt.hdr.label);
+    
+    if istrue(cfg.plotsignal)
+
+   
+    
+    % only plot labels when current chanlabel objects are less then the total number of channels (see bug 2065)
+    % this is a cheap quick fix. If it causes error in plotting components, do this conditional on viewmode
+    chanob = findobj(h,'tag', 'chanlabel');
+    if numel(chanob)<numel(chanindx)
+        needredrawchanlabel = true;
+    else
+        needredrawchanlabel = false;
+    end
+    if (cfg.channelmaxlabels <= length(chanindx))
+        delete(chanob);
+        needredrawchanlabel = false;
+    end
+    colors = zeros(length(chanindx),3);
+    for i = 1:length(chanindx)
+        if strcmp(cfg.viewmode, 'component')
+            colors(i,:) = [0 0 0];
+        else
+            colors(i,:) = opt.chancolors(chanindx(i),:);
+        end
+    end
+    hasSameColors = false;
+    if ~isempty(colors)
+        if all((colors(1,1) == colors(:,1)) & (colors(1,2) == colors(:,2)) & (colors(1,3) == colors(:,3)));
+         	hasSameColors = true;
         end
 
         if hasSameColors

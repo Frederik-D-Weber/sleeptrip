@@ -470,29 +470,95 @@ cfg.channel = subject.eegchannels{1};
 cfg.powvalue = 'power';
 freq_continous = st_tfr_continuous(cfg, data);
 
-%transform posthoc
-switch 'log10(p+1)'
-    case 'db'
-        freq_continous.powspctrm(:) = 10*log10(freq_continous.powspctrm(:));
-    case 'db(p+1)'
-        freq_continous.powspctrm(:) = freq_continous.powspctrm(:)+1;
-        freq_continous.powspctrm(:) = 10*log10(freq_continous.powspctrm(:));
-    case  'log10'
-        freq_continous.powspctrm(:) = log10(freq_continous.powspctrm(:));
-    case  'log10(p+1)'
-        freq_continous.powspctrm(:) = freq_continous.powspctrm(:)+1;
-        freq_continous.powspctrm(:) = log10(freq_continous.powspctrm(:));
+freq_continous_trans = freq_continous;
+
+%transform posthoc examples
+transStrings = {'db', 'db(p+1)', 'log10', 'log10(p+1)'};
+zLims = {[], [], [-3 0], [0 0.1]};
+for iTrans = 1:numel(transStrings)
+    switch transStrings{iTrans}
+        case 'db'
+            freq_continous_trans.powspctrm(:) = 10*log10(freq_continous.powspctrm(:));
+        case 'db(p+1)'
+            freq_continous_trans.powspctrm(:) = freq_continous.powspctrm(:)+1;
+            freq_continous_trans.powspctrm(:) = 10*log10(freq_continous_trans.powspctrm(:));
+        case  'log10'
+            freq_continous_trans.powspctrm(:) = log10(freq_continous.powspctrm(:));
+            freq_continous_trans_log10 = freq_continous_trans;
+        case  'log10(p+1)'
+            freq_continous_trans.powspctrm(:) = freq_continous.powspctrm(:)+1;
+            freq_continous_trans.powspctrm(:) = log10(freq_continous_trans.powspctrm(:));
+    end
+
+    cfg = [];
+    %cfg.zlim           = [-3 0]; %log(10)
+    cfg.zlim           =  zLims{iTrans};%[0 0.5]; % log10(p+1)
+    cfg.colormap       = jet(256); % still a good colormap, however not for some forms of colorblindness
+    % cfg.layout         = ...
+    % ft_multiplotTFR(cfg, freq_continous);
+    cfg.channel        = subject.eegchannels{1};
+    cfg.title          = transStrings{iTrans};
+    ft_singleplotTFR(cfg, freq_continous_trans);
+    
+    %%% to make this a bit prettier and in hours as units
+    set(gca,'TickDir','out');
+    time = freq_continous.time;
+    timeticksdiff = 3600;
+    xTick = [0:timeticksdiff:(max([max(time)]))];
+    set(gca, 'xTick', xTick);
+    set(gca, 'xTickLabel', arrayfun(@num2str,round(xTick/3600,2),'UniformOutput',false)); 
+    timeunit = 'h';
+    set(gca, 'box', 'off')
+    xlabel(['Time [' timeunit ']']);
+    ylabel('Frequency [Hz]');
 end
 
+
+
+
+
+%%% fooof it
+% first log10 transform it %'db' transformed first
+% before fooofing check that the values are positive by adding the minimal
+% value to it and a 1 for log(1) = 0 for better scaling
+
+freq_continous_trans = freq_continous;
+freq_continous_trans.powspctrm(:) = log10(freq_continous.powspctrm(:));
+freq_continous_pos = freq_continous_trans;
+minpowerval = + min(freq_continous_pos.powspctrm(:));
+if minpowerval < 0
+freq_continous_pos.powspctrm = freq_continous_pos.powspctrm + abs(minpowerval) + 1;
+end
+cfg = [];
+cfg.fooof = 'all';
+freq_continous_pos_fooofed_periodic = st_fooof(cfg,freq_continous_pos);
+%freq_continous_fooofed = st_fooof(cfg,freq_continous);
+figure
+cfg = [];
+cfg.zlim           = [-4 1];
+%cfg.zlim           = [-100 8];
+cfg.colormap       = jet(256); 
+ft_singleplotTFR(cfg, freq_continous_pos_fooofed_periodic);
+%ft_singleplotTFR(cfg, freq_continous_fooofed);
+
+
+figure
+plot(squeeze(freq_continous_pos_fooofed_periodic.aperiodic_params(1,1,:)))
+hold on
+plot(squeeze(freq_continous_pos_fooofed_periodic.aperiodic_params(1,2,:)))
+hold off
+
+
+figure
 cfg = [];
 %cfg.zlim           = [-3 0]; %log(10)
-cfg.zlim           = [0 0.5]; % log10(p+1)
+cfg.zlim           =  [-4 1];%[0 0.5]; % log10(p+1)
 cfg.colormap       = jet(256); % still a good colormap, however not for some forms of colorblindness
 % cfg.layout         = ...
 % ft_multiplotTFR(cfg, freq_continous);
 cfg.channel        = subject.eegchannels{1};
-ft_singleplotTFR(cfg, freq_continous);
-
+cfg.title          = 'log10';
+ft_singleplotTFR(cfg, freq_continous_trans_log10);
 
 %%% to make this a bit prettier and in hours as units
 set(gca,'TickDir','out');
@@ -500,35 +566,19 @@ time = freq_continous.time;
 timeticksdiff = 3600;
 xTick = [0:timeticksdiff:(max([max(time)]))];
 set(gca, 'xTick', xTick);
-set(gca, 'xTickLabel', arrayfun(@num2str,round(xTick/3600,2),'UniformOutput',false)); 
+set(gca, 'xTickLabel', arrayfun(@num2str,round(xTick/3600,2),'UniformOutput',false));
 timeunit = 'h';
 set(gca, 'box', 'off')
 xlabel(['Time [' timeunit ']']);
 ylabel('Frequency [Hz]');
 
-
-
-%%% fooof it
-% before fooofing check that the values are positive by adding the minimal
-% value to it and a 1 for log(1) = 0 for better scaling
-freq_continous_pos = freq_continous;
-minpowerval = + min(freq_continous_pos.powspctrm(:));
-if minpowerval < 0
-freq_continous_pos.powspctrm = freq_continous_pos.powspctrm + abs(minpowerval) + 1;
-end
-cfg = [];
-freq_continous_pos_fooofed = st_fooof(cfg,freq_continous_pos);
-%freq_continous_fooofed = st_fooof(cfg,freq_continous);
 figure
 cfg = [];
 cfg.zlim           = [-4 1];
 %cfg.zlim           = [-100 8];
-cfg.colormap       = jet(256); 
-ft_singleplotTFR(cfg, freq_continous_pos_fooofed);
-%ft_singleplotTFR(cfg, freq_continous_fooofed);
-
-
-
+cfg.colormap       = jet(256);
+ft_singleplotTFR(cfg, freq_continous_pos_fooofed_periodic);
+ 
 %practice: compare the results of cfg.approach = 'mtmfft_segments' with
 %cfg.approach = 'spectrogram', the latter computation is about 10 times
 %faster as it uses matlab internal functions. Also play around with the
@@ -545,40 +595,26 @@ cfg.bgcolor = 'dark'; % 'white' or 'dark'
 % Instead of specifiying a dataset, data header, a montage or a scoring you
 % can also dot this interactively by setting
 % cfg.datainteractive = 'yes';
-cfg_postscore = st_scorebrowser(cfg ,data);
+cfg_postscore = st_scorebrowser(cfg, data);
+
+
+%% looking at the data in the score browser version
+cfg = [];
+cfg.renderer = 'opengl'; % to get things plotted a little faster
+cfg.bgcolor = 'dark'; % 'white' or 'dark'
+% Instead of specifiying a dataset, data header, a montage or a scoring you
+% can also dot this interactively by setting
+cfg.events = table({'ev1'; 'ev2'; 'ev3'; 'ev4'},[10 11 12 13]', [12 15 12.5 13]', [2 3 0.5 0]',{'C4:A1'; 'C3:A2'; 'HEOG'; 'EMG'},'VariableName',{'event', 'start', 'stop', 'duration', 'channel'});
+cfg.datainteractive = 'yes';
+cfg.eventsplothypnogram = 'yes';
+%cfg.eventhighlighting = 'snake';    
+cfg_postscore = st_scorebrowser(cfg);
 
 % st_scorebrowser(cfg, data); % without an output argument the browser will give the handling back to Matlab immediately. Not recommended!
 % There are many features, it is recommended to never press Ctrl+C while
 % using it (as to not crash it) and to see the button "shortcuts" to get
 % some help on what can be done.
    
-
-%% take a look at the data, MIGHT NOT WORK ON ALL MATLAB VERSIONS!
-
-% get the indices of the respective epochs for later marking
-epochs_W    = find(strcmp(scoring.epochs, 'W'));
-epochs_N1   = find(strcmp(scoring.epochs, 'N1'));
-epochs_N2   = find(strcmp(scoring.epochs, 'N2'));
-epochs_N3   = find(strcmp(scoring.epochs, 'N3'));
-epochs_R    = find(strcmp(scoring.epochs, 'R'));
-
-% take the epochs and transform them into sample values, st_times2samples
-% helps to match this to the samples to the data structure
-artfctdef                  = [];
-artfctdef.W.artifact  = st_times2samples(data,[(epochs_W(:)  -1)*scoring.epochlength epochs_W(:)*scoring.epochlength],'rmnanrows');
-artfctdef.N1.artifact = st_times2samples(data,[(epochs_N1(:) -1)*scoring.epochlength epochs_N1(:)*scoring.epochlength],'rmnanrows');
-artfctdef.N2.artifact = st_times2samples(data,[(epochs_N2(:) -1)*scoring.epochlength epochs_N2(:)*scoring.epochlength],'rmnanrows');
-artfctdef.N3.artifact = st_times2samples(data,[(epochs_N3(:) -1)*scoring.epochlength epochs_N3(:)*scoring.epochlength],'rmnanrows');
-artfctdef.R.artifact  = st_times2samples(data,[(epochs_R(:)  -1)*scoring.epochlength epochs_R(:)*scoring.epochlength],'rmnanrows');
-
-cfg               = [];
-cfg.continuous    = 'yes';
-cfg.artfctdef     = artfctdef;
-cfg.blocksize     = scoring.epochlength;
-cfg.viewmode      = 'vertical'; % 'vertical' or 'butterfly'
-cfg.artifactalpha = 0.7;
-cfg.renderer      = 'opengl'; % 'painters' or 'opengl' or 'zbuffer'
-ft_databrowser(cfg, data);
 
 %% calculate power density
 % power values in some sleep stages, e.g. non-REM
@@ -1668,7 +1704,7 @@ for iSubject = 1:numel(subjects)
     cfg.scoring          = scoring_cycles_firsts{iSubject};
     cfg.dataset          = subject.dataset;
     %cfg.channel = {'EOGLeft:M1','EOGRight:M1'};
-    cfg.channel          = subject.eegchannels;
+    cfg.channel          = {'HEOG'};
     %cfg.RemoveSignalThatIsNotREM = 'no';
     [res_rems_channel, res_rems_event, res_rems_summary] = st_rems(cfg);
     
@@ -1695,6 +1731,8 @@ for iSubject = 1:numel(subjects)
 
     res_spindles_event = res_spindles_events{iSubject};
     res_slowwaves_event = res_slowwaves_events{iSubject};
+    res_rems_event = res_rems_events{iSubject};
+
 
     
     scoring = scorings{iSubject};
@@ -1705,18 +1743,20 @@ for iSubject = 1:numel(subjects)
     spindle_troughs_subject.eegchannels{2} = res_spindles_event.table.seconds_trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
     slowwave_troughs_subject.eegchannels{1} = res_slowwaves_event.table.seconds_trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{1}}));
     slowwave_troughs_subject.eegchannels{2} = res_slowwaves_event.table.seconds_trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{2}}));
-
-
+    rem_troughs_subject = res_rems_event.table.seconds_center;
 
     % we can also get the amplitudes
     spindle_amplitude_subject.eegchannels{1} = res_spindles_event.table.amplitude_peak2trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{1}}));
     spindle_amplitude_subject.eegchannels{2} = res_spindles_event.table.amplitude_peak2trough_max(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
     slowwave_amplitude_subject.eegchannels{1} = res_slowwaves_event.table.amplitude_peak2trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{1}}));
     slowwave_amplitude_subject.eegchannels{2} = res_slowwaves_event.table.amplitude_peak2trough_max(strcmp(res_slowwaves_event.table.channel,{subject.eegchannels{2}}));
-
+    
     % ... or the frequency of each sleep spindle
     spindle_frequency_subject.eegchannels{1} = res_spindles_event.table.frequency_by_mean_pk_trgh_cnt_per_dur(strcmp(res_spindles_event.table.channel,{subject.eegchannels{1}}));
     spindle_frequency_subject.eegchannels{2} = res_spindles_event.table.frequency_by_mean_pk_trgh_cnt_per_dur(strcmp(res_spindles_event.table.channel,{subject.eegchannels{2}}));
+
+    % ... or the REM velocity
+    rem_velocity_subject = res_rems_event.table.speed_uV_per_second_seconds;
 
     % also plot event properties like amplitude and frequency for each event
     cfg = [];
@@ -1729,23 +1769,28 @@ for iSubject = 1:numel(subjects)
                        spindle_troughs_subject.eegchannels{1}';...
                        spindle_troughs_subject.eegchannels{2}';...
                        slowwave_troughs_subject.eegchannels{1}';...
-                       slowwave_troughs_subject.eegchannels{2}'};
+                       slowwave_troughs_subject.eegchannels{2}';...
+                       rem_troughs_subject'};
     cfg.eventvalues = {spindle_amplitude_subject.eegchannels{1}';...
                        spindle_amplitude_subject.eegchannels{2}';...
                        spindle_frequency_subject.eegchannels{1}';...
                        spindle_frequency_subject.eegchannels{2}';...
                        slowwave_amplitude_subject.eegchannels{1}';...
-                       slowwave_amplitude_subject.eegchannels{2}'};
+                       slowwave_amplitude_subject.eegchannels{2}';
+                       rem_velocity_subject'};
     cfg.eventvalueranges = {[min(spindle_amplitude_subject.eegchannels{1}), max(spindle_amplitude_subject.eegchannels{1})];...
                        [min(spindle_amplitude_subject.eegchannels{2}), max(spindle_amplitude_subject.eegchannels{2})];...
                        [min(spindle_frequency_subject.eegchannels{1}), max(spindle_frequency_subject.eegchannels{1})];...
                        [min(spindle_frequency_subject.eegchannels{2}), max(spindle_frequency_subject.eegchannels{2})];...
                        [min(slowwave_amplitude_subject.eegchannels{1}), max(slowwave_amplitude_subject.eegchannels{1})];...
-                       [min(slowwave_amplitude_subject.eegchannels{2}), max(slowwave_amplitude_subject.eegchannels{2})]};
+                       [min(slowwave_amplitude_subject.eegchannels{2}), max(slowwave_amplitude_subject.eegchannels{2})];...
+                       [min(rem_velocity_subject), max(rem_velocity_subject)]
+                       };
     cfg.eventvalueranges = cellfun(@(x) round(x,2), cfg.eventvalueranges,'UniformOutput',false);               
     cfg.eventlabels = {['spd ' 'ampl ' subject.eegchannels{1}], ['spd ' 'ampl ' subject.eegchannels{2}], ...
                        ['spd ' 'freq ' subject.eegchannels{1}], ['spd ' 'freq ' subject.eegchannels{2}],...
-                       ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}]};
+                       ['sw ' 'ampl ' subject.eegchannels{1}], ['sw ' 'ampl ' subject.eegchannels{2}],...
+                       ['rem' 'vel']};
     figure_handle = st_hypnoplot(cfg, scoring);
 end
 

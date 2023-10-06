@@ -458,21 +458,21 @@ epochLengthSamples = scoring.epochlength*fsample;
     if (scoring.dataoffset ~= 0) %&& ~strcmp(DoEpochData,'yes')
         signalOffsetSamples_new = round(scoring.dataoffset*fsample);
         if (signalOffsetSamples_new ~= 0)
-            cfg = [];
+            cfg_rdt = [];
             if (signalOffsetSamples_new > 0) && (signalOffsetSamples_new+1+epochLengthSamples < size(data.trial{1},2))
-                cfg.begsample = signalOffsetSamples_new+1;
-                cfg.endsample = numel(data.time{1});
+                cfg_rdt.begsample = signalOffsetSamples_new+1;
+                cfg_rdt.endsample = numel(data.time{1});
                 
-                data = ft_redefinetrial(cfg,data);
-                cfg = [];
-                cfg.offset = signalOffsetSamples_new+1;
-                data = ft_redefinetrial(cfg,data);
+                data = ft_redefinetrial(cfg_rdt,data);
+                cfg_rdt = [];
+                cfg_rdt.offset = signalOffsetSamples_new+1;
+                data = ft_redefinetrial(cfg_rdt,data);
                 data.sampleinfo = [1 numel(data.time{1})];
                 warning(['IMPORTANT: JUST CUT ' num2str(signalOffsetSamples_new) ' samples at the beginning corresponding to : ' num2str(signalOffsetSamples_new/fsample) ' seconds because of hypnogram/data offset!']);
             elseif signalOffsetSamples_new < 0
                 for iTrTr = 1:numel(data.trial)
-                    cfg.padtype = 'zero';
-                    data.trial{iTrTr} = ft_preproc_padding(data.trial{iTrTr}, cfg.padtype, -signalOffsetSamples_new, 0);
+                    cfg_rdt.padtype = 'zero';
+                    data.trial{iTrTr} = ft_preproc_padding(data.trial{iTrTr}, cfg_rdt.padtype, -signalOffsetSamples_new, 0);
                 end
                 data.time{1} = (0:(size(data.trial{1},2)-1))/data.fsample;
                 data.sampleinfo = [1 numel(data.time{1})];

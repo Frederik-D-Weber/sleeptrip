@@ -105,6 +105,11 @@ cfg.method   = ft_getopt(cfg, 'method', 'wavelet');
 cfg.length   = ft_getopt(cfg, 'length', 4);
 cfg.foi      = ft_getopt(cfg, 'foi', 0.5:0.5:30);
 
+
+cfg.keeptrials = ft_getopt(cfg, 'keeptrials', 'no');
+
+
+
 cfg.timestep = ft_getopt(cfg, 'timestep', 0.1);
 
 minFreq = min(cfg.foi);
@@ -236,7 +241,7 @@ else
     if istrue(cfg.keeptrials)
         freq = event_freq_chs;
     else
-    freq = ft_appendfreq([], event_freq_chs{:});
+        freq = ft_appendfreq([], event_freq_chs{:});
     end
 end
 
