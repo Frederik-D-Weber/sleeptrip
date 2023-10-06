@@ -1,6 +1,6 @@
 function [res] = st_scoringdescriptives(cfg, scoring)
-% 
-% ST_SCORINGDESCRIPTIVES determine sleep scoring values for sleep table and stores 
+%
+% ST_SCORINGDESCRIPTIVES determine sleep scoring values for sleep table and stores
 % in result structure
 % Note that many other sleep variables can be derived from these
 % descriptives (e.g. sleep efficiency).
@@ -20,22 +20,22 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %
 % Optional configuration parameters are
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or
-%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or 
+%                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or
 %                        'N2' or 'N3' or 'SWS' or 'S4' or 'R',
 %                        see ST_SLEEPONSET for details (default = 'N1_XR')
 %   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
-%                        opportunity (or lights off moment if former is not present) 
+%                        opportunity (or lights off moment if former is not present)
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
 %   cfg.allowsleepaftersleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
-%                        opportunity (or lights on moment if former is not present) 
+%                        opportunity (or lights on moment if former is not present)
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'yes')
 %   cfg.allowsleepopoonbeforescoring = srting, if possible, allow sleep opportunity onset to be before the scoring starts, i.e. to be < 0(default = 'yes')
 %   cfg.allowsleepopoffafterscoring = srting, if possible, allow sleep opportunity offset to be after the scoring ends, i.e. to be > scoring duration(default = 'yes')
-%   cfg.fixindicatorstoepochlength = string, either 'no', 'start', 'end', and 'snap' to put the 
-%                       indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring 
+%   cfg.fixindicatorstoepochlength = string, either 'no', 'start', 'end', and 'snap' to put the
+%                       indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring
 %                       to the start or end of their epoch or snap them to either the start or end on which whatever is closer (default = 'no')
-%   cfg.cycle          = string or integer value from 1 to Inf. 
-%                        If set, then the descriptives is derived from 
+%   cfg.cycle          = string or integer value from 1 to Inf.
+%                        If set, then the descriptives is derived from
 %                        only this cycle.
 %                        possible values are:
 %                          'presleep' = prior to first cycle
@@ -44,7 +44,7 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %                          2 = second cycle in slepp
 %                          3 = third cycle in sleep
 %                          [1 3] = first and third cycle in sleep
-%                          ... 
+%                          ...
 %                          'last' = last cycle (even uncomplete) in sleep%
 %                          'last' = last complete cycle in sleep
 %                          'postsleep' = post last cycle (after last)
@@ -96,46 +96,46 @@ cfg.fixindicatorstoepochlength  = ft_getopt(cfg, 'fixindicatorstoepochlength', '
 
 if ~strcmp(cfg.fixindicatorstoepochlength,'no')
     ft_warning('trying to fix the indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring to whole epochs with ''%s''.',cfg.fixindicatorstoepochlength)
-if isfield(scoring, 'lightsoff')
-    switch cfg.fixindicatorstoepochlength
-        case 'snap'
-            scoring.lightsoff = round(scoring.lightsoff/scoring.epochlength)*scoring.epochlength;
-        case 'start'
-            scoring.lightsoff = floor(scoring.lightsoff/scoring.epochlength)*scoring.epochlength;
-        case 'begin'
-            scoring.lightsoff = ceil(scoring.lightsoff/scoring.epochlength)*scoring.epochlength;
+    if isfield(scoring, 'lightsoff')
+        switch cfg.fixindicatorstoepochlength
+            case 'snap'
+                scoring.lightsoff = round(scoring.lightsoff/scoring.epochlength)*scoring.epochlength;
+            case 'start'
+                scoring.lightsoff = floor(scoring.lightsoff/scoring.epochlength)*scoring.epochlength;
+            case 'begin'
+                scoring.lightsoff = ceil(scoring.lightsoff/scoring.epochlength)*scoring.epochlength;
+        end
     end
-end
-if isfield(scoring, 'lightson')
-   switch cfg.fixindicatorstoepochlength
-        case 'snap'
-            scoring.lightson = round(scoring.lightson/scoring.epochlength)*scoring.epochlength;
-        case 'start'
-            scoring.lightson = floor(scoring.lightson/scoring.epochlength)*scoring.epochlength;
-        case 'begin'
-            scoring.lightson = ceil(scoring.lightson/scoring.epochlength)*scoring.epochlength;
-   end
-end
-if isfield(scoring, 'sleepopon')
-   switch cfg.fixindicatorstoepochlength
-        case 'snap'
-            scoring.sleepopon = round(scoring.sleepopon/scoring.epochlength)*scoring.epochlength;
-        case 'start'
-            scoring.sleepopon = floor(scoring.sleepopon/scoring.epochlength)*scoring.epochlength;
-        case 'begin'
-            scoring.sleepopon = ceil(scoring.sleepopon/scoring.epochlength)*scoring.epochlength;
-   end
-end
-if isfield(scoring, 'sleepopoff')
-   switch cfg.fixindicatorstoepochlength
-        case 'snap'
-            scoring.sleepopoff = round(scoring.sleepopoff/scoring.epochlength)*scoring.epochlength;
-        case 'start'
-            scoring.sleepopoff = floor(scoring.sleepopoff/scoring.epochlength)*scoring.epochlength;
-        case 'begin'
-            scoring.sleepopoff = ceil(scoring.sleepopoff/scoring.epochlength)*scoring.epochlength;
-   end
-end
+    if isfield(scoring, 'lightson')
+        switch cfg.fixindicatorstoepochlength
+            case 'snap'
+                scoring.lightson = round(scoring.lightson/scoring.epochlength)*scoring.epochlength;
+            case 'start'
+                scoring.lightson = floor(scoring.lightson/scoring.epochlength)*scoring.epochlength;
+            case 'begin'
+                scoring.lightson = ceil(scoring.lightson/scoring.epochlength)*scoring.epochlength;
+        end
+    end
+    if isfield(scoring, 'sleepopon')
+        switch cfg.fixindicatorstoepochlength
+            case 'snap'
+                scoring.sleepopon = round(scoring.sleepopon/scoring.epochlength)*scoring.epochlength;
+            case 'start'
+                scoring.sleepopon = floor(scoring.sleepopon/scoring.epochlength)*scoring.epochlength;
+            case 'begin'
+                scoring.sleepopon = ceil(scoring.sleepopon/scoring.epochlength)*scoring.epochlength;
+        end
+    end
+    if isfield(scoring, 'sleepopoff')
+        switch cfg.fixindicatorstoepochlength
+            case 'snap'
+                scoring.sleepopoff = round(scoring.sleepopoff/scoring.epochlength)*scoring.epochlength;
+            case 'start'
+                scoring.sleepopoff = floor(scoring.sleepopoff/scoring.epochlength)*scoring.epochlength;
+            case 'begin'
+                scoring.sleepopoff = ceil(scoring.sleepopoff/scoring.epochlength)*scoring.epochlength;
+        end
+    end
 end
 
 
@@ -167,9 +167,9 @@ if isfield(scoring, 'sleepopon')
 else
     if hasLightsOff && ~isnan(lightsOffMoment)
         sleepOpportunityOnMoment = lightsOffMoment;
-    	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
+        ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The lights off moment is used instead');
     else
-    	ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset latency will be NaN.');
+        ft_warning('The sleep opportunity onset moment was not provided in the scoring structure.\n The beginning of the scoring is thus assumed as sleep opportunity onset, but sleep onset latency will be NaN.');
     end
 end
 
@@ -183,10 +183,10 @@ data_offset_min = NaN;
 if isfield(scoring,'dataoffset')
     data_offset_min = scoring.dataoffset/60;
 end
- 
 
 
-    
+
+
 if isfield(cfg,'cycle')
     res_cycle = st_sleepcycles(cfg,scoring);
     cycle_complete = res_cycle.table.complete;
@@ -194,7 +194,7 @@ if isfield(cfg,'cycle')
     cfg2 = [];
     cfg2.start = res_cycle.table.startepoch;
     cfg2.end = res_cycle.table.endepoch;
-    
+
     if isempty(cfg2.start)
         ft_warning('No sleep cycles detected in this scoring')
     else
@@ -212,9 +212,9 @@ if isfield(cfg,'cycle')
         end
     end
     scoring_cycles = st_cutscoring(cfg2,scoring);
-    
+
     scoring_duration_min = (cfg2.end - cfg2.start + 1)*scoring.epochlength/60;
-    
+
     indcycle = [];
     if isnumeric(cfg.cycle)
         if numel(cfg.cycle) > 1
@@ -251,14 +251,14 @@ if isfield(cfg,'cycle')
         end
     end
 
-    
+
     data_offset_min_cycle = nan(1,numel(cfg2.end));
     for iSc = 1:numel(cfg2.end)
         if ~isempty(scoring_duration_min)
             data_offset_min_cycle(iSc) = data_offset_min + sum(scoring_duration_min(1:(iSc-1)));
         end
     end
-    
+
     scoring_cycles = scoring_cycles(indcycle);
     cycle_complete = cycle_complete(indcycle);
     cycle_labels = cycle_labels(indcycle);
@@ -279,16 +279,16 @@ for iScoringCycle = 1:numel(scoring_cycles)
         ft_warning('No sleep cycles detected in this scoring part %d',iScoringCycle)
     end
     sleepOnsetTime = NaN;
-    
+
     N1OnsetTime = NaN;
     N2OnsetTime = NaN;
-    
+
     SWSonsetTime = NaN;
     S4onsetTime = NaN;
     REMonsetTime = NaN;
-    
+
     totalSleepPeriod = NaN;
-    
+
     N1Time = NaN;
     N2Time = NaN;
     N3Time = NaN;
@@ -300,8 +300,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
     UnknownTime = NaN;
     SWStime = NaN;
     NRtime = NaN;
-    
-    
+
+
     N1Time_all = NaN;
     N2Time_all = NaN;
     N3Time_all = NaN;
@@ -313,7 +313,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
     UnknownTime_all = NaN;
     SWStime_all = NaN;
     NRtime_all = NaN;
-    
+
     N1TimePreOnset = NaN;
     N2TimePreOnset = NaN;
     N3TimePreOnset = NaN;
@@ -325,7 +325,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
     UnknownTimePreOnset = NaN;
     SWStimePreOnset = NaN;
     NRtimePreOnset = NaN;
-    
+
     N1Time_without_excluded = NaN;
     N2Time_without_excluded = NaN;
     N3Time_without_excluded = NaN;
@@ -337,10 +337,10 @@ for iScoringCycle = 1:numel(scoring_cycles)
     UnknownTime_without_excluded = NaN;
     SWStime_without_excluded = NaN;
     NRtime_without_excluded = NaN;
-    
+
     LongestWakeTimePeriodAfterSleepOnset = NaN;
     LongestWakeTimePeriodAfterSleepOnset_after_so = NaN;
-    
+
     nArousals = NaN;
     nArousals_sleep_period = NaN;
 
@@ -350,19 +350,19 @@ for iScoringCycle = 1:numel(scoring_cycles)
 
 
     fprintf([functionname ' function initialized\n']);
-    
-    
+
+
     dummySampleRate = 100;
     %lightsOffSample = round(lightsOffMoment*dummySampleRate);
     epochLengthSamples = scoring.epochlength * dummySampleRate;
-    
+
     epochs = cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0);
     hypnStages = [cellfun(@sleepStage2str,epochs,'UniformOutput',0) ...
         cellfun(@sleepStage2str_alt,epochs,'UniformOutput',0) ...
         cellfun(@sleepStage2str_alt2,epochs,'UniformOutput',0) ...
         cellfun(@sleepStage2str_alt3,epochs,'UniformOutput',0)];
-    
-    
+
+
     N1Time_all = length(find(strcmp(hypnStages(:,1),'N1')))*scoring.epochlength;
     N2Time_all = length(find(strcmp(hypnStages(:,1),'N2')))*scoring.epochlength;
     N3Time_all = length(find(strcmp(hypnStages(:,1),'N3')))*scoring.epochlength;
@@ -372,20 +372,20 @@ for iScoringCycle = 1:numel(scoring_cycles)
     MovementTime_all = length(find(strcmp(hypnStages(:,1),'MT')))*scoring.epochlength;
     ArtifactTime_all = length(find(strcmp(hypnStages(:,1),'A')))*scoring.epochlength;
     UnknownTime_all = length(find(strcmp(hypnStages(:,1),'?')))*scoring.epochlength;
-    
+
     SWStime_all = N3Time_all + S4Time_all;
     NRtime_all = SWStime_all + N2Time_all;
-    
+
     hypnEpochs = 1:numel(epochs);
     hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
     hypnEpochsEndsSamples   = (hypnEpochs * epochLengthSamples)';
-    
+
     [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepaftersleepopoff] = st_sleeponset(cfg,scoring);
-    
+
     if isempty(onsetepoch)
         onsetnumber = NaN;
     end
-    
+
     hasLightsOn = false;
     lightsOnMoment = lastscoredsleepstagenumber*scoring.epochlength;
     lightsOnToLightsOff = NaN;
@@ -406,8 +406,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
     else
         ft_warning('The lights on moment was not provided in the scoring structure.\n The end of sleep is thus assumed as lights on.');
     end
-    
-    
+
+
     hasSleepOpportunityOff = false;
     sleepOpportunityOffMoment = lastscoredsleepstagenumber*scoring.epochlength;
     sleepOpportunityOnToSleepOpportunityOff = NaN;
@@ -433,25 +433,25 @@ for iScoringCycle = 1:numel(scoring_cycles)
             ft_warning('The sleep opportunity off moment was not provided in the scoring structure.\n  The end of sleep is thus assumed as sleep opportunity off.');
         end
     end
-    
+
 
     sleepOnsetTime = (onsetnumber-1)*scoring.epochlength - sleepOpportunityOnMoment;
     sleepOnsetTimepointafterscoringstart = (onsetnumber-1)*scoring.epochlength;
     sleepOffsetTimepointafterscoringstart = lastscoredsleepstagenumber*scoring.epochlength;
 
-    
+
     if allowedsleeponsetbeforesleepopon
         ft_warning('sleep onset was allowed to be before sleep opportunity moment and thus sleep onset latency and sleep opportunity duration will be NaN.')
         sleepOnsetTime = NaN;
         sleepOpportunityOnToSleepOpportunityOff = NaN;
     end
-    
+
     N1ind = find(strcmp(hypnStages(:,1),'N1'));
     N2ind = find(strcmp(hypnStages(:,1),'N2'));
     SWSind = find(strcmp(hypnStages(:,2),'SWS'));
     S4ind = find(strcmp(hypnStages(:,1),'S4'));
     REMind = find(strcmp(hypnStages(:,1),'R'));
-    
+
     if ~isempty(N1ind)
         N1OnsetTime = (min(N1ind(N1ind >= onsetnumber)) - onsetnumber)*scoring.epochlength;
         if isempty(N1OnsetTime)
@@ -482,7 +482,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
             REMonsetTime = NaN;
         end
     end
-    
+
     preOnsetCandidate = onsetnumber;
     if preOnsetCandidate > 1
         preOnsetCandidate = preOnsetCandidate-1;
@@ -490,16 +490,16 @@ for iScoringCycle = 1:numel(scoring_cycles)
     if ~isnan(onsetnumber)
         %hypnTST = epochs(onsetCandidate:preOffsetCandidate);
         hypnTST_excluded = scoring.excluded(onsetnumber:lastscoredsleepstagenumber);
-        
+
         hypnStagesTST = hypnStages(onsetnumber:lastscoredsleepstagenumber,:);
         hypnStagesPreSleepOnset = hypnStages(1:preOnsetCandidate,:);
         hypnEpochsTST = hypnEpochs(onsetnumber:lastscoredsleepstagenumber);
         hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(onsetnumber:lastscoredsleepstagenumber,:);
         hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(onsetnumber:lastscoredsleepstagenumber,:);
-        
+
         totalSleepPeriod = (length(onsetnumber:lastscoredsleepstagenumber))*scoring.epochlength;
     else
-        
+
         %hypnTST = epochs(onsetCandidate:preOffsetCandidate);
         hypnTST_excluded = scoring.excluded(1:0);
         hypnStagesTST = hypnStages(1:0,:);
@@ -507,11 +507,11 @@ for iScoringCycle = 1:numel(scoring_cycles)
         hypnEpochsTST = hypnEpochs(1:0);
         hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(1:0,:);
         hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(1:0,:);
-        
+
         totalSleepPeriod = 0;
     end
-    
-    
+
+
     N1Time = length(find(strcmp(hypnStagesTST(:,1),'N1')))*scoring.epochlength;
     N2Time = length(find(strcmp(hypnStagesTST(:,1),'N2')))*scoring.epochlength;
     N3Time = length(find(strcmp(hypnStagesTST(:,1),'N3')))*scoring.epochlength;
@@ -521,17 +521,17 @@ for iScoringCycle = 1:numel(scoring_cycles)
     MovementTime = length(find(strcmp(hypnStagesTST(:,1),'MT')))*scoring.epochlength;
     ArtifactTime = length(find(strcmp(hypnStagesTST(:,1),'A')))*scoring.epochlength;
     UnknownTime = length(find(strcmp(hypnStagesTST(:,1),'?')))*scoring.epochlength;
-    
-    
+
+
     SWStime = N3Time + S4Time;
     NRtime = SWStime + N2Time;
-    
-    
+
+
     if isfield(scoring, 'arousals')
         nArousals = size(scoring.arousals,1);
-        
+
         for iStages = 1:numel(stagesCombo)
-            
+
 
             if ~isnan(onsetnumber)
                 cfg_cut = [];
@@ -544,9 +544,9 @@ for iScoringCycle = 1:numel(scoring_cycles)
                 scorings_sleepperiod.epochs = scorings_sleepperiod.epochs(1:0);
                 scorings_sleepperiod.excluded = scorings_sleepperiod.excluded(1:0);
             end
-            
+
             nArousals_sleep_period = size(scorings_sleepperiod.arousals,1);
-            
+
             cfg_sc = cfg;
             cfg_sc.stages = stagesCombo{iStages};
             cfg_sc.considerexcluded = 'no';
@@ -555,11 +555,11 @@ for iScoringCycle = 1:numel(scoring_cycles)
                 cfg_sc.start = begins_epoch;
                 cfg_sc.end = ends_epoch;
                 scorings_cut = st_cutscoring(cfg_sc,scorings_sleepperiod);
-                
+
                 scorings_cut_appended = st_append_scoring(scorings_cut{:});
                 nArousalsByStage(iStages) = size(scorings_cut_appended.arousals,1);
             end
-            
+
             cfg_sc = cfg;
             cfg_sc.stages = stagesCombo{iStages};
             cfg_sc.considerexcluded = 'yes';
@@ -568,17 +568,17 @@ for iScoringCycle = 1:numel(scoring_cycles)
                 cfg_sc.start = begins_epoch;
                 cfg_sc.end = ends_epoch;
                 scorings_cut = st_cutscoring(cfg_sc,scorings_sleepperiod);
-                
+
                 scorings_cut_appended = st_append_scoring(scorings_cut{:});
                 nArousalsByStageNonMTnonExcl(iStages) = size(scorings_cut_appended.arousals,1);
             end
         end
     end
-    
+
     hypnEpochs = 1:numel(scoring.epochs);
     hypnEpochsTST = 1:numel(hypnStagesTST(:,1));
 
-    
+
     [consecBegins, consecEnds] = consecutiveBeginsAndEnds(hypnEpochsTST(ismember(hypnStagesTST(:,1),{'N1'})),1);
     N1_bouts = numel(consecBegins);
     [consecBegins, consecEnds] = consecutiveBeginsAndEnds(hypnEpochsTST(ismember(hypnStagesTST(:,1),{'N2'})),1);
@@ -609,155 +609,178 @@ for iScoringCycle = 1:numel(scoring_cycles)
     nonS_bouts = numel(consecBegins);
     [consecBegins, consecEnds] = consecutiveBeginsAndEnds(hypnEpochsTST(ismember(hypnStagesTST(:,1),{'MT','W'})),1);
     WakeMT_bouts = numel(consecBegins);
-        
+
     idx_unknown_TST = hypnEpochsTST(ismember(hypnStagesTST(:,1),{'?'}));
     [temp1, temp2, arbitrary_numbers] = unique(hypnStagesTST(:,1));
     transtitions = logical(abs([0; diff(arbitrary_numbers)]));
     transtitions(idx_unknown_TST) = 0;
-    
-    NtransitionsTST = sum(transtitions);
-    
-    
-    nCycles = size(res_cycle_sccy.table,1);
-    
-    interruptTypes = {{'MT','W'},{'MT','W','N1','S1'},{'MT','W','N1','S1','N2','S2','N3','S3','S4'}};
-    scoringparts_start = {'NRstartepoch', 'Rstartepoch', 'NRstarts_ascending'};
-    scoringparts_ends = {'NRendepoch', 'Rendepoch', 'NRends_ascending'};
-    nInterruptTypes = numel(interruptTypes);
-    nscoringparts = numel(scoringparts_start);
 
-    interrupt_duration_min_by_IntType_and_ScoringPart = cell(nInterruptTypes,nscoringparts,2);
-    timewindow_min_by_IntType_and_ScoringPart = nan(nInterruptTypes,nscoringparts,2);
-    Interruptions_in_bouts_by_IntType_and_ScoringPart = nan(nInterruptTypes,nscoringparts,2);
-    mean_Duration_min_by_IntType_and_ScoringPart = nan(nInterruptTypes,nscoringparts,2);
-    overall_Duration_min_by_IntType_and_ScoringPart = nan(nInterruptTypes,nscoringparts,2);
-    
+    NtransitionsTST = sum(transtitions);
+
+    %------ sleep fragmentation-----------
+    nCycles = size(res_cycle_sccy.table,1);
+
+    interruptTypes = {{'MT','W'},{'MT','W','N1','S1'},{'MT','W','N1','S1','N2','S2','N3','S3','S4'}};
+    episodeTypes_start = {'NRstartepoch', 'Rstartepoch', 'NRstarts_ascending'};
+    episodeType_ends = {'NRendepoch', 'Rendepoch', 'NRends_ascending'};
+    nInterruptTypes = numel(interruptTypes);
+    nEpisodeTypes = numel(episodeTypes_start);
+
+    interrupt_duration_min_by_IntType_and_EpType = cell(nInterruptTypes,nEpisodeTypes,2);
+    timewindow_min_by_IntType_and_EpType = nan(nInterruptTypes,nEpisodeTypes,2);
+    Interruptions_in_bouts_by_IntType_and_EpType = nan(nInterruptTypes,nEpisodeTypes,2);
+    mean_Duration_min_by_IntType_and_EpType = nan(nInterruptTypes,nEpisodeTypes,2);
+    overall_Duration_min_by_IntType_and_EpType = nan(nInterruptTypes,nEpisodeTypes,2);
+
+    %for each definition of an interruption (=constellation of stages)
     for iInterruptType = 1:nInterruptTypes
         interruptType = interruptTypes{iInterruptType};
-        
-        
-        interrupt_duration_min_byScoringPart_and_Cycle = cell(nscoringparts,nCycles);
-        overall_Duration_min_byScoringPart_and_Cycle = nan(nscoringparts,nCycles);
-        Interruptions_in_bouts_byScoringPart_and_Cycle = nan(nscoringparts,nCycles);
-        mean_Duration_min_byScoringPart_and_Cycle = nan(nscoringparts,nCycles);
-        timewindow_seconds_by_ScoringPart_and_Cycle = nan(nscoringparts,nCycles);
-        
-        
-        for iScoringPart = 1:numel(scoringparts_start)
+
+
+        interrupt_duration_min_byEpType_and_Cycle = cell(nEpisodeTypes,nCycles);
+        overall_Duration_min_byEpType_and_Cycle = nan(nEpisodeTypes,nCycles);
+        Interruptions_in_bouts_byEpType_and_Cycle = nan(nEpisodeTypes,nCycles);
+        mean_Duration_min_byEpType_and_Cycle = nan(nEpisodeTypes,nCycles);
+        timewindow_seconds_byEpType_and_Cycle = nan(nEpisodeTypes,nCycles);
+
+        %for each definition of an episode (= NREM, REM, ascendingNREM)
+        for iEpisodeType = 1:numel(episodeTypes_start)
+
+            %for two variants: excluding/including manual arousals
             for iArousalNoYes = 1:2
-            if strcmp(scoringparts_start{iScoringPart},'NRstartepoch') && (iInterruptType == 3)
-                continue;
-            end
-            if strcmp(scoringparts_start{iScoringPart},'Rstartepoch') && (iInterruptType == 2)
-                continue;
-            end
-            rangestart = res_cycle_sccy.table.(scoringparts_start{iScoringPart});
-            rangestop  = res_cycle_sccy.table.(scoringparts_ends{iScoringPart});
-            for iCycle = 1:nCycles
-                scoringpart_range = rangestart(iCycle):rangestop(iCycle);
-                timewindow_seconds_by_ScoringPart_and_Cycle(iScoringPart,iCycle) = numel(scoringpart_range)*scoring.epochlength;
-                if isnan(rangestart(iCycle)) || isnan(rangestop(iCycle)) || isempty(scoringpart_range)
-                    overall_Duration_min_byScoringPart_and_Cycle(iScoringPart,iCycle) = NaN;
-                    Interruptions_in_bouts_byScoringPart_and_Cycle(iScoringPart,iCycle) = NaN;
-                    mean_Duration_min_byScoringPart_and_Cycle(iScoringPart,iCycle) = NaN;
-                else
-                    % if consider arousal an interruption too
-                    nArousals_current_cycle = NaN;
-                    if isfield(scoring, 'arousals') && (iArousalNoYes == 2)
-                        cfg_sc2 = cfg;
-                        cfg_sc2.considerexcluded = 'no';
-                        cfg_sc2.start = scoringpart_range(1);
-                        cfg_sc2.end = scoringpart_range(end);
-                        scorings_cut2 = st_cutscoring(cfg_sc2,scoring);
-                        scorings_cut2_appended = st_append_scoring(scorings_cut2{:});
-                        nArousals_current_cycle = size(scorings_cut2_appended.arousals,1);
-                    end
-                    
-                    [consecBegins, consecEnds] = consecutiveBeginsAndEnds(hypnEpochs(ismember(hypnStages(scoringpart_range,1),interruptType)),1);
-                    consecDur = consecEnds' - consecBegins' + 1;
-                    nInterrupts = numel(consecBegins);
-                    
-                    if isempty(consecBegins) && isnan(nArousals_current_cycle)
-                        interupptions_durations_min = [];
-                        interrupt_duration_min_byScoringPart_and_Cycle{iScoringPart,iCycle} = interupptions_durations_min;
-                    elseif isempty(consecBegins) && ~isnan(nArousals_current_cycle) % just arousals but no other interruptions 
-                        if nArousals_current_cycle > 0
-                            interupptions_durations_min = scorings_cut2_appended.arousals.duration/60;
-                        else
-                            interupptions_durations_min = [];
-                        end
-                    else % arousals and other interruptions
-                        
-                        
-                        consecBegins_wholescoring = consecBegins + min(scoringpart_range)-1;
-                        consecEnds_wholescoring = consecEnds + min(scoringpart_range)-1;
-                        
-                        consecBegins_wholescoring_seconds = (consecBegins_wholescoring'-1)*scoring.epochlength;
-                        consecEnds_wholescoring_seconds = consecEnds_wholescoring'*scoring.epochlength;
-                        
-                        if isfield(scoring, 'arousals') && (iArousalNoYes == 2)
-                            
-                            scorings_cut2_appended_temp = scorings_cut2_appended;
-                            for iInterrupt = 1:numel(consecBegins_wholescoring_seconds)
-                                scorings_cut2_appended_temp.arousals(((scorings_cut2_appended_temp.arousals.start >= consecBegins_wholescoring_seconds(iInterrupt) ) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt) )),:) = [];
-                                idx_rightsideoverlap = (scorings_cut2_appended_temp.arousals.start <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start >= consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop >= consecEnds_wholescoring_seconds(iInterrupt));
-                                idx_leftsideoverlap = (scorings_cut2_appended_temp.arousals.stop > consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start < consecBegins_wholescoring_seconds(iInterrupt));
-                                
-                                if sum(idx_rightsideoverlap) > 0
-                                    consecEnds_wholescoring_seconds(iInterrupt) = max(scorings_cut2_appended_temp.arousals.stop(idx_rightsideoverlap));
-                                    scorings_cut2_appended_temp.arousals(idx_rightsideoverlap,:) = [];
-                                end
-                                if sum(idx_leftsideoverlap) > 0
-                                    consecBegins_wholescoring_seconds(iInterrupt) = min(scorings_cut2_appended_temp.arousals.start(idx_leftsideoverlap));
-                                    scorings_cut2_appended_temp.arousals(idx_leftsideoverlap,:) = [];
-                                    
-                                end
-                                scorings_cut2_appended_temp.arousals.stop(idx_leftsideoverlap) = consecBegins_wholescoring_seconds(iInterrupt);
-                            end
-                            
-                            consecDur_wholescoring_seconds  = consecEnds_wholescoring_seconds - consecBegins_wholescoring_seconds;
-                            
-                            interupptions_durations_min = cat(1,consecDur_wholescoring_seconds/60,scorings_cut2_appended_temp.arousals.duration/60);
-                            
-                        else
-                            consecDur_wholescoring_seconds  = consecEnds_wholescoring_seconds - consecBegins_wholescoring_seconds;
-                            interupptions_durations_min = cat(1,consecDur_wholescoring_seconds/60);
-                        end
-                        
-                       
-                     
-                        
-                    end
-                    
-                    overall_Duration_min = (nansum(interupptions_durations_min));
-                    Interruptions_in_bouts = numel(interupptions_durations_min(~isnan(interupptions_durations_min)));
-                    if Interruptions_in_bouts >0
-                        mean_Duration_min = overall_Duration_min/Interruptions_in_bouts;
+
+                %skip combination of NREM episode plus NREM-interruptions
+                if strcmp(episodeTypes_start{iEpisodeType},'NRstartepoch') && (iInterruptType == 3)
+                    continue;
+                end
+
+                %skip combination of REM episode plus N1-interruptions (not sure why)
+                if strcmp(episodeTypes_start{iEpisodeType},'Rstartepoch') && (iInterruptType == 2)
+                    continue;
+                end
+
+                %for each cycle, get start and end epochs for current episode
+                rangestart = res_cycle_sccy.table.(episodeTypes_start{iEpisodeType});
+                rangestop  = res_cycle_sccy.table.(episodeType_ends{iEpisodeType});
+                for iCycle = 1:nCycles
+
+                    scoringpart_range = rangestart(iCycle):rangestop(iCycle);
+
+                    %scoringpart_range may be NaN. only use numel if it isn't
+                    if ~isnan(scoringpart_range)
+                        timewindow_seconds_byEpType_and_Cycle(iEpisodeType,iCycle) = numel(scoringpart_range)*scoring.epochlength;
                     else
-                        mean_Duration_min = 0;
-                        Interruptions_in_bouts = 0;
+                        timewindow_seconds_byEpType_and_Cycle(iEpisodeType,iCycle)=0;
                     end
-                    overall_Duration_min_byScoringPart_and_Cycle(iScoringPart,iCycle) = overall_Duration_min;
-                    Interruptions_in_bouts_byScoringPart_and_Cycle(iScoringPart,iCycle) = Interruptions_in_bouts;
-                    mean_Duration_min_byScoringPart_and_Cycle(iScoringPart,iCycle) = mean_Duration_min;
-                    interrupt_duration_min_byScoringPart_and_Cycle{iScoringPart,iCycle} = interupptions_durations_min;
+
+                    if isnan(rangestart(iCycle)) || isnan(rangestop(iCycle)) || isempty(scoringpart_range)
+                        overall_Duration_min_byEpType_and_Cycle(iEpisodeType,iCycle) = NaN;
+                        Interruptions_in_bouts_byEpType_and_Cycle(iEpisodeType,iCycle) = NaN;
+                        mean_Duration_min_byEpType_and_Cycle(iEpisodeType,iCycle) = NaN;
+                    else
+
+                        % if consider arousal an interruption too
+                        nArousals_current_cycle = NaN;
+                        if isfield(scoring, 'arousals') && (iArousalNoYes == 2)
+                            cfg_sc2 = cfg;
+                            cfg_sc2.considerexcluded = 'no';
+                            cfg_sc2.start = scoringpart_range(1);
+                            cfg_sc2.end = scoringpart_range(end);
+                            scorings_cut2 = st_cutscoring(cfg_sc2,scoring);
+                            scorings_cut2_appended = st_append_scoring(scorings_cut2{:});
+                            nArousals_current_cycle = size(scorings_cut2_appended.arousals,1);
+                        end
+
+                        %find the subrange(s) of interruptions, and their number and total duration
+                        episodeStages=hypnStages(scoringpart_range,1); %stage labels of current episode
+                        [consecBegins, consecEnds] = consecutiveBeginsAndEnds(hypnEpochs(ismember(episodeStages,interruptType)),1);
+
+                        consecDur = consecEnds' - consecBegins' + 1;
+                        nInterrupts = numel(consecBegins);
+
+                        if isempty(consecBegins) && isnan(nArousals_current_cycle)
+                            interupptions_durations_min = [];
+                            interrupt_duration_min_byEpType_and_Cycle{iEpisodeType,iCycle} = interupptions_durations_min;
+                        elseif isempty(consecBegins) && ~isnan(nArousals_current_cycle) % just arousals but no other interruptions
+                            if nArousals_current_cycle > 0
+                                interupptions_durations_min = scorings_cut2_appended.arousals.duration/60;
+                            else
+                                interupptions_durations_min = [];
+                            end
+
+                        else % arousals and other interruptions
+
+
+                            consecBegins_wholescoring = consecBegins + min(scoringpart_range)-1;
+                            consecEnds_wholescoring = consecEnds + min(scoringpart_range)-1;
+
+                            consecBegins_wholescoring_seconds = (consecBegins_wholescoring'-1)*scoring.epochlength;
+                            consecEnds_wholescoring_seconds = consecEnds_wholescoring'*scoring.epochlength;
+
+                            if isfield(scoring, 'arousals') && (iArousalNoYes == 2)
+
+                                scorings_cut2_appended_temp = scorings_cut2_appended;
+                                for iInterrupt = 1:numel(consecBegins_wholescoring_seconds)
+                                    scorings_cut2_appended_temp.arousals(((scorings_cut2_appended_temp.arousals.start >= consecBegins_wholescoring_seconds(iInterrupt) ) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt) )),:) = [];
+                                    idx_rightsideoverlap = (scorings_cut2_appended_temp.arousals.start <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start >= consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop >= consecEnds_wholescoring_seconds(iInterrupt));
+                                    idx_leftsideoverlap = (scorings_cut2_appended_temp.arousals.stop > consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start < consecBegins_wholescoring_seconds(iInterrupt));
+
+                                    if sum(idx_rightsideoverlap) > 0
+                                        consecEnds_wholescoring_seconds(iInterrupt) = max(scorings_cut2_appended_temp.arousals.stop(idx_rightsideoverlap));
+                                        scorings_cut2_appended_temp.arousals(idx_rightsideoverlap,:) = [];
+                                    end
+                                    if sum(idx_leftsideoverlap) > 0
+                                        consecBegins_wholescoring_seconds(iInterrupt) = min(scorings_cut2_appended_temp.arousals.start(idx_leftsideoverlap));
+                                        scorings_cut2_appended_temp.arousals(idx_leftsideoverlap,:) = [];
+
+                                    end
+                                    scorings_cut2_appended_temp.arousals.stop(idx_leftsideoverlap) = consecBegins_wholescoring_seconds(iInterrupt);
+                                end
+
+                                consecDur_wholescoring_seconds  = consecEnds_wholescoring_seconds - consecBegins_wholescoring_seconds;
+
+                                interupptions_durations_min = cat(1,consecDur_wholescoring_seconds/60,scorings_cut2_appended_temp.arousals.duration/60);
+
+                            else
+                                consecDur_wholescoring_seconds  = consecEnds_wholescoring_seconds - consecBegins_wholescoring_seconds;
+                                interupptions_durations_min = cat(1,consecDur_wholescoring_seconds/60);
+                            end
+                        end
+
+                        overall_Duration_min = (nansum(interupptions_durations_min)); %combined length of interruptions in current bout
+                        Interruptions_in_bouts = numel(interupptions_durations_min(~isnan(interupptions_durations_min)));
+                        if Interruptions_in_bouts >0
+                            mean_Duration_min = overall_Duration_min/Interruptions_in_bouts;
+                        else
+                            mean_Duration_min = 0; %RC: should be probably NaN?
+                            Interruptions_in_bouts = 0;
+                        end
+                        overall_Duration_min_byEpType_and_Cycle(iEpisodeType,iCycle) = overall_Duration_min;
+                        Interruptions_in_bouts_byEpType_and_Cycle(iEpisodeType,iCycle) = Interruptions_in_bouts;
+                        mean_Duration_min_byEpType_and_Cycle(iEpisodeType,iCycle) = mean_Duration_min;
+                        interrupt_duration_min_byEpType_and_Cycle{iEpisodeType,iCycle} = interupptions_durations_min;
+                    end
+                end
+
+                interrupt_duration_min_by_IntType_and_EpType{iInterruptType,iEpisodeType,iArousalNoYes} = cat(1,interrupt_duration_min_byEpType_and_Cycle{iEpisodeType,:});
+
+                %aggregate across cycles, only if non-NaNs available (else nansum/nanmean changes NaN to zero)
+                if ~all(isnan(Interruptions_in_bouts_byEpType_and_Cycle(iEpisodeType,:)))
+                    overall_Duration_min_by_IntType_and_EpType(iInterruptType,iEpisodeType,iArousalNoYes) = nansum(interrupt_duration_min_by_IntType_and_EpType{iInterruptType,iEpisodeType,iArousalNoYes});
+                    mean_Duration_min_by_IntType_and_EpType(iInterruptType,iEpisodeType,iArousalNoYes) = nanmean(interrupt_duration_min_by_IntType_and_EpType{iInterruptType,iEpisodeType,iArousalNoYes});
+                    Interruptions_in_bouts_by_IntType_and_EpType(iInterruptType,iEpisodeType,iArousalNoYes) = nansum(Interruptions_in_bouts_byEpType_and_Cycle(iEpisodeType,:));
+                    timewindow_min_by_IntType_and_EpType(iInterruptType,iEpisodeType,iArousalNoYes) = nansum(timewindow_seconds_byEpType_and_Cycle(iEpisodeType,:))/60;
+
                 end
             end
-            
-            interrupt_duration_min_by_IntType_and_ScoringPart{iInterruptType,iScoringPart,iArousalNoYes} = cat(1,interrupt_duration_min_byScoringPart_and_Cycle{iScoringPart,:});
-            
-            overall_Duration_min_by_IntType_and_ScoringPart(iInterruptType,iScoringPart,iArousalNoYes) = nansum(interrupt_duration_min_by_IntType_and_ScoringPart{iInterruptType,iScoringPart,iArousalNoYes});
-            mean_Duration_min_by_IntType_and_ScoringPart(iInterruptType,iScoringPart,iArousalNoYes) = nanmean(interrupt_duration_min_by_IntType_and_ScoringPart{iInterruptType,iScoringPart,iArousalNoYes});
-            Interruptions_in_bouts_by_IntType_and_ScoringPart(iInterruptType,iScoringPart,iArousalNoYes) = nansum(Interruptions_in_bouts_byScoringPart_and_Cycle(iScoringPart,:));
-            timewindow_min_by_IntType_and_ScoringPart(iInterruptType,iScoringPart,iArousalNoYes) = nansum(timewindow_seconds_by_ScoringPart_and_Cycle(iScoringPart,:))/60;
 
         end
-            
-        end
-        
-        
+
+
     end
-    
+
+
+    %---presleep------
     N1TimePreOnset = length(find(strcmp(hypnStagesPreSleepOnset(:,1),'N1')))*scoring.epochlength;
     N2TimePreOnset = length(find(strcmp(hypnStagesPreSleepOnset(:,1),'N2')))*scoring.epochlength;
     N3TimePreOnset = length(find(strcmp(hypnStagesPreSleepOnset(:,1),'N3')))*scoring.epochlength;
@@ -767,10 +790,10 @@ for iScoringCycle = 1:numel(scoring_cycles)
     MovementTimePreOnset = length(find(strcmp(hypnStagesPreSleepOnset(:,1),'MT')))*scoring.epochlength;
     ArtifactTimePreOnset = length(find(strcmp(hypnStagesPreSleepOnset(:,1),'A')))*scoring.epochlength;
     UnknownTimePreOnset = length(find(strcmp(hypnStagesPreSleepOnset(:,1),'?')))*scoring.epochlength;
-    
+
     SWStimePreOnset = N3TimePreOnset + S4TimePreOnset;
     NRtimePreOnset = SWStimePreOnset + N2TimePreOnset;
-    
+
     N1Time_without_excluded = length(find(strcmp(hypnStagesTST(:,1),'N1') & (hypnTST_excluded == 0)' ))*scoring.epochlength;
     N2Time_without_excluded = length(find(strcmp(hypnStagesTST(:,1),'N2') & (hypnTST_excluded == 0)' ))*scoring.epochlength;
     N3Time_without_excluded = length(find(strcmp(hypnStagesTST(:,1),'N3') & (hypnTST_excluded == 0)' ))*scoring.epochlength;
@@ -780,10 +803,10 @@ for iScoringCycle = 1:numel(scoring_cycles)
     MovementTime_without_excluded = length(find(strcmp(hypnStagesTST(:,1),'MT') & (hypnTST_excluded == 0)' ))*scoring.epochlength;
     ArtifactTime_without_excluded = length(find(strcmp(hypnStagesTST(:,1),'A') & (hypnTST_excluded == 0)' ))*scoring.epochlength;
     UnknownTime_without_excluded = length(find(strcmp(hypnStagesTST(:,1),'?') & (hypnTST_excluded == 0)' ))*scoring.epochlength;
-    
+
     SWStime_without_excluded = N3Time_without_excluded + S4Time_without_excluded;
     NRtime_without_excluded = SWStime_without_excluded + N2Time_without_excluded;
-    
+
     hypnStagesTST_wake_index = find(strcmp(hypnStagesTST(:,1),'W'));
     if ~isempty(hypnStagesTST_wake_index)
         [hypnStagesTST_wake_index_begins, hypnStagesTST_wake_index_ends] = consecutiveBeginsAndEnds(hypnStagesTST_wake_index,1);
@@ -794,21 +817,21 @@ for iScoringCycle = 1:numel(scoring_cycles)
         LongestWakeTimePeriodAfterSleepOnset = 0;
         LongestWakeTimePeriodAfterSleepOnset_after_so = NaN;
     end
-    
+
     scoringfile = 'unknown';
     if isfield(scoring,'ori')
         if isfield(scoring.ori,'scoringfile')
-        scoringfile = scoring.ori.scoringfile;
+            scoringfile = scoring.ori.scoringfile;
         end
     end
-    
-    
+
+
     totalSleepInSleepPeriod = (totalSleepPeriod-WakeTime);
     totalSleepInSleepPeriod_minus_unknown_or_artifact = totalSleepInSleepPeriod-ArtifactTime-UnknownTime;
 
     sleepEfficiency_SP_percent = 100*(totalSleepInSleepPeriod/totalSleepPeriod);
     sleepEfficiency_SOP_percent = 100*(totalSleepInSleepPeriod/(sleepOpportunityOnToSleepOpportunityOff));
-    
+
     table_tmp = table(...
         {scoringfile}, ...
         {scoring.standard}, ...
@@ -935,8 +958,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
         sleepOpportunityOffMoment/60, ...
         lightsOffMoment/60, ...
         lightsOnMoment/60, ...
-        sleepOnsetTimepointafterscoringstart/60, ... 
-        sleepOffsetTimepointafterscoringstart/60, ... 
+        sleepOnsetTimepointafterscoringstart/60, ...
+        sleepOffsetTimepointafterscoringstart/60, ...
         N1_bouts, ...
         N2_bouts, ...
         N3_bouts, ...
@@ -970,58 +993,58 @@ for iScoringCycle = 1:numel(scoring_cycles)
         nArousalsByStage(4)/(S4Time/60), ...
         nArousalsByStage(5)/(REMtime/60), ...
         nArousalsByStage(6)/(WakeTime/60), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(1,1,1), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(1,1,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,1,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,1,1)/timewindow_min_by_IntType_and_ScoringPart(1,1,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(1,2,1), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(1,2,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,2,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,2,1)/timewindow_min_by_IntType_and_ScoringPart(1,2,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(1,3,1), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(1,3,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,3,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,3,1)/timewindow_min_by_IntType_and_ScoringPart(1,3,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(2,1,1), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(2,1,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,1,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,1,1)/timewindow_min_by_IntType_and_ScoringPart(2,1,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(2,3,1), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(2,3,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,3,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,3,1)/timewindow_min_by_IntType_and_ScoringPart(2,3,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(3,2,1), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(3,2,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(3,2,1), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(3,2,1)/timewindow_min_by_IntType_and_ScoringPart(3,2,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(1,1,2), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(1,1,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,1,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,1,2)/timewindow_min_by_IntType_and_ScoringPart(1,1,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(1,2,2), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(1,2,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,2,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,2,2)/timewindow_min_by_IntType_and_ScoringPart(1,2,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(1,3,2), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(1,3,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,3,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(1,3,2)/timewindow_min_by_IntType_and_ScoringPart(1,3,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(2,1,2), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(2,1,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,1,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,1,2)/timewindow_min_by_IntType_and_ScoringPart(2,1,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(2,3,2), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(2,3,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,3,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(2,3,2)/timewindow_min_by_IntType_and_ScoringPart(2,3,2), ...
-        overall_Duration_min_by_IntType_and_ScoringPart(3,2,2), ...
-        mean_Duration_min_by_IntType_and_ScoringPart(3,2,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(3,2,2), ...
-        Interruptions_in_bouts_by_IntType_and_ScoringPart(3,2,2)/timewindow_min_by_IntType_and_ScoringPart(3,2,2), ...
-        60*Interruptions_in_bouts_by_IntType_and_ScoringPart(3,2,2)/timewindow_min_by_IntType_and_ScoringPart(3,2,2), ...
-        timewindow_min_by_IntType_and_ScoringPart(1,1,1), ...
-        timewindow_min_by_IntType_and_ScoringPart(1,2,1), ...
-        timewindow_min_by_IntType_and_ScoringPart(1,3,1), ...
+        overall_Duration_min_by_IntType_and_EpType(1,1,1), ...
+        mean_Duration_min_by_IntType_and_EpType(1,1,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,1,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,1,1)/timewindow_min_by_IntType_and_EpType(1,1,2), ...
+        overall_Duration_min_by_IntType_and_EpType(1,2,1), ...
+        mean_Duration_min_by_IntType_and_EpType(1,2,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,2,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,2,1)/timewindow_min_by_IntType_and_EpType(1,2,2), ...
+        overall_Duration_min_by_IntType_and_EpType(1,3,1), ...
+        mean_Duration_min_by_IntType_and_EpType(1,3,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,3,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,3,1)/timewindow_min_by_IntType_and_EpType(1,3,2), ...
+        overall_Duration_min_by_IntType_and_EpType(2,1,1), ...
+        mean_Duration_min_by_IntType_and_EpType(2,1,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,1,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,1,1)/timewindow_min_by_IntType_and_EpType(2,1,2), ...
+        overall_Duration_min_by_IntType_and_EpType(2,3,1), ...
+        mean_Duration_min_by_IntType_and_EpType(2,3,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,3,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,3,1)/timewindow_min_by_IntType_and_EpType(2,3,2), ...
+        overall_Duration_min_by_IntType_and_EpType(3,2,1), ...
+        mean_Duration_min_by_IntType_and_EpType(3,2,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(3,2,1), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(3,2,1)/timewindow_min_by_IntType_and_EpType(3,2,2), ...
+        overall_Duration_min_by_IntType_and_EpType(1,1,2), ...
+        mean_Duration_min_by_IntType_and_EpType(1,1,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,1,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,1,2)/timewindow_min_by_IntType_and_EpType(1,1,2), ...
+        overall_Duration_min_by_IntType_and_EpType(1,2,2), ...
+        mean_Duration_min_by_IntType_and_EpType(1,2,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,2,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,2,2)/timewindow_min_by_IntType_and_EpType(1,2,2), ...
+        overall_Duration_min_by_IntType_and_EpType(1,3,2), ...
+        mean_Duration_min_by_IntType_and_EpType(1,3,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,3,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(1,3,2)/timewindow_min_by_IntType_and_EpType(1,3,2), ...
+        overall_Duration_min_by_IntType_and_EpType(2,1,2), ...
+        mean_Duration_min_by_IntType_and_EpType(2,1,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,1,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,1,2)/timewindow_min_by_IntType_and_EpType(2,1,2), ...
+        overall_Duration_min_by_IntType_and_EpType(2,3,2), ...
+        mean_Duration_min_by_IntType_and_EpType(2,3,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,3,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(2,3,2)/timewindow_min_by_IntType_and_EpType(2,3,2), ...
+        overall_Duration_min_by_IntType_and_EpType(3,2,2), ...
+        mean_Duration_min_by_IntType_and_EpType(3,2,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(3,2,2), ...
+        Interruptions_in_bouts_by_IntType_and_EpType(3,2,2)/timewindow_min_by_IntType_and_EpType(3,2,2), ...
+        60*Interruptions_in_bouts_by_IntType_and_EpType(3,2,2)/timewindow_min_by_IntType_and_EpType(3,2,2), ...
+        timewindow_min_by_IntType_and_EpType(1,1,1), ...
+        timewindow_min_by_IntType_and_EpType(1,2,1), ...
+        timewindow_min_by_IntType_and_EpType(1,3,1), ...
         cycle_labels(iScoringCycle), ...
         cycle_complete(iScoringCycle), ...
         'VariableNames',{'scoringfile','standard','sleep_onset_definition','epoch_length_seconds',...
@@ -1139,13 +1162,13 @@ for iScoringCycle = 1:numel(scoring_cycles)
         'cycle_label',...
         'cycle_complete'}...
         );
-    
+
     if iScoringCycle == 1
         res.table = table_tmp;
     else
         res.table = cat(1,res.table,table_tmp);
     end
-    
+
 end
 fprintf([functionname ' function finished\n']);
 
