@@ -6307,6 +6307,7 @@ delete(findobj(h,'tag', 'ecg_HR_peaks_markers'));
 
 if strcmp(cfg.viewmode, 'butterfly')
     set(gca,'ColorOrder',opt.chancolors(chanindx,:)) % plot vector does not clear axis, therefore this is possible
+
     if istrue(cfg.plotsignal)
         ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
             'hpos', opt.laytime.pos(1,1), 'vpos', opt.laytime.pos(1,2), 'width', opt.laytime.width(1), 'height', opt.laytime.height(1), 'hlim', opt.hlim, 'vlim', opt.vlim);
@@ -6351,12 +6352,14 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                 colors(i,:) = opt.chancolors(chanindx(i),:);
             end
         end
+
         hasSameColors = false;
         if ~isempty(colors)
             if all((colors(1,1) == colors(:,1)) & (colors(1,2) == colors(:,2)) & (colors(1,3) == colors(:,3)));
                 hasSameColors = true;
             end
         end
+
         if hasSameColors
             hlim = opt.hlim;
             vlim = opt.vlim;
@@ -6379,6 +6382,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
             % then shift to the new horizontal position
             timx = timx + hpos;
         end
+
         for i = 1:length(chanindx)
             %         if strcmp(cfg.viewmode, 'component')
             %             color = 'k';
@@ -6480,156 +6484,162 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                 end
 
             end
+        end
+    end
+end
 
 if strcmp(cfg.viewmode, 'butterfly')
     set(gca,'ColorOrder',opt.chancolors(chanindx,:)) % plot vector does not clear axis, therefore this is possible
+
     if istrue(cfg.plotsignal)
-    ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
-        'hpos', opt.laytime.pos(1,1), 'vpos', opt.laytime.pos(1,2), 'width', opt.laytime.width(1), 'height', opt.laytime.height(1), 'hlim', opt.hlim, 'vlim', opt.vlim);
+        ft_plot_vector(tim, dat, 'box', false, 'tag', 'timecourse', 'linewidth', cfg.signallinewidth, ...
+            'hpos', opt.laytime.pos(1,1), 'vpos', opt.laytime.pos(1,2), 'width', opt.laytime.width(1), 'height', opt.laytime.height(1), 'hlim', opt.hlim, 'vlim', opt.vlim);
     end
-    
+
     % two ticks per channel
     yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height/2); ...
         opt.laytime.pos(:,2)+(opt.laytime.height/4); ...
         opt.laytime.pos(:,2);                        ...
         opt.laytime.pos(:,2)-(opt.laytime.height/4); ...
         opt.laytime.pos(:,2)-(opt.laytime.height/2)]);
-    
+
     yTickLabel = {num2str(yTick.*range(opt.vlim) + opt.vlim(1))};
-    
+
     set(gca, 'yTick', yTick);
     set(gca, 'yTickLabel', yTickLabel)
-    
+
 elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
-     % determine channel indices into data outside of loop
+    % determine channel indices into data outside of loop
     laysels = match_str(opt.laytime.label, opt.hdr.label);
-    
+
     if istrue(cfg.plotsignal)
 
-   
-    
-    % only plot labels when current chanlabel objects are less then the total number of channels (see bug 2065)
-    % this is a cheap quick fix. If it causes error in plotting components, do this conditional on viewmode
-    chanob = findobj(h,'tag', 'chanlabel');
-    if numel(chanob)<numel(chanindx)
-        needredrawchanlabel = true;
-    else
-        needredrawchanlabel = false;
-    end
-    if (cfg.channelmaxlabels <= length(chanindx))
-        delete(chanob);
-        needredrawchanlabel = false;
-    end
-    colors = zeros(length(chanindx),3);
-    for i = 1:length(chanindx)
-        if strcmp(cfg.viewmode, 'component')
-            colors(i,:) = [0 0 0];
+
+
+        % only plot labels when current chanlabel objects are less then the total number of channels (see bug 2065)
+        % this is a cheap quick fix. If it causes error in plotting components, do this conditional on viewmode
+        chanob = findobj(h,'tag', 'chanlabel');
+        if numel(chanob)<numel(chanindx)
+            needredrawchanlabel = true;
         else
-            colors(i,:) = opt.chancolors(chanindx(i),:);
+            needredrawchanlabel = false;
         end
-    end
-    hasSameColors = false;
-    if ~isempty(colors)
-        if all((colors(1,1) == colors(:,1)) & (colors(1,2) == colors(:,2)) & (colors(1,3) == colors(:,3)));
-         	hasSameColors = true;
+        if (cfg.channelmaxlabels <= length(chanindx))
+            delete(chanob);
+            needredrawchanlabel = false;
         end
-
-        if hasSameColors
-            ft_plot_vector(timx, dat(1:length(chanindx), :), 'box', false, 'color', colors(1,:), 'tag', 'timecourse', 'linewidth', cfg.signallinewidth);
+        colors = zeros(length(chanindx),3);
+        for i = 1:length(chanindx)
+            if strcmp(cfg.viewmode, 'component')
+                colors(i,:) = [0 0 0];
+            else
+                colors(i,:) = opt.chancolors(chanindx(i),:);
+            end
         end
+        hasSameColors = false;
+        if ~isempty(colors)
+            if all((colors(1,1) == colors(:,1)) & (colors(1,2) == colors(:,2)) & (colors(1,3) == colors(:,3)));
+                hasSameColors = true;
+            end
 
-        if strcmp(cfg.doSleepScoring,'yes')
-            if cfg.has_ECG
-                for i = 1:length(chanindx)
+            if hasSameColors
+                ft_plot_vector(timx, dat(1:length(chanindx), :), 'box', false, 'color', colors(1,:), 'tag', 'timecourse', 'linewidth', cfg.signallinewidth);
+            end
 
-                    laysel = laysels(i);
-                    if laysel == find(chanindx == cfg.score_channel_ecg_number);
+            if strcmp(cfg.doSleepScoring,'yes')
+                if cfg.has_ECG
+                    for i = 1:length(chanindx)
 
-                        if strcmp(cfg.markECG,'yes')
+                        laysel = laysels(i);
+                        if laysel == find(chanindx == cfg.score_channel_ecg_number);
 
-                            %                             %rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin, min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
-                            %                             %rgb_ind(isnan(rgb_ind)) = 1;
-                            %                             %rgb = flip(autumn(128),1);
-                            %                             %ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', rgb(rgb_ind,:), 'tag', 'ecg_HR_timecourse', ...
-                            %                             ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', 'k', 'tag', 'ecg_HR_timecourse', ...
-                            %                             'linewidth', 1.5, ...
-                            %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
-                            %
-                            if ~isempty(cfg.ECG_instHRsmin_SignalPeaksSamples)
-                                rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples), min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
-                                rgb_ind(isnan(rgb_ind)) = 1;
-                                rgb = flip(autumn(128),1);
-                                for iECGpeak = 1:numel(cfg.ECG_instHRsmin_SignalPeaksSamples)
-                                    %ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', [0.2 0.2 0.2], ...
-                                    ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', rgb(rgb_ind(iECGpeak),:), ...
-                                        'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
-                                end
-                                %                             ft_plot_vector(tim(cfg.ECG_instHRsmin_SignalPeaksSamples), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples), 'box', false, 'color', 'none', 'marker', 'o', 'markerfacecolor', [1 90/255 0], 'tag', 'ecg_HR_peaks_markers', ...
+                            if strcmp(cfg.markECG,'yes')
+
+                                %                             %rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin, min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
+                                %                             %rgb_ind(isnan(rgb_ind)) = 1;
+                                %                             %rgb = flip(autumn(128),1);
+                                %                             %ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', rgb(rgb_ind,:), 'tag', 'ecg_HR_timecourse', ...
+                                %                             ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', 'k', 'tag', 'ecg_HR_timecourse', ...
+                                %                             'linewidth', 1.5, ...
                                 %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
+                                %
+                                if ~isempty(cfg.ECG_instHRsmin_SignalPeaksSamples)
+                                    rgb_ind = 1+fix(fw_normalize(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples), min(cfg.ECG_instHRsmin), max(cfg.ECG_instHRsmin), 0, 127));
+                                    rgb_ind(isnan(rgb_ind)) = 1;
+                                    rgb = flip(autumn(128),1);
+                                    for iECGpeak = 1:numel(cfg.ECG_instHRsmin_SignalPeaksSamples)
+                                        %ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', [0.2 0.2 0.2], ...
+                                        ft_plot_text(tim(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)), num2str(round(cfg.ECG_instHRsmin(cfg.ECG_instHRsmin_SignalPeaksSamples(iECGpeak)))),'FontSize', 8, 'tag', 'ecg_HR_peaks_markers','interpreter','none','color', rgb(rgb_ind(iECGpeak),:), ...
+                                            'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
+                                    end
+                                    %                             ft_plot_vector(tim(cfg.ECG_instHRsmin_SignalPeaksSamples), dat(datsel, cfg.ECG_instHRsmin_SignalPeaksSamples), 'box', false, 'color', 'none', 'marker', 'o', 'markerfacecolor', [1 90/255 0], 'tag', 'ecg_HR_peaks_markers', ...
+                                    %                                 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', cfg.chanyrange(chanindx(datsel),:));
+                                end
                             end
+                            break
                         end
-                        break
                     end
                 end
             end
         end
-    end
-    if length(chanindx)>19
-        % no space for yticks
-        yTick = [];
-        yTickLabel = [];
-    else
-        %FW begin
-        yTickLabel = [];
-        for i = 1:length(chanindx)
-            curr_scale = cfg.chanscale(chanindx);
-            curr_range = cfg.chanyrange(chanindx,:);
 
-            if length(chanindx) > 6
-                % one tick per channel
-                yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/4); ...
-                    opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/4)]);
-                %FW begin
-                %temp_tick = [.25 .75] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
-                temp_tick = [.25 .75] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
+        if length(chanindx)>19
+            % no space for yticks
+            yTick = [];
+            yTickLabel = [];
+        else
+            %FW begin
+            yTickLabel = [];
+            for i = 1:length(chanindx)
+                curr_scale = cfg.chanscale(chanindx);
+                curr_range = cfg.chanyrange(chanindx,:);
 
-                yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2)},'UniformOutput',false));
-                yTickLabel = [yTickLabel {yTickLabel_temp}];
-                %yTickLabel = [yTickLabel {[.25 .75] .* temp_factor}];
-                %FW end
-            else
-                %FW begin
-                % two ticks per channel
-                % temp_tick = [0 .25 .75 1] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
-                temp_tick = [0 .25 .75 1] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
-                %annotation('line',[-0.01 -0.01],[0 1],'color',[0.5 0.5 0.5]) .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i)));
-                yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/2); ...
-                    opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/4); ...
-                    opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/4); ...
-                    opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/2)]);
-                yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2) temp_tick(3) temp_tick(4)},'UniformOutput',false));
-                if i==1
-                    yTickLabel = [{num2str(yTickLabel_temp(1)) num2str(yTickLabel_temp(2)) num2str(yTickLabel_temp(3)) ' '} yTickLabel];
-                elseif i == length(chanindx)
-                    yTickLabel = [{' ' num2str(yTickLabel_temp(2)) num2str(yTickLabel_temp(3)) num2str(yTickLabel_temp(4))} yTickLabel];
+                if length(chanindx) > 6
+                    % one tick per channel
+                    yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/4); ...
+                        opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/4)]);
+                    %FW begin
+                    %temp_tick = [.25 .75] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
+                    temp_tick = [.25 .75] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
+
+                    yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2)},'UniformOutput',false));
+                    yTickLabel = [yTickLabel {yTickLabel_temp}];
+                    %yTickLabel = [yTickLabel {[.25 .75] .* temp_factor}];
+                    %FW end
                 else
-                    yTickLabel = [{num2str(yTickLabel_temp(1)) num2str(yTickLabel_temp(2)) num2str(yTickLabel_temp(3)) num2str(yTickLabel_temp(4))} yTickLabel];
+                    %FW begin
+                    % two ticks per channel
+                    % temp_tick = [0 .25 .75 1] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
+                    temp_tick = [0 .25 .75 1] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
+                    %annotation('line',[-0.01 -0.01],[0 1],'color',[0.5 0.5 0.5]) .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i)));
+                    yTick = sort([opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/2); ...
+                        opt.laytime.pos(:,2)+(opt.laytime.height(laysel)/4); ...
+                        opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/4); ...
+                        opt.laytime.pos(:,2)-(opt.laytime.height(laysel)/2)]);
+                    yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2) temp_tick(3) temp_tick(4)},'UniformOutput',false));
+                    if i==1
+                        yTickLabel = [{num2str(yTickLabel_temp(1)) num2str(yTickLabel_temp(2)) num2str(yTickLabel_temp(3)) ' '} yTickLabel];
+                    elseif i == length(chanindx)
+                        yTickLabel = [{' ' num2str(yTickLabel_temp(2)) num2str(yTickLabel_temp(3)) num2str(yTickLabel_temp(4))} yTickLabel];
+                    else
+                        yTickLabel = [{num2str(yTickLabel_temp(1)) num2str(yTickLabel_temp(2)) num2str(yTickLabel_temp(3)) num2str(yTickLabel_temp(4))} yTickLabel];
+                    end
+                    %yTickLabel = [yTickLabel {[.0 .25 .75 1] .* temp_factor}];
+                    %FW end
                 end
-                %yTickLabel = [yTickLabel {[.0 .25 .75 1] .* temp_factor}];
-                %FW end
             end
         end
+        %FW end
+        %FW begin
+        %yTickLabel = repmat(yTickLabel, 1, length(chanindx));
+        set(gca, 'yTick', yTick);
+        if length(chanindx) > 6
+            set(gca, 'yTickLabel', flip(yTickLabel));
+        else
+            set(gca, 'yTickLabel', yTickLabel);
+        end
+        %FW end
     end
-    %FW end
-    %FW begin
-    %yTickLabel = repmat(yTickLabel, 1, length(chanindx));
-    set(gca, 'yTick', yTick);
-    if length(chanindx) > 6
-        set(gca, 'yTickLabel', flip(yTickLabel));
-    else
-        set(gca, 'yTickLabel', yTickLabel);
-    end
-    %FW end
 
 else
     error('unknown viewmode "%s"', cfg.viewmode);
