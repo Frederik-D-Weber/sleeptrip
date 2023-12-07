@@ -52,6 +52,8 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %                        See ST_SLEEPCYCLES for futher
 %                        parameters that are passed on to it.
 %
+%   cfg.arousalInterruptionReachSeconds = seconds added (in each sleep cycle part) that an scored arousal in scoring.arousals is counted into the other sleep stage interruption. 
+%                                         for example if an arousal is more than 10 seconds before a N1 interruption in REM sleep it is part of that interruption. default = 10
 %
 % See also ST_READ_SCORING, ST_SLEEPONSET, ST_SLEEPCYCLES
 
@@ -88,6 +90,9 @@ fprintf([functionname ' function started\n']);
 
 % set the defaults
 cfg.sleeponsetdef  = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
+
+cfg.arousalInterruptionReachSeconds  = ft_getopt(cfg, 'arousalInterruptionReachSeconds', 10);
+
 
 cfg.allowsleepopoonbeforescoring  = ft_getopt(cfg, 'allowsleepopoonbeforescoring', 'yes');
 cfg.allowsleepopoffafterscoring  = ft_getopt(cfg, 'allowsleepopoffafterscoring', 'yes');
@@ -724,17 +729,29 @@ for iScoringCycle = 1:numel(scoring_cycles)
                                     scorings_cut2_appended_temp.arousals(((scorings_cut2_appended_temp.arousals.start >= consecBegins_wholescoring_seconds(iInterrupt) ) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt) )),:) = [];
                                     idx_rightsideoverlap = (scorings_cut2_appended_temp.arousals.start <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start >= consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop >= consecEnds_wholescoring_seconds(iInterrupt));
                                     idx_leftsideoverlap = (scorings_cut2_appended_temp.arousals.stop > consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start < consecBegins_wholescoring_seconds(iInterrupt));
-
+                                    idx_leftsideoverlap_reach = (scorings_cut2_appended_temp.arousals.stop + cfg.arousalInterruptionReachSeconds > consecBegins_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.start < consecBegins_wholescoring_seconds(iInterrupt));
+                                    idx_completeoverlap = (scorings_cut2_appended_temp.arousals.start <= consecEnds_wholescoring_seconds(iInterrupt)) & (scorings_cut2_appended_temp.arousals.stop >= consecEnds_wholescoring_seconds(iInterrupt));
+                                    
                                     if sum(idx_rightsideoverlap) > 0
                                         consecEnds_wholescoring_seconds(iInterrupt) = max(scorings_cut2_appended_temp.arousals.stop(idx_rightsideoverlap));
-                                        scorings_cut2_appended_temp.arousals(idx_rightsideoverlap,:) = [];
                                     end
                                     if sum(idx_leftsideoverlap) > 0
                                         consecBegins_wholescoring_seconds(iInterrupt) = min(scorings_cut2_appended_temp.arousals.start(idx_leftsideoverlap));
-                                        scorings_cut2_appended_temp.arousals(idx_leftsideoverlap,:) = [];
-
                                     end
-                                    scorings_cut2_appended_temp.arousals.stop(idx_leftsideoverlap) = consecBegins_wholescoring_seconds(iInterrupt);
+                                    if  sum(idx_leftsideoverlap_reach) > 0
+                                        consecBegins_wholescoring_seconds(iInterrupt) = min(scorings_cut2_appended_temp.arousals.start(idx_leftsideoverlap_reach));
+                                    end
+                                    if sum(idx_completeoverlap) > 0
+                                        consecBegins_wholescoring_seconds(iInterrupt) = min(scorings_cut2_appended_temp.arousals.start(idx_completeoverlap));
+                                        consecEnds_wholescoring_seconds(iInterrupt) = max(scorings_cut2_appended_temp.arousals.stop(idx_completeoverlap));
+                                    end
+                                    
+                                    idx_aggregate = idx_completeoverlap | idx_leftsideoverlap | idx_rightsideoverlap | idx_leftsideoverlap_reach;
+                                    if sum(idx_aggregate) > 0
+                                        scorings_cut2_appended_temp.arousals(idx_aggregate,:) = [];
+                                    end
+                                     
+                                    %scorings_cut2_appended_temp.arousals.stop(idx_leftsideoverlap) = consecBegins_wholescoring_seconds(iInterrupt);
                                 end
 
                                 consecDur_wholescoring_seconds  = consecEnds_wholescoring_seconds - consecBegins_wholescoring_seconds;

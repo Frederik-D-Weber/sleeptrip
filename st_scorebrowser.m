@@ -301,7 +301,7 @@ if istrue(cfg.datainteractive)
                 else
                     cfg_pp.dataset = cfg_dhms.datafile;
                 end
-                if ismember(cfg.precision,{'single','double'})
+                if ismember(cfg.precision,{'single','double','single_trial','double_trial'})
                     cfg_pp.precision = 'single';
                 end
                 data = st_preprocessing(cfg_pp);
@@ -389,11 +389,6 @@ if istrue(cfg.datainteractive)
 end
 
 
-if ~hasdata && ~istrue(cfg.datainteractive)
-    data = st_preprocessing(cfg);
-    hasdata = true;
-end
-
 cfg.channel         = ft_getopt(cfg, 'channel', 'all', 1);
 cfg.channeldisplayed = ft_getopt(cfg, 'channeldisplayed', cfg.channel);
 
@@ -410,9 +405,25 @@ if hasdata
             data = ft_struct2double(data);
         case 'single_trial'
             data.trial = ft_struct2single(data.trial);
+            cfg.precision = 'single';
         case 'double_trial'
             data.trial = ft_struct2double(data.trial);
+            cfg.precision = 'double';
     end
+else
+     switch cfg.precision
+         case 'original'
+             cfg.precision = [];
+         case 'single_trial'
+             cfg.precision = 'single';
+         case 'double_trial'
+             cfg.precision = 'double';
+     end
+end
+
+if ~hasdata && ~istrue(cfg.datainteractive)
+    data = st_preprocessing(cfg);
+    hasdata = true;
 end
 
 
@@ -2336,12 +2347,16 @@ end
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cleanup_cb_hhyp(hObject, eventdata, varargin)
+try
 h_main = ft_getopt(varargin, 'h_main');
 h = getparent(h_main);
 opt = getappdata(h, 'opt');
 opt.changedBGcolor3 = false;
 setappdata(h, 'opt', opt);
 delete(hObject);
+catch err
+    ft_warning('could not reset hypnogram background color, this might make the hypnogram invisible in dark mode in newer Matlab versions. %s', err)
+end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
