@@ -567,8 +567,9 @@ for iFreqBand = 1:numel(cfg.bands)
         
         %size(powspec)
         
-        w = cellfun(@max,freq2.time);
-        w2 = w(w>=cfg.minSecBouts);
+        w_start = cellfun(@min,freq2.time);
+        w_end = cellfun(@max,freq2.time);
+        w = w_end - w_start;
         
         
         number_of_bouts{iFreqBand,iChanNum} = length(w2);
